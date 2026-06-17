@@ -13,8 +13,9 @@ Jarvis/wwwroot/generated-audio/
 **/screenshots/
 **/command_logs.json
 **/voice_history.json
+**/chat_sessions.json
 **/*.tmp
 **/*.temp
 
-models/
-tools/
+/models/
+/tools/

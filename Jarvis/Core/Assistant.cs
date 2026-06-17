@@ -73,7 +73,22 @@ public sealed class Assistant
         return response;
     }
 
+    public Task<string> GenerateSessionResponseAsync(
+        string input,
+        IEnumerable<ChatMessage> sessionMessages,
+        Func<string, Task>? onChunk = null,
+        CancellationToken cancellationToken = default)
+    {
+        var prompt = BuildPrompt(sessionMessages);
+        return GenerateFromPromptAsync(prompt, onChunk, cancellationToken);
+    }
+
     private IEnumerable<ChatMessage> BuildPrompt()
+    {
+        return BuildPrompt(_chatHistoryService.GetRecent(_settingsService.Current.MaxHistoryMessages));
+    }
+
+    private IEnumerable<ChatMessage> BuildPrompt(IEnumerable<ChatMessage> history)
     {
         var systemPrompt = new StringBuilder();
         systemPrompt.AppendLine(_settingsService.Current.SystemPrompt);
@@ -90,9 +105,30 @@ public sealed class Assistant
 
         yield return ChatMessage.System(systemPrompt.ToString());
 
-        foreach (var message in _chatHistoryService.GetRecent(_settingsService.Current.MaxHistoryMessages))
+        foreach (var message in history
+            .Where(message => message.Role is "user" or "assistant")
+            .TakeLast(_settingsService.Current.MaxHistoryMessages))
         {
             yield return message;
         }
+    }
+
+    private async Task<string> GenerateFromPromptAsync(
+        IEnumerable<ChatMessage> prompt,
+        Func<string, Task>? onChunk,
+        CancellationToken cancellationToken)
+    {
+        var responseBuilder = new StringBuilder();
+        await foreach (var chunk in _ollamaService.StreamChatAsync(prompt, cancellationToken))
+        {
+            if (onChunk is not null)
+            {
+                await onChunk(chunk);
+            }
+
+            responseBuilder.Append(chunk);
+        }
+
+        return responseBuilder.ToString();
     }
 }

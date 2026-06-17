@@ -10,6 +10,7 @@ public interface IPathResolver
     string VoiceHistoryPath { get; }
     string MemoryPath { get; }
     string ChatHistoryPath { get; }
+    string ChatSessionsPath { get; }
     string CommandLogPath { get; }
     string SettingsPath { get; }
 }

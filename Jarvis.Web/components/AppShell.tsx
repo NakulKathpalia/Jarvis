@@ -1,18 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AppLayout } from "./AppLayout";
 import { ChatPanel } from "./ChatPanel";
 import { ControlPanel } from "./ControlPanel";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { FilesPanel } from "./FilesPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { SettingsPanel } from "./SettingsPanel";
 import { Sidebar } from "./Sidebar";
 import { Toast } from "./Toast";
+import { VoicePanel } from "./VoicePanel";
 import type { PendingVoiceCommand } from "./VoiceConfirmationCard";
 import { jarvisApi } from "@/lib/api";
 import type {
   AppSettings,
   ChatMessage,
+  ChatSession,
+  ChatSessionSummary,
   JarvisStatus,
   MemoryFormValues,
   MemoryItem,
@@ -22,7 +27,8 @@ import type {
 export function AppShell() {
   const [activeView, setActiveView] = useState<ViewKey>("chat");
   const [status, setStatus] = useState<JarvisStatus | null>(null);
-  const [history, setHistory] = useState<ChatMessage[]>([]);
+  const [chatSummaries, setChatSummaries] = useState<ChatSessionSummary[]>([]);
+  const [activeChat, setActiveChat] = useState<ChatSession | null>(null);
   const [memory, setMemory] = useState<MemoryItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [pendingVoiceCommand, setPendingVoiceCommand] = useState<PendingVoiceCommand | null>(null);
@@ -38,8 +44,8 @@ export function AppShell() {
     setStatus(await jarvisApi.status());
   }, []);
 
-  const refreshHistory = useCallback(async () => {
-    setHistory(await jarvisApi.history());
+  const refreshChats = useCallback(async () => {
+    setChatSummaries(await jarvisApi.chats());
   }, []);
 
   const refreshMemory = useCallback(async () => {
@@ -51,43 +57,74 @@ export function AppShell() {
   }, []);
 
   const refreshAll = useCallback(async () => {
-    await Promise.all([refreshStatus(), refreshHistory(), refreshMemory(), refreshSettings()]);
-  }, [refreshHistory, refreshMemory, refreshSettings, refreshStatus]);
+    await Promise.all([refreshStatus(), refreshChats(), refreshMemory(), refreshSettings()]);
+  }, [refreshChats, refreshMemory, refreshSettings, refreshStatus]);
 
   useEffect(() => {
     refreshAll().catch((error: Error) => showToast(error.message));
   }, [refreshAll, showToast]);
 
-  const visibleHistory = useMemo(
-    () => history.filter((message) => message.role !== "system"),
-    [history]
+  const visibleMessages = useMemo(
+    () => (activeChat?.messages ?? []).filter((message) => message.role !== "system"),
+    [activeChat]
   );
 
+  async function createNewChat() {
+    const session = await jarvisApi.createChat();
+    setActiveChat(session);
+    setActiveView("chat");
+    await refreshChats();
+  }
+
+  async function openChat(id: string) {
+    const session = await jarvisApi.chatSession(id);
+    setActiveChat(session);
+    setActiveView("chat");
+  }
+
+  async function deleteChat(id: string) {
+    const nextSummaries = await jarvisApi.deleteChat(id);
+    setChatSummaries(nextSummaries);
+    if (activeChat?.id === id) {
+      setActiveChat(null);
+    }
+    showToast("Chat deleted");
+  }
+
+  async function ensureActiveChat() {
+    if (activeChat) {
+      return activeChat;
+    }
+
+    const session = await jarvisApi.createChat();
+    setActiveChat(session);
+    await refreshChats();
+    return session;
+  }
+
   async function sendMessage(message: string, options?: { skipAutoSpeak?: boolean }) {
-    const optimisticHistory: ChatMessage[] = [
-      ...history,
+    setIsBusy(true);
+    const session = await ensureActiveChat();
+    const optimisticMessages: ChatMessage[] = [
+      ...session.messages,
       { role: "user", content: message },
       { role: "assistant", content: "Thinking..." }
     ];
-    setHistory(optimisticHistory);
-    setIsBusy(true);
+
+    setActiveChat({ ...session, messages: optimisticMessages, updatedAtUtc: new Date().toISOString() });
 
     try {
-      const result = await jarvisApi.chat(message);
+      const result = await jarvisApi.sendChatMessage(session.id, message);
       const assistantResponse = result.response || "(empty response)";
-      setHistory([
-        ...history,
-        { role: "user", content: message },
-        { role: "assistant", content: assistantResponse }
-      ]);
-      await refreshStatus();
+      setActiveChat(result.session);
+      await Promise.all([refreshStatus(), refreshChats()]);
       if (!options?.skipAutoSpeak && settings?.autoSpeakResponses && assistantResponse !== "(empty response)") {
         await speakText(assistantResponse);
       }
       return assistantResponse;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Chat failed");
-      await refreshHistory();
+      setActiveChat(await jarvisApi.chatSession(session.id));
       return "";
     } finally {
       setIsBusy(false);
@@ -100,7 +137,7 @@ export function AppShell() {
 
       if (commandResult.handled) {
         setPendingVoiceCommand(null);
-        await Promise.all([refreshHistory(), refreshStatus(), refreshMemory(), refreshSettings()]);
+        await Promise.all([refreshStatus(), refreshMemory(), refreshSettings(), refreshChats()]);
         if (!options?.skipAutoSpeak && settings?.autoSpeakResponses) {
           await speakText(commandResult.message);
         }
@@ -116,11 +153,15 @@ export function AppShell() {
         };
         setPendingVoiceCommand(pendingCommand);
         const message = `${commandResult.message} Use Confirm to run it, or Cancel to ignore it.`;
-        setHistory([
-          ...history,
-          { role: "user", content: transcript },
-          { role: "assistant", content: message }
-        ]);
+        const session = await ensureActiveChat();
+        setActiveChat({
+          ...session,
+          messages: [
+            ...session.messages,
+            { role: "user", content: transcript },
+            { role: "assistant", content: message }
+          ]
+        });
         showToast("Voice command needs confirmation");
         return message;
       }
@@ -141,8 +182,9 @@ export function AppShell() {
       const result = await jarvisApi.voiceCommand(pendingVoiceCommand.transcript, true);
       setPendingVoiceCommand(null);
       const message = result.message || "Voice command completed.";
-      setHistory((current) => [...current, { role: "assistant", content: message }]);
-      await Promise.all([refreshHistory(), refreshStatus(), refreshMemory(), refreshSettings()]);
+      const session = await ensureActiveChat();
+      setActiveChat({ ...session, messages: [...session.messages, { role: "assistant", content: message }] });
+      await Promise.all([refreshStatus(), refreshMemory(), refreshSettings(), refreshChats()]);
       if (settings?.autoSpeakResponses) {
         await speakText(message);
       }
@@ -154,13 +196,14 @@ export function AppShell() {
     }
   }
 
-  function cancelVoiceCommand() {
+  async function cancelVoiceCommand() {
     if (!pendingVoiceCommand) {
       return;
     }
 
     setPendingVoiceCommand(null);
-    setHistory((current) => [...current, { role: "assistant", content: "Voice command cancelled." }]);
+    const session = await ensureActiveChat();
+    setActiveChat({ ...session, messages: [...session.messages, { role: "assistant", content: "Voice command cancelled." }] });
     showToast("Voice command cancelled");
   }
 
@@ -210,51 +253,67 @@ export function AppShell() {
   }
 
   return (
-    <div className="app-frame">
-      <Sidebar
-        activeView={activeView}
-        onChangeView={setActiveView}
-        status={status}
-        memoryCount={memory.length}
-      />
+    <AppLayout
+      sidebar={
+        <Sidebar
+          activeView={activeView}
+          activeChatId={activeChat?.id ?? null}
+          chats={chatSummaries}
+          onChangeView={setActiveView}
+          onNewChat={createNewChat}
+          onOpenChat={openChat}
+          status={status}
+          memoryCount={memory.length}
+        />
+      }
+    >
+      {activeView === "chat" && (
+        <ChatPanel
+          autoSpeak={settings?.autoSpeakResponses ?? false}
+          messages={visibleMessages}
+          chats={chatSummaries}
+          activeChatId={activeChat?.id ?? null}
+          status={status}
+          isBusy={isBusy}
+          pendingVoiceCommand={pendingVoiceCommand}
+          onRefresh={refreshAll}
+          onNewChat={createNewChat}
+          onOpenChat={openChat}
+          onDeleteChat={deleteChat}
+          onSend={sendMessage}
+          onVoiceCommand={handleVoiceCommand}
+          onConfirmVoiceCommand={confirmVoiceCommand}
+          onCancelVoiceCommand={() => void cancelVoiceCommand()}
+          onSpeak={speakText}
+          onToast={showToast}
+        />
+      )}
 
-      <main className="main-surface">
-        {activeView === "chat" && (
-          <ChatPanel
-            autoSpeak={settings?.autoSpeakResponses ?? false}
-            messages={visibleHistory}
-            isBusy={isBusy}
-            pendingVoiceCommand={pendingVoiceCommand}
-            onRefresh={refreshAll}
-            onSend={sendMessage}
-            onVoiceCommand={handleVoiceCommand}
-            onConfirmVoiceCommand={confirmVoiceCommand}
-            onCancelVoiceCommand={cancelVoiceCommand}
-            onSpeak={speakText}
-            onToast={showToast}
-          />
-        )}
+      {activeView === "memory" && (
+        <MemoryPanel
+          items={memory}
+          onAdd={addMemory}
+          onUpdate={updateMemory}
+          onDelete={deleteMemory}
+          onClear={clearMemory}
+        />
+      )}
 
-        {activeView === "memory" && (
-          <MemoryPanel
-            items={memory}
-            onAdd={addMemory}
-            onUpdate={updateMemory}
-            onDelete={deleteMemory}
-            onClear={clearMemory}
-          />
-        )}
+      {activeView === "files" && <FilesPanel onToast={showToast} />}
 
-        {activeView === "files" && <FilesPanel onToast={showToast} />}
+      {activeView === "control" && <ControlPanel onToast={showToast} />}
 
-        {activeView === "control" && <ControlPanel onToast={showToast} />}
+      {activeView === "voice" && (
+        <VoicePanel disabled={isBusy} onRefresh={refreshAll} onToast={showToast} />
+      )}
 
-        {activeView === "settings" && settings && (
-          <SettingsPanel settings={settings} onSave={saveSettings} />
-        )}
-      </main>
+      {activeView === "settings" && settings && (
+        <SettingsPanel settings={settings} onSave={saveSettings} />
+      )}
+
+      {activeView === "diagnostics" && <DiagnosticsPanel />}
 
       <Toast message={toast} />
-    </div>
+    </AppLayout>
   );
 }

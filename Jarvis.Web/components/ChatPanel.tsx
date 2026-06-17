@@ -1,21 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Composer } from "./Composer";
 import { MessageList } from "./MessageList";
-import { TopBar } from "./TopBar";
 import { VoiceCommandHelpPanel } from "./VoiceCommandHelpPanel";
 import { VoiceLoopPanel } from "./VoiceLoopPanel";
 import { WakeWordPanel } from "./WakeWordPanel";
 import { PendingVoiceCommand, VoiceConfirmationCard } from "./VoiceConfirmationCard";
-import type { ChatMessage } from "@/lib/types";
+import { AssistantOrb } from "./ui/AssistantOrb";
+import { ChatCard } from "./ui/ChatCard";
+import { PromptChip } from "./ui/PromptChip";
+import { StatusBadge } from "./ui/StatusBadge";
+import type { ChatMessage, ChatSessionSummary, JarvisStatus } from "@/lib/types";
 
 type ChatPanelProps = {
   messages: ChatMessage[];
+  chats: ChatSessionSummary[];
+  activeChatId: string | null;
+  status: JarvisStatus | null;
   isBusy: boolean;
   autoSpeak: boolean;
   pendingVoiceCommand: PendingVoiceCommand | null;
   onRefresh: () => Promise<void>;
+  onNewChat: () => Promise<void>;
+  onOpenChat: (id: string) => Promise<void>;
+  onDeleteChat: (id: string) => Promise<void>;
   onSend: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
   onVoiceCommand: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
   onConfirmVoiceCommand: () => Promise<void>;
@@ -24,12 +33,25 @@ type ChatPanelProps = {
   onToast: (message: string) => void;
 };
 
+const promptChips = [
+  "Open YouTube",
+  "Search my files",
+  "Remember something",
+  "Check diagnostics",
+  "Voice command"
+];
+
 export function ChatPanel({
   messages,
+  chats,
+  activeChatId,
+  status,
   isBusy,
-  autoSpeak,
   pendingVoiceCommand,
   onRefresh,
+  onNewChat,
+  onOpenChat,
+  onDeleteChat,
   onSend,
   onVoiceCommand,
   onConfirmVoiceCommand,
@@ -38,38 +60,110 @@ export function ChatPanel({
   onToast
 }: ChatPanelProps) {
   const [wakeSignal, setWakeSignal] = useState(0);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length, isBusy]);
 
   function handleWakeActivated() {
     setWakeSignal((current) => current + 1);
   }
 
   return (
-    <section className="chat-panel">
-      <TopBar
-        title="Jarvis"
-        subtitle="Local-first chat powered by Ollama"
-        action={
-          <button className="soft-button" type="button" onClick={onRefresh}>
-            Refresh
-          </button>
-        }
-      />
+    <section className="flex min-h-screen flex-col">
+      <header className="border-b border-jarvis-border/70 px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
+            <AssistantOrb size="md" active={isBusy || status?.online} />
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-black text-jarvis-text sm:text-3xl">Jarvis Assistant</h2>
+                <StatusBadge tone={status?.online ? "green" : "amber"}>
+                  {status?.online ? "Ollama online" : "Offline"}
+                </StatusBadge>
+              </div>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-jarvis-muted">
+                Local-first chat, voice, files, memory, and PC control in one private workspace.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge>{status?.model ?? "No model"}</StatusBadge>
+            <button className="soft-button" type="button" onClick={onRefresh}>Refresh</button>
+            <button className="primary-button" type="button" onClick={() => void onNewChat()}>New Chat</button>
+          </div>
+        </div>
+      </header>
 
-      <VoiceLoopPanel
-        disabled={isBusy}
-        onRefresh={onRefresh}
-        onToast={onToast}
-        wakeSignal={wakeSignal}
-      />
-      <WakeWordPanel onToast={onToast} onWakeActivated={handleWakeActivated} />
-      <VoiceCommandHelpPanel onToast={onToast} />
-      <VoiceConfirmationCard
-        pendingCommand={pendingVoiceCommand}
-        disabled={isBusy}
-        onConfirm={onConfirmVoiceCommand}
-        onCancel={onCancelVoiceCommand}
-      />
-      <MessageList messages={messages} onSpeak={onSpeak} />
+      <div className="mx-auto grid w-full max-w-6xl gap-4 px-4 py-5 sm:px-6 lg:px-8">
+        <VoiceLoopPanel
+          disabled={isBusy}
+          onRefresh={onRefresh}
+          onToast={onToast}
+          wakeSignal={wakeSignal}
+        />
+        <WakeWordPanel onToast={onToast} onWakeActivated={handleWakeActivated} />
+        <VoiceConfirmationCard
+          pendingCommand={pendingVoiceCommand}
+          disabled={isBusy}
+          onConfirm={onConfirmVoiceCommand}
+          onCancel={onCancelVoiceCommand}
+        />
+      </div>
+
+      {messages.length === 0 && (
+        <div className="mx-auto w-full max-w-6xl px-4 pb-4 sm:px-6 lg:px-8">
+          <div className="grid gap-6 rounded-[2rem] border border-jarvis-border bg-jarvis-panel/60 p-5 shadow-card sm:p-7">
+            <div className="flex flex-wrap gap-2">
+              {promptChips.map((chip) => (
+                <PromptChip key={chip} label={chip} onClick={() => void onSend(chip)} />
+              ))}
+            </div>
+            <div>
+              <div className="mb-4 flex items-end justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-black text-jarvis-text">Conversation Library</h3>
+                  <p className="mt-1 text-sm text-jarvis-muted">Pick up where you left off.</p>
+                </div>
+                <span className="text-sm text-jarvis-faint">{chats.length} chats</span>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {chats.map((chat) => (
+                  <ChatCard
+                    key={chat.id}
+                    chat={chat}
+                    active={chat.id === activeChatId}
+                    onOpen={() => void onOpenChat(chat.id)}
+                    onDelete={() => void onDeleteChat(chat.id)}
+                  />
+                ))}
+                {chats.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-jarvis-border p-6 text-sm text-jarvis-muted">
+                    No saved chats yet. Send your first prompt and Jarvis will create one.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-auto">
+        <MessageList messages={messages} isBusy={isBusy} onSpeak={onSpeak} />
+        {isBusy && messages.length > 0 && (
+          <div className="mx-auto flex max-w-4xl gap-2 px-4 pb-4 text-jarvis-green2">
+            <span className="h-2 w-2 animate-thinking-dot rounded-full bg-jarvis-green" />
+            <span className="h-2 w-2 animate-thinking-dot rounded-full bg-jarvis-green [animation-delay:120ms]" />
+            <span className="h-2 w-2 animate-thinking-dot rounded-full bg-jarvis-green [animation-delay:240ms]" />
+          </div>
+        )}
+        <div ref={scrollRef} />
+      </div>
+
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+        <VoiceCommandHelpPanel onToast={onToast} />
+      </div>
       <Composer
         disabled={isBusy}
         onSend={onSend}

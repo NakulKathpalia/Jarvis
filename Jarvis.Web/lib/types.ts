@@ -1,9 +1,26 @@
-export type ViewKey = "chat" | "memory" | "files" | "control" | "settings";
+export type ViewKey = "chat" | "memory" | "files" | "control" | "voice" | "settings" | "diagnostics";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
   content: string;
   createdAtUtc?: string;
+};
+
+export type ChatSession = {
+  id: string;
+  title: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  messages: ChatMessage[];
+};
+
+export type ChatSessionSummary = {
+  id: string;
+  title: string;
+  preview: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  messageCount: number;
 };
 
 export type MemoryItem = {

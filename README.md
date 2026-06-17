@@ -44,13 +44,36 @@ Keep local models, tool binaries, generated audio, and temporary files out of gi
 
 - Local Ollama chat
 - JSON memory and chat history
+- JSON chat sessions with a New Chat flow and saved conversation cards
 - Smart memory search, tags, importance, edit, and delete
 - File indexing with path and text-content search
 - PC control commands with safety confirmation and JSON logs
 - Stable voice pipeline with Whisper, wake word check, command routing, AI fallback, and Piper speech
 - Cross-platform path resolver, platform detection, settings validation, and diagnostics endpoint
-- Next.js dashboard
+- Next.js dashboard with Tailwind CSS dark green UI
 - CLI mode
+
+## Web Dashboard
+
+The dashboard is a Tailwind-based responsive UI with:
+
+- Left navigation for Chat, Memory, Files, Control, Voice, Settings, and Diagnostics
+- New Chat button and recent chat list
+- Google Assistant-inspired local assistant area with a green orb
+- Netflix-style conversation cards for saved chat sessions
+- Restyled Memory, Files, Control, Voice, Settings, and Diagnostics panels
+
+Chat session APIs:
+
+```text
+GET    /api/chats
+GET    /api/chats/{id}
+POST   /api/chats
+POST   /api/chats/{id}/messages
+DELETE /api/chats/{id}
+```
+
+Chat sessions are stored locally as JSON and do not replace the older `/api/chat` and `/api/history` endpoints.
 
 ## Voice Pipeline
 

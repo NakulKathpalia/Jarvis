@@ -1,6 +1,8 @@
 import type {
   AppSettings,
   ChatMessage,
+  ChatSession,
+  ChatSessionSummary,
   DiagnosticsResult,
   FileSearchResult,
   JarvisStatus,
@@ -49,6 +51,22 @@ export const jarvisApi = {
     request<{ response: string }>("/api/chat", {
       method: "POST",
       body: JSON.stringify({ message })
+    }),
+  chats: () => request<ChatSessionSummary[]>("/api/chats"),
+  chatSession: (id: string) => request<ChatSession>(`/api/chats/${encodeURIComponent(id)}`),
+  createChat: (title?: string) =>
+    request<ChatSession>("/api/chats", {
+      method: "POST",
+      body: JSON.stringify({ title })
+    }),
+  sendChatMessage: (id: string, message: string) =>
+    request<{ response: string; session: ChatSession }>(`/api/chats/${encodeURIComponent(id)}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ message })
+    }),
+  deleteChat: (id: string) =>
+    request<ChatSessionSummary[]>(`/api/chats/${encodeURIComponent(id)}`, {
+      method: "DELETE"
     }),
   transcribeVoice: async (audio: Blob) => {
     const formData = new FormData();

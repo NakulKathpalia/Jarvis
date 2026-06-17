@@ -19,6 +19,9 @@ await memoryService.LoadAsync();
 var chatHistoryService = new ChatHistoryService(pathResolver.ChatHistoryPath);
 await chatHistoryService.LoadAsync();
 
+var chatSessionService = new ChatSessionService(pathResolver.ChatSessionsPath);
+await chatSessionService.LoadAsync();
+
 var commandLogService = new CommandLogService(pathResolver.CommandLogPath);
 await commandLogService.LoadAsync();
 
@@ -119,6 +122,64 @@ app.MapPost("/api/chat", async (ChatRequest request, CancellationToken cancellat
 
     var response = await assistant.GenerateResponseAsync(request.Message.Trim(), cancellationToken: cancellationToken);
     return Results.Ok(new { response });
+});
+
+app.MapGet("/api/chats", () => Results.Ok(chatSessionService.GetSummaries()));
+
+app.MapGet("/api/chats/{id}", (string id) =>
+{
+    var session = chatSessionService.Get(id);
+    return session is null
+        ? Results.NotFound(new { error = "Chat session not found." })
+        : Results.Ok(session);
+});
+
+app.MapPost("/api/chats", async (ChatSessionCreateRequest request, CancellationToken cancellationToken) =>
+{
+    var session = await chatSessionService.CreateAsync(request.Title, cancellationToken);
+    return Results.Ok(session);
+});
+
+app.MapPost("/api/chats/{id}/messages", async (string id, ChatSessionMessageRequest request, CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Message))
+    {
+        return Results.BadRequest(new { error = "Message is required." });
+    }
+
+    var session = chatSessionService.Get(id);
+    if (session is null)
+    {
+        return Results.NotFound(new { error = "Chat session not found." });
+    }
+
+    var userMessage = ChatMessage.User(request.Message.Trim());
+    await chatSessionService.AddMessageAsync(id, userMessage, cancellationToken);
+
+    var refreshedSession = chatSessionService.Get(id);
+    var response = await assistant.GenerateSessionResponseAsync(
+        request.Message.Trim(),
+        refreshedSession?.Messages ?? [userMessage],
+        cancellationToken: cancellationToken);
+
+    if (!string.IsNullOrWhiteSpace(response))
+    {
+        await chatSessionService.AddMessageAsync(id, ChatMessage.Assistant(response), cancellationToken);
+    }
+
+    return Results.Ok(new
+    {
+        response,
+        session = chatSessionService.Get(id)
+    });
+});
+
+app.MapDelete("/api/chats/{id}", async (string id, CancellationToken cancellationToken) =>
+{
+    var deleted = await chatSessionService.DeleteAsync(id, cancellationToken);
+    return deleted
+        ? Results.Ok(chatSessionService.GetSummaries())
+        : Results.NotFound(new { error = "Chat session not found." });
 });
 
 app.MapGet("/api/memory", () => Results.Ok(memoryService.Items));
@@ -506,6 +567,8 @@ static async Task RunCliAsync(SettingsService settingsService, OllamaService oll
 }
 
 public sealed record ChatRequest(string Message);
+public sealed record ChatSessionCreateRequest(string? Title);
+public sealed record ChatSessionMessageRequest(string Message);
 public sealed record MemoryRequest(string Text, string? Category, string[]? Tags = null, int Importance = 3);
 public sealed record MemoryUpdateRequest(string Text, string? Category, string[]? Tags = null, int? Importance = null);
 public sealed record SpeakRequest(string Text);
