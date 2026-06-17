@@ -9,7 +9,14 @@ import { Sidebar } from "./Sidebar";
 import { Toast } from "./Toast";
 import type { PendingVoiceCommand } from "./VoiceConfirmationCard";
 import { jarvisApi } from "@/lib/api";
-import type { AppSettings, ChatMessage, JarvisStatus, MemoryItem, ViewKey } from "@/lib/types";
+import type {
+  AppSettings,
+  ChatMessage,
+  JarvisStatus,
+  MemoryFormValues,
+  MemoryItem,
+  ViewKey
+} from "@/lib/types";
 
 export function AppShell() {
   const [activeView, setActiveView] = useState<ViewKey>("chat");
@@ -156,10 +163,22 @@ export function AppShell() {
     showToast("Voice command cancelled");
   }
 
-  async function addMemory(text: string) {
-    setMemory(await jarvisApi.addMemory(text));
+  async function addMemory(values: MemoryFormValues) {
+    setMemory(await jarvisApi.addMemory(values));
     await refreshStatus();
     showToast("Memory saved");
+  }
+
+  async function updateMemory(id: string, values: MemoryFormValues) {
+    setMemory(await jarvisApi.updateMemory(id, values));
+    await refreshStatus();
+    showToast("Memory updated");
+  }
+
+  async function deleteMemory(id: string) {
+    setMemory(await jarvisApi.deleteMemory(id));
+    await refreshStatus();
+    showToast("Memory deleted");
   }
 
   async function clearMemory() {
@@ -216,7 +235,13 @@ export function AppShell() {
         )}
 
         {activeView === "memory" && (
-          <MemoryPanel items={memory} onAdd={addMemory} onClear={clearMemory} />
+          <MemoryPanel
+            items={memory}
+            onAdd={addMemory}
+            onUpdate={updateMemory}
+            onDelete={deleteMemory}
+            onClear={clearMemory}
+          />
         )}
 
         {activeView === "files" && <FilesPanel onToast={showToast} />}

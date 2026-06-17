@@ -10,7 +10,17 @@ export type MemoryItem = {
   id: string;
   text: string;
   category: string;
+  tags: string[];
+  importance: number;
   createdAtUtc: string;
+  updatedAtUtc: string;
+};
+
+export type MemoryFormValues = {
+  text: string;
+  category: string;
+  tags: string[];
+  importance: number;
 };
 
 export type AppSettings = {
@@ -86,4 +96,14 @@ export type WakeWordCheckResult = {
   message: string;
   transcript: string;
   phrase: string;
+};
+
+export type FileSearchResult = {
+  path: string;
+  fileName: string;
+  relativePath: string;
+  matchType: string;
+  snippet?: string | null;
+  sizeBytes: number;
+  lastWriteTimeUtc: string;
 };

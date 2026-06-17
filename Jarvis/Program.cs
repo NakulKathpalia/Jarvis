@@ -87,8 +87,47 @@ app.MapPost("/api/memory", async (MemoryRequest request, CancellationToken cance
         return Results.BadRequest(new { error = "Memory text is required." });
     }
 
-    await memoryService.AddAsync(request.Text.Trim(), request.Category ?? "General", cancellationToken);
+    await memoryService.AddAsync(
+        request.Text.Trim(),
+        request.Category ?? "General",
+        request.Tags,
+        request.Importance,
+        cancellationToken);
     return Results.Ok(memoryService.Items);
+});
+
+app.MapGet("/api/memory/search", (string? q, string? category, string? tag, int? minImportance) =>
+{
+    var results = memoryService.Search(q ?? string.Empty, category, tag, minImportance);
+    return Results.Ok(results);
+});
+
+app.MapPut("/api/memory/{id}", async (string id, MemoryUpdateRequest request, CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Text))
+    {
+        return Results.BadRequest(new { error = "Memory text is required." });
+    }
+
+    var updated = await memoryService.UpdateAsync(
+        id,
+        request.Text.Trim(),
+        request.Category ?? "General",
+        request.Tags,
+        request.Importance ?? 3,
+        cancellationToken);
+
+    return updated is null
+        ? Results.NotFound(new { error = "Memory not found." })
+        : Results.Ok(memoryService.Items);
+});
+
+app.MapDelete("/api/memory/{id}", async (string id, CancellationToken cancellationToken) =>
+{
+    var removed = await memoryService.DeleteAsync(id, cancellationToken);
+    return removed is null
+        ? Results.NotFound(new { error = "Memory not found." })
+        : Results.Ok(memoryService.Items);
 });
 
 app.MapDelete("/api/memory", async (CancellationToken cancellationToken) =>
@@ -130,6 +169,38 @@ app.MapPost("/api/files/index", async (CancellationToken cancellationToken) =>
 app.MapGet("/api/files/search", (string q) =>
 {
     return Results.Ok(fileIndexService.Search(q));
+});
+
+app.MapGet("/api/files/search-detailed", (string q, int? limit) =>
+{
+    var results = fileIndexService.SearchDetailed(q, limit.GetValueOrDefault(25));
+    return Results.Ok(results);
+});
+
+app.MapPost("/api/files/open", (FileOpenRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Path))
+    {
+        return Results.BadRequest(new { error = "Path is required." });
+    }
+
+    var success = fileIndexService.OpenFile(request.Path);
+    return success
+        ? Results.Ok(new { success = true, message = "File opened." })
+        : Results.BadRequest(new { error = "Unable to open file." });
+});
+
+app.MapPost("/api/files/open-folder", (FileOpenRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Path))
+    {
+        return Results.BadRequest(new { error = "Path is required." });
+    }
+
+    var success = fileIndexService.OpenContainingFolder(request.Path);
+    return success
+        ? Results.Ok(new { success = true, message = "Folder opened." })
+        : Results.BadRequest(new { error = "Unable to open folder." });
 });
 
 app.MapGet("/api/voice/status", () => Results.Ok(new
@@ -330,7 +401,9 @@ static async Task RunCliAsync(SettingsService settingsService, OllamaService oll
 }
 
 public sealed record ChatRequest(string Message);
-public sealed record MemoryRequest(string Text, string? Category);
+public sealed record MemoryRequest(string Text, string? Category, string[]? Tags = null, int Importance = 3);
+public sealed record MemoryUpdateRequest(string Text, string? Category, string[]? Tags = null, int? Importance = null);
 public sealed record SpeakRequest(string Text);
 public sealed record VoiceCommandRequest(string Transcript, bool Confirmed = false);
 public sealed record WakeWordCheckRequest(string Transcript);
+public sealed record FileOpenRequest(string Path);

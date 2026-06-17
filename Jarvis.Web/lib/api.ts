@@ -1,8 +1,10 @@
 import type {
   AppSettings,
   ChatMessage,
+  FileSearchResult,
   JarvisStatus,
   MemoryItem,
+  MemoryFormValues,
   VoiceCommandCatalogItem,
   VoiceCommandResult,
   WakeWordCheckResult,
@@ -90,10 +92,28 @@ export const jarvisApi = {
     }),
   voiceCommands: () => request<VoiceCommandCatalogItem[]>("/api/voice/commands"),
   memory: () => request<MemoryItem[]>("/api/memory"),
-  addMemory: (text: string, category = "General") =>
+  searchMemory: (filters: { query?: string; category?: string; tag?: string; minImportance?: number }) => {
+    const params = new URLSearchParams();
+    if (filters.query?.trim()) params.set("q", filters.query.trim());
+    if (filters.category?.trim()) params.set("category", filters.category.trim());
+    if (filters.tag?.trim()) params.set("tag", filters.tag.trim());
+    if (filters.minImportance) params.set("minImportance", String(filters.minImportance));
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return request<MemoryItem[]>(`/api/memory/search${suffix}`);
+  },
+  addMemory: (values: MemoryFormValues) =>
     request<MemoryItem[]>("/api/memory", {
       method: "POST",
-      body: JSON.stringify({ text, category })
+      body: JSON.stringify(values)
+    }),
+  updateMemory: (id: string, values: MemoryFormValues) =>
+    request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(values)
+    }),
+  deleteMemory: (id: string) =>
+    request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}`, {
+      method: "DELETE"
     }),
   clearMemory: () => request<MemoryItem[]>("/api/memory", { method: "DELETE" }),
   settings: () => request<AppSettings>("/api/settings"),
@@ -104,5 +124,19 @@ export const jarvisApi = {
     }),
   indexFiles: () => request<{ count: number }>("/api/files/index", { method: "POST" }),
   searchFiles: (query: string) =>
-    request<string[]>(`/api/files/search?q=${encodeURIComponent(query)}`)
+    request<string[]>(`/api/files/search?q=${encodeURIComponent(query)}`),
+  searchFilesDetailed: (query: string, limit = 25) =>
+    request<FileSearchResult[]>(
+      `/api/files/search-detailed?q=${encodeURIComponent(query)}&limit=${limit}`
+    ),
+  openFile: (path: string) =>
+    request<{ success: boolean; message: string }>(`/api/files/open`, {
+      method: "POST",
+      body: JSON.stringify({ path })
+    }),
+  openContainingFolder: (path: string) =>
+    request<{ success: boolean; message: string }>(`/api/files/open-folder`, {
+      method: "POST",
+      body: JSON.stringify({ path })
+    })
 };

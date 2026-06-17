@@ -73,7 +73,7 @@ public sealed class VoiceCommandService
 
         if (TryStripPrefix(normalized, ["remember that ", "remember ", "save memory ", "memorize "], out var memoryText))
         {
-            await _memoryService.AddAsync(memoryText, "Voice", cancellationToken);
+            await _memoryService.AddAsync(memoryText, "Voice", cancellationToken: cancellationToken);
             return VoiceCommandResult.Done("memory.add", $"Saved to memory: {memoryText}");
         }
 

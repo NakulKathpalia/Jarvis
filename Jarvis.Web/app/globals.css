@@ -702,6 +702,159 @@ span {
   overflow: auto;
 }
 
+.memory-search-bar,
+.memory-form,
+.memory-edit-grid {
+  width: min(100%, 920px);
+  display: grid;
+  gap: 10px;
+}
+
+.memory-search-bar {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto;
+  padding: 18px 0 8px;
+}
+
+.memory-search-bar input,
+.memory-form input,
+.memory-form textarea,
+.memory-edit-grid input,
+.memory-edit-grid textarea {
+  width: 100%;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  outline: none;
+  padding: 12px 13px;
+}
+
+.memory-search-bar input:focus,
+.memory-form input:focus,
+.memory-form textarea:focus,
+.memory-edit-grid input:focus,
+.memory-edit-grid textarea:focus {
+  border-color: var(--accent);
+}
+
+.memory-form,
+.memory-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #272727;
+  padding: 14px;
+}
+
+.memory-form {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: end;
+  margin-bottom: 10px;
+}
+
+.memory-form label,
+.memory-edit-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.memory-form label span,
+.memory-edit-grid label span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.memory-form textarea,
+.memory-edit-grid textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.memory-form button {
+  min-height: 44px;
+  border-radius: 10px;
+}
+
+.memory-card {
+  gap: 12px;
+}
+
+.memory-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.memory-card-head strong {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.memory-badges,
+.memory-tags,
+.memory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.memory-badge,
+.memory-tag,
+.file-match-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.memory-tag {
+  color: #a7f3d0;
+  background: rgba(16, 163, 127, 0.12);
+}
+
+.memory-card span,
+.file-card span,
+.file-snippet {
+  font-size: 13px;
+}
+
+.memory-card.editing {
+  background: #232323;
+}
+
+.memory-edit-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.file-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.file-card-head strong {
+  font-size: 15px;
+}
+
+.file-path {
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  overflow-wrap: anywhere;
+}
+
+.file-snippet {
+  margin: 0;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .list-card,
 .list-empty {
   border: 1px solid var(--line);
@@ -891,6 +1044,12 @@ span {
   .tool-form,
   .settings-form,
   .composer {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-search-bar,
+  .memory-form,
+  .memory-edit-grid {
     grid-template-columns: 1fr;
   }
 

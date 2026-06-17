@@ -6,6 +6,12 @@
 
 Jarvis.Web/node_modules/
 Jarvis.Web/.next/
+Jarvis.Web/tsconfig.tsbuildinfo
+
+Jarvis/wwwroot/generated-audio/
+**/generated-audio/
+**/*.tmp
+**/*.temp
 
 models/
 tools/
