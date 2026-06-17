@@ -9,7 +9,7 @@ public static class Commands
         MemoryService memoryService,
         SettingsService settingsService,
         FileIndexService fileIndexService,
-        InstalledAppService appService)
+        PcCommandService pcCommandService)
     {
         var commands = new List<ICommand>();
         var manager = new CommandManager(commands);
@@ -18,7 +18,7 @@ public static class Commands
         commands.Add(new MemoryCommand(memoryService));
         commands.Add(new SettingsCommandService(settingsService));
         commands.Add(new FileCommand(fileIndexService));
-        commands.Add(new AppCommandService(appService));
+        commands.Add(new AppCommandService(pcCommandService));
 
         return manager;
     }

@@ -1,4 +1,5 @@
 using Jarvis.Memory;
+using Jarvis.Models;
 
 namespace Jarvis.Services;
 
@@ -35,19 +36,19 @@ public sealed class VoiceCommandService
 
     private readonly MemoryService _memoryService;
     private readonly FileIndexService _fileIndexService;
-    private readonly InstalledAppService _installedAppService;
     private readonly SettingsService _settingsService;
+    private readonly PcCommandService _pcCommandService;
 
     public VoiceCommandService(
         MemoryService memoryService,
         FileIndexService fileIndexService,
-        InstalledAppService installedAppService,
-        SettingsService settingsService)
+        SettingsService settingsService,
+        PcCommandService pcCommandService)
     {
         _memoryService = memoryService;
         _fileIndexService = fileIndexService;
-        _installedAppService = installedAppService;
         _settingsService = settingsService;
+        _pcCommandService = pcCommandService;
     }
 
     public async Task<VoiceCommandResult> TryExecuteAsync(
@@ -107,18 +108,13 @@ public sealed class VoiceCommandService
 
         if (TryStripPrefix(normalized, ["open ", "launch ", "start "], out var target))
         {
-            if (!confirmed)
-            {
-                return VoiceCommandResult.NeedsConfirmation(
-                    "app.open",
-                    $"Opening '{target}' will launch an app, file, folder, or URL.",
-                    target);
-            }
+            return await RunPcCommandAsync(input, confirmed, cancellationToken);
+        }
 
-            var opened = await _installedAppService.OpenAsync(target);
-            return opened
-                ? VoiceCommandResult.Done("app.open", $"Opened {target}.")
-                : VoiceCommandResult.Done("app.open", $"Could not open {target}.");
+        var pcResult = await _pcCommandService.ExecuteAsync(input, confirmed, cancellationToken);
+        if (pcResult.Handled || pcResult.RequiresConfirmation)
+        {
+            return ToVoiceResult(pcResult);
         }
 
         return VoiceCommandResult.NoMatch();
@@ -168,6 +164,30 @@ public sealed class VoiceCommandService
             .Select(command => $"{command.Category}: {string.Join(" | ", command.Examples)}");
 
         return "Available local voice commands:\n" + string.Join("\n", lines);
+    }
+
+    private async Task<VoiceCommandResult> RunPcCommandAsync(
+        string input,
+        bool confirmed,
+        CancellationToken cancellationToken)
+    {
+        var pcResult = await _pcCommandService.ExecuteAsync(input, confirmed, cancellationToken);
+        return ToVoiceResult(pcResult);
+    }
+
+    private static VoiceCommandResult ToVoiceResult(PcCommandExecutionResult result)
+    {
+        if (result.RequiresConfirmation)
+        {
+            return VoiceCommandResult.NeedsConfirmation(
+                result.Command,
+                result.Message,
+                result.ConfirmationId ?? result.ConfirmationToken ?? string.Empty);
+        }
+
+        return result.Handled
+            ? VoiceCommandResult.Done(result.Command, result.Message)
+            : VoiceCommandResult.NoMatch();
     }
 }
 

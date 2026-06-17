@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChatPanel } from "./ChatPanel";
+import { ControlPanel } from "./ControlPanel";
 import { FilesPanel } from "./FilesPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { SettingsPanel } from "./SettingsPanel";
@@ -245,6 +246,8 @@ export function AppShell() {
         )}
 
         {activeView === "files" && <FilesPanel onToast={showToast} />}
+
+        {activeView === "control" && <ControlPanel onToast={showToast} />}
 
         {activeView === "settings" && settings && (
           <SettingsPanel settings={settings} onSave={saveSettings} />

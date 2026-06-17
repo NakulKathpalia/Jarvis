@@ -100,6 +100,12 @@ h2 {
   font-weight: 650;
 }
 
+h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
 p,
 span {
   color: var(--muted);
@@ -855,6 +861,86 @@ span {
   overflow-wrap: anywhere;
 }
 
+.control-message,
+.control-confirmation,
+.control-grid {
+  width: min(100%, 920px);
+}
+
+.control-message,
+.control-confirmation {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #282828;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.control-confirmation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-color: rgba(251, 191, 36, 0.52);
+  background: #2b281f;
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  overflow: auto;
+}
+
+.control-section {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.control-card {
+  gap: 8px;
+}
+
+.control-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.control-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.control-pill.safe,
+.control-pill.completed {
+  color: #a7f3d0;
+  background: rgba(16, 163, 127, 0.12);
+}
+
+.control-pill.confirmationrequired,
+.control-pill.pendingconfirmation {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+}
+
+.control-pill.blocked,
+.control-pill.failed,
+.control-pill.expired {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.12);
+}
+
 .list-card,
 .list-empty {
   border: 1px solid var(--line);
@@ -1049,8 +1135,14 @@ span {
 
   .memory-search-bar,
   .memory-form,
-  .memory-edit-grid {
+  .memory-edit-grid,
+  .control-grid {
     grid-template-columns: 1fr;
+  }
+
+  .control-confirmation {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .voice-setup-row {

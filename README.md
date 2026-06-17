@@ -46,6 +46,40 @@ Keep local models, tool binaries, generated audio, and temporary files out of gi
 - JSON memory and chat history
 - Smart memory search, tags, importance, edit, and delete
 - File indexing with path and text-content search
+- PC control commands with safety confirmation and JSON logs
 - Whisper transcription and Piper speech APIs
 - Next.js dashboard
 - CLI mode
+
+## PC Control Commands
+
+Supported commands are intentionally limited to known local actions. Jarvis does not execute arbitrary shell, PowerShell, cmd, script, delete, registry, credential, format, or attack commands from user text.
+
+Safe commands run directly:
+
+- Browser search: `search web for best local ai models`
+- Volume up: `volume up`
+- Volume down: `volume down`
+- Mute/unmute toggle: `mute volume`
+
+Commands that require confirmation:
+
+- Open app: `open chrome`
+- Open website: `open youtube`
+- Open folder: `open folder D:\newfolder`
+- Open file: `open file D:\notes.txt`
+- Take screenshot: `take screenshot`
+- Sleep: `sleep computer`
+- Shutdown: `shutdown computer`
+- Restart: `restart computer`
+
+Unknown system commands are blocked and logged.
+
+Command logs are stored locally as JSON with timestamp, original input, parsed command, target, safety level, status, and result message.
+
+## Current Limitations
+
+- Windows PC control is implemented first. macOS/Linux can be added later through the `IPcControlService` abstraction.
+- Screenshots are saved locally as `.bmp` files.
+- Shutdown and restart are scheduled with a short delay after confirmation.
+- The dashboard should be run with `npm run dev` during active development; production builds are for release checks.

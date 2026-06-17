@@ -5,6 +5,9 @@ import type {
   JarvisStatus,
   MemoryItem,
   MemoryFormValues,
+  PcCommandCatalogItem,
+  PcCommandExecutionResult,
+  PcCommandLogEntry,
   VoiceCommandCatalogItem,
   VoiceCommandResult,
   WakeWordCheckResult,
@@ -138,5 +141,17 @@ export const jarvisApi = {
     request<{ success: boolean; message: string }>(`/api/files/open-folder`, {
       method: "POST",
       body: JSON.stringify({ path })
+    }),
+  commandCatalog: () => request<PcCommandCatalogItem[]>("/api/commands/catalog"),
+  commandLogs: () => request<PcCommandLogEntry[]>("/api/commands/logs"),
+  executeCommand: (input: string) =>
+    request<PcCommandExecutionResult>("/api/commands/execute", {
+      method: "POST",
+      body: JSON.stringify({ input })
+    }),
+  confirmCommand: (confirmationId: string) =>
+    request<PcCommandExecutionResult>("/api/commands/confirm", {
+      method: "POST",
+      body: JSON.stringify({ confirmationId })
     })
 };

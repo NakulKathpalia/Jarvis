@@ -1,4 +1,4 @@
-export type ViewKey = "chat" | "memory" | "files" | "settings";
+export type ViewKey = "chat" | "memory" | "files" | "control" | "settings";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -106,4 +106,36 @@ export type FileSearchResult = {
   snippet?: string | null;
   sizeBytes: number;
   lastWriteTimeUtc: string;
+};
+
+export type CommandSafetyLevel = "Safe" | "ConfirmationRequired" | "Blocked";
+
+export type CommandExecutionStatus = "PendingConfirmation" | "Completed" | "Failed" | "Blocked" | "Expired";
+
+export type PcCommandCatalogItem = {
+  command: string;
+  description: string;
+  safetyLevel: CommandSafetyLevel;
+  examples: string[];
+};
+
+export type PcCommandLogEntry = {
+  id: string;
+  timestampUtc: string;
+  originalInput: string;
+  parsedCommand: string;
+  target: string;
+  safetyLevel: CommandSafetyLevel;
+  status: CommandExecutionStatus;
+  resultMessage: string;
+};
+
+export type PcCommandExecutionResult = {
+  handled: boolean;
+  requiresConfirmation: boolean;
+  command: string;
+  target: string;
+  message: string;
+  confirmationToken?: string | null;
+  confirmationId?: string | null;
 };

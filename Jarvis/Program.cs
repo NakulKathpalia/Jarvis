@@ -4,11 +4,13 @@ using Jarvis.Data;
 using Jarvis.Memory;
 using Jarvis.Models;
 using Jarvis.Services;
+using System.Text.Json.Serialization;
 
 var basePath = AppContext.BaseDirectory;
 var settingsPath = Path.Combine(basePath, "appsettings.json");
 var memoryPath = Path.Combine(basePath, "Memory", "memory.json");
 var historyPath = Path.Combine(basePath, "Data", "chat_history.json");
+var commandLogPath = Path.Combine(basePath, "Data", "command_logs.json");
 
 var settingsService = new SettingsService(settingsPath);
 await settingsService.LoadAsync();
@@ -19,21 +21,27 @@ await memoryService.LoadAsync();
 var chatHistoryService = new ChatHistoryService(historyPath);
 await chatHistoryService.LoadAsync();
 
+var commandLogService = new CommandLogService(commandLogPath);
+await commandLogService.LoadAsync();
+
 using var httpClient = new HttpClient();
 var ollamaService = new OllamaService(httpClient, settingsService);
 var whisperService = new WhisperService(settingsService);
 var piperService = new PiperService(settingsService, Path.Combine(basePath, "wwwroot"));
 var wakeWordService = new WakeWordService(settingsService, whisperService);
 var fileIndexService = new FileIndexService(settingsService);
-var installedAppService = new InstalledAppService();
-var voiceCommandService = new VoiceCommandService(memoryService, fileIndexService, installedAppService, settingsService);
+var pcCommandParser = new PcCommandParser();
+var commandSafetyService = new CommandSafetyService();
+var pcControlService = new WindowsPcControlService(Path.Combine(basePath, "Data", "screenshots"));
+var pcCommandService = new PcCommandService(pcCommandParser, commandSafetyService, commandLogService, pcControlService);
+var voiceCommandService = new VoiceCommandService(memoryService, fileIndexService, settingsService, pcCommandService);
 var classifierService = new ClassifierService();
 
 var commandManager = Commands.Create(
     memoryService,
     settingsService,
     fileIndexService,
-    installedAppService);
+    pcCommandService);
 
 var assistant = new Assistant(
     ollamaService,
@@ -51,6 +59,10 @@ if (args.Contains("--cli", StringComparer.OrdinalIgnoreCase))
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://localhost:5055");
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 var app = builder.Build();
 app.UseDefaultFiles();
@@ -201,6 +213,32 @@ app.MapPost("/api/files/open-folder", (FileOpenRequest request) =>
     return success
         ? Results.Ok(new { success = true, message = "Folder opened." })
         : Results.BadRequest(new { error = "Unable to open folder." });
+});
+
+app.MapGet("/api/commands/catalog", () => Results.Ok(pcCommandService.Catalog));
+
+app.MapGet("/api/commands/logs", () => Results.Ok(commandLogService.Logs.Take(50)));
+
+app.MapPost("/api/commands/execute", async (PcCommandExecuteRequest request, CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Input))
+    {
+        return Results.BadRequest(new { error = "Command input is required." });
+    }
+
+    var result = await pcCommandService.ExecuteAsync(request.Input.Trim(), cancellationToken: cancellationToken);
+    return Results.Ok(result);
+});
+
+app.MapPost("/api/commands/confirm", async (PcCommandConfirmRequest request, CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.ConfirmationId))
+    {
+        return Results.BadRequest(new { error = "Confirmation id is required." });
+    }
+
+    var result = await pcCommandService.ConfirmAsync(request.ConfirmationId.Trim(), cancellationToken);
+    return Results.Ok(result);
 });
 
 app.MapGet("/api/voice/status", () => Results.Ok(new

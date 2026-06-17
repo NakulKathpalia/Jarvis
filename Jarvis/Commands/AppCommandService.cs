@@ -4,27 +4,34 @@ namespace Jarvis.Commands;
 
 public sealed class AppCommandService : ICommand
 {
-    private readonly InstalledAppService _appService;
+    private readonly PcCommandService _pcCommandService;
 
-    public AppCommandService(InstalledAppService appService)
+    public AppCommandService(PcCommandService pcCommandService)
     {
-        _appService = appService;
+        _pcCommandService = pcCommandService;
     }
 
     public string Name => "app";
-    public string Description => "Open an app, file, folder, or URL.";
-    public string Usage => "/app open <target>";
+    public string Description => "Run known PC control commands with safety checks.";
+    public string Usage => "/app <command> or /app confirm <confirmation-id>";
 
     public async Task ExecuteAsync(string arguments, CancellationToken cancellationToken = default)
     {
-        var parts = arguments.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2 || !parts[0].Equals("open", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(arguments))
         {
             Console.WriteLine($"Usage: {Usage}");
             return;
         }
 
-        var opened = await _appService.OpenAsync(parts[1].Trim());
-        Console.WriteLine(opened ? "Opened." : "Could not open target.");
+        var parts = arguments.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var result = parts.Length == 2 && parts[0].Equals("confirm", StringComparison.OrdinalIgnoreCase)
+            ? await _pcCommandService.ConfirmAsync(parts[1].Trim(), cancellationToken)
+            : await _pcCommandService.ExecuteAsync(arguments.Trim(), cancellationToken: cancellationToken);
+
+        Console.WriteLine(result.Message);
+        if (result.RequiresConfirmation)
+        {
+            Console.WriteLine($"Confirm with: /app confirm {result.ConfirmationId}");
+        }
     }
 }
