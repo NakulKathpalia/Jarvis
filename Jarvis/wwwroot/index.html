@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jarvis</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark">J</div>
+        <div>
+          <h1>Jarvis</h1>
+          <p id="statusText">Starting</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="chat" title="Chat">
+          <span>Chat</span>
+        </button>
+        <button class="nav-item" data-view="memory" title="Memory">
+          <span>Memory</span>
+        </button>
+        <button class="nav-item" data-view="files" title="Files">
+          <span>Files</span>
+        </button>
+        <button class="nav-item" data-view="settings" title="Settings">
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <div class="system-card">
+        <div class="metric">
+          <span>Model</span>
+          <strong id="modelName">-</strong>
+        </div>
+        <div class="metric">
+          <span>Memory</span>
+          <strong id="memoryCount">0</strong>
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <section class="view active" id="chatView">
+        <header class="topbar">
+          <div>
+            <h2>Conversation</h2>
+            <p>Local Ollama session</p>
+          </div>
+          <button class="ghost-button" id="refreshButton">Refresh</button>
+        </header>
+
+        <div class="chat-log" id="chatLog"></div>
+
+        <form class="composer" id="chatForm">
+          <textarea id="messageInput" rows="1" placeholder="Ask Jarvis..."></textarea>
+          <button type="submit" id="sendButton">Send</button>
+        </form>
+      </section>
+
+      <section class="view" id="memoryView">
+        <header class="topbar">
+          <div>
+            <h2>Memory</h2>
+            <p>Saved locally</p>
+          </div>
+          <button class="danger-button" id="clearMemoryButton">Clear</button>
+        </header>
+
+        <form class="inline-form" id="memoryForm">
+          <input id="memoryInput" placeholder="Remember something important">
+          <button type="submit">Add</button>
+        </form>
+
+        <div class="list" id="memoryList"></div>
+      </section>
+
+      <section class="view" id="filesView">
+        <header class="topbar">
+          <div>
+            <h2>Files</h2>
+            <p>Local index</p>
+          </div>
+          <button class="ghost-button" id="indexButton">Index</button>
+        </header>
+
+        <form class="inline-form" id="fileSearchForm">
+          <input id="fileQueryInput" placeholder="Search indexed files">
+          <button type="submit">Find</button>
+        </form>
+
+        <div class="list file-list" id="fileResults"></div>
+      </section>
+
+      <section class="view" id="settingsView">
+        <header class="topbar">
+          <div>
+            <h2>Settings</h2>
+            <p>Runtime configuration</p>
+          </div>
+          <button class="ghost-button" id="saveSettingsButton">Save</button>
+        </header>
+
+        <div class="settings-grid">
+          <label>
+            <span>Ollama URL</span>
+            <input id="ollamaUrlInput">
+          </label>
+          <label>
+            <span>Model</span>
+            <input id="modelInput">
+          </label>
+          <label>
+            <span>History Messages</span>
+            <input id="historyInput" type="number" min="1">
+          </label>
+          <label>
+            <span>File Root</span>
+            <input id="fileRootInput">
+          </label>
+          <label class="wide">
+            <span>System Prompt</span>
+            <textarea id="systemPromptInput" rows="5"></textarea>
+          </label>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

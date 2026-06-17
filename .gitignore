@@ -1,0 +1,11 @@
+.vs/
+.tmp/
+
+**/bin/
+**/obj/
+
+Jarvis.Web/node_modules/
+Jarvis.Web/.next/
+
+models/
+tools/
