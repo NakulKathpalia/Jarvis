@@ -47,9 +47,36 @@ Keep local models, tool binaries, generated audio, and temporary files out of gi
 - Smart memory search, tags, importance, edit, and delete
 - File indexing with path and text-content search
 - PC control commands with safety confirmation and JSON logs
-- Whisper transcription and Piper speech APIs
+- Stable voice pipeline with Whisper, wake word check, command routing, AI fallback, and Piper speech
+- Cross-platform path resolver, platform detection, settings validation, and diagnostics endpoint
 - Next.js dashboard
 - CLI mode
+
+## Voice Pipeline
+
+The voice pipeline runs as a single backend orchestration flow:
+
+```text
+Microphone -> Record Audio -> Whisper -> Wake Word Check -> Command Detection -> Confirmation or Execution -> AI Fallback -> Piper Speech -> Result
+```
+
+Pipeline state is explicit:
+
+```text
+Idle, Listening, Recording, Transcribing, WakeWordChecking, CommandDetected, AwaitingConfirmation, ExecutingCommand, GeneratingAIResponse, Speaking, Completed, Error
+```
+
+Voice history is stored separately from chat history in local JSON.
+
+## Diagnostics
+
+Use the diagnostics endpoint to inspect platform and local paths:
+
+```text
+GET http://localhost:5055/api/diagnostics
+```
+
+Diagnostics includes platform, app data path, memory path, logs path, screenshot path, generated audio path, Ollama health, Whisper health, Piper health, and settings warnings.
 
 ## PC Control Commands
 

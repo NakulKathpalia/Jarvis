@@ -1,6 +1,7 @@
 import type {
   AppSettings,
   ChatMessage,
+  DiagnosticsResult,
   FileSearchResult,
   JarvisStatus,
   MemoryItem,
@@ -10,6 +11,9 @@ import type {
   PcCommandLogEntry,
   VoiceCommandCatalogItem,
   VoiceCommandResult,
+  VoiceHistoryItem,
+  VoicePipelineResult,
+  VoicePipelineStatus,
   WakeWordCheckResult,
   VoiceStatus
 } from "./types";
@@ -39,6 +43,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const jarvisApi = {
   status: () => request<JarvisStatus>("/api/status"),
+  diagnostics: () => request<DiagnosticsResult>("/api/diagnostics"),
   history: () => request<ChatMessage[]>("/api/history"),
   chat: (message: string) =>
     request<{ response: string }>("/api/chat", {
@@ -76,6 +81,36 @@ export const jarvisApi = {
     }>;
   },
   voiceStatus: () => request<VoiceStatus>("/api/voice/status"),
+  voicePipelineStatus: () => request<VoicePipelineStatus>("/api/voice/pipeline/status"),
+  voiceHistory: () => request<VoiceHistoryItem[]>("/api/voice/history"),
+  runVoicePipeline: async (audio: Blob, requireWakeWord = false) => {
+    const formData = new FormData();
+    formData.append("audio", audio, `jarvis-pipeline-${Date.now()}.webm`);
+    formData.append("requireWakeWord", String(requireWakeWord));
+
+    const response = await fetch("/api/voice/pipeline", {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      let message = `Voice pipeline failed (${response.status})`;
+      try {
+        const body = (await response.json()) as { error?: string };
+        message = body.error ?? message;
+      } catch {
+        // Keep the default error.
+      }
+      throw new Error(message);
+    }
+
+    return response.json() as Promise<VoicePipelineResult>;
+  },
+  confirmVoicePipeline: (confirmationId: string) =>
+    request<VoicePipelineResult>("/api/voice/pipeline/confirm", {
+      method: "POST",
+      body: JSON.stringify({ confirmationId })
+    }),
   wakeStatus: () =>
     request<VoiceStatus["wakeWord"]>("/api/voice/wake-status"),
   wakeCheck: (transcript: string) =>

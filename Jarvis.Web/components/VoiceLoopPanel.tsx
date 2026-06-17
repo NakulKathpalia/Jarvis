@@ -2,32 +2,37 @@
 
 import { useEffect, useRef, useState } from "react";
 import { jarvisApi } from "@/lib/api";
+import type { VoicePipelineResult, VoicePipelineState, VoicePipelineStatus } from "@/lib/types";
 import { startVoiceCapture, type VoiceCaptureSession } from "@/lib/voiceCapture";
 
 type VoiceLoopPanelProps = {
   disabled: boolean;
-  autoSpeak: boolean;
-  onSend: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
-  onSpeak: (text: string) => Promise<void>;
+  onRefresh: () => Promise<void>;
   onToast: (message: string) => void;
   wakeSignal: number;
 };
 
-type VoiceLoopState = "idle" | "listening" | "transcribing" | "thinking" | "speaking" | "ready";
 type VoiceLoopSource = "manual" | "wake";
 
-export function VoiceLoopPanel({
-  disabled,
-  autoSpeak,
-  onSend,
-  onSpeak,
-  onToast,
-  wakeSignal
-}: VoiceLoopPanelProps) {
+const activeStates: VoicePipelineState[] = [
+  "Recording",
+  "Transcribing",
+  "WakeWordChecking",
+  "CommandDetected",
+  "ExecutingCommand",
+  "GeneratingAIResponse",
+  "Speaking"
+];
+
+export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: VoiceLoopPanelProps) {
   const [isActive, setIsActive] = useState(false);
-  const [state, setState] = useState<VoiceLoopState>("idle");
-  const [lastTranscript, setLastTranscript] = useState("");
+  const [status, setStatus] = useState<VoicePipelineStatus | null>(null);
+  const [pending, setPending] = useState<VoicePipelineResult | null>(null);
   const captureRef = useRef<VoiceCaptureSession | null>(null);
+
+  useEffect(() => {
+    jarvisApi.voicePipelineStatus().then(setStatus).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (wakeSignal <= 0) {
@@ -37,46 +42,26 @@ export function VoiceLoopPanel({
     void activateLoop("wake");
   }, [wakeSignal]);
 
-  async function startLoop() {
-    await activateLoop("manual");
-  }
-
   async function activateLoop(source: VoiceLoopSource) {
-    if (disabled) {
+    if (disabled || isBusy(status?.state)) {
       onToast("Jarvis is busy.");
-      return;
-    }
-
-    if (state === "listening" || state === "transcribing" || state === "thinking" || state === "speaking") {
-      onToast("Voice loop is already active.");
-      return;
-    }
-
-    setIsActive(true);
-    await startListening(source);
-  }
-
-  function stopLoop() {
-    captureRef.current?.cancel();
-    captureRef.current = null;
-    setIsActive(false);
-    setState("idle");
-    setLastTranscript("");
-    onToast("Voice loop stopped");
-  }
-
-  async function startListening(source: VoiceLoopSource = "manual") {
-    if (disabled) {
       return;
     }
 
     try {
       captureRef.current = await startVoiceCapture();
-      setState("listening");
-      onToast(source === "wake" ? "Wake word activated. Listening." : "Voice loop listening");
+      setIsActive(true);
+      setStatus({
+        state: "Recording",
+        updatedAtUtc: new Date().toISOString(),
+        lastTranscript: status?.lastTranscript ?? "",
+        lastAiResponse: status?.lastAiResponse ?? "",
+        message: source === "wake" ? "Wake word activated. Recording." : "Recording voice turn."
+      });
+      onToast(source === "wake" ? "Wake word activated. Recording." : "Recording voice turn");
     } catch (error) {
       setIsActive(false);
-      setState("idle");
+      setStatus(toStatus("Error", error instanceof Error ? error.message : "Microphone permission failed"));
       onToast(error instanceof Error ? error.message : "Microphone permission failed");
     }
   }
@@ -88,76 +73,120 @@ export function VoiceLoopPanel({
     }
 
     captureRef.current = null;
-    setState("transcribing");
+    setStatus(toStatus("Transcribing", "Sending audio to the local voice pipeline.", status));
 
     try {
       const wav = await capture.stop();
-      const transcription = await jarvisApi.transcribeVoice(wav);
-      const transcript = transcription.transcript.trim();
-
-      if (!transcript) {
-        onToast(transcription.message || "No transcript returned");
-        setState(isActive ? "ready" : "idle");
-        return;
-      }
-
-      setLastTranscript(transcript);
-      setState("thinking");
-      const response = await onSend(transcript, { skipAutoSpeak: true });
-
-      if (autoSpeak && response.trim()) {
-        setState("speaking");
-        await onSpeak(response);
-      }
-
-      setState(isActive ? "ready" : "idle");
+      const result = await jarvisApi.runVoicePipeline(wav);
+      await handlePipelineResult(result);
     } catch (error) {
-      onToast(error instanceof Error ? error.message : "Voice loop failed");
-      setState(isActive ? "ready" : "idle");
+      const message = error instanceof Error ? error.message : "Voice pipeline failed";
+      setStatus(toStatus("Error", message, status));
+      onToast(message);
+    } finally {
+      setIsActive(false);
     }
   }
 
-  async function listenAgain() {
-    await startListening("manual");
+  async function confirmPending() {
+    const confirmationId = pending?.confirmationId;
+    if (!confirmationId) {
+      return;
+    }
+
+    setStatus(toStatus("ExecutingCommand", "Executing confirmed voice command.", status));
+    try {
+      const result = await jarvisApi.confirmVoicePipeline(confirmationId);
+      setPending(null);
+      await handlePipelineResult(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Voice confirmation failed";
+      setStatus(toStatus("Error", message, status));
+      onToast(message);
+    }
   }
 
-  const statusText = getStatusText(state, isActive);
+  function cancelPending() {
+    setPending(null);
+    setStatus(toStatus("Completed", "Voice command cancelled locally.", status));
+  }
+
+  function stopLoop() {
+    captureRef.current?.cancel();
+    captureRef.current = null;
+    setIsActive(false);
+    setPending(null);
+    setStatus(toStatus("Idle", "Voice loop stopped.", status));
+    onToast("Voice loop stopped");
+  }
+
+  async function handlePipelineResult(result: VoicePipelineResult) {
+    setStatus({
+      state: result.state,
+      updatedAtUtc: new Date().toISOString(),
+      lastTranscript: result.transcript || status?.lastTranscript || "",
+      lastAiResponse: result.aiResponse || status?.lastAiResponse || "",
+      message: result.message
+    });
+
+    if (result.requiresConfirmation) {
+      setPending(result);
+      onToast("Voice command needs confirmation");
+      return;
+    }
+
+    if (result.audioUrl) {
+      setStatus(toStatus("Speaking", "Playing Piper audio.", status));
+      await new Audio(result.audioUrl).play();
+      setStatus(toStatus("Completed", result.message, status));
+    }
+
+    await onRefresh();
+  }
+
+  const currentState = status?.state ?? "Idle";
+  const transcript = status?.lastTranscript ?? "";
+  const aiResponse = status?.lastAiResponse ?? "";
 
   return (
-    <section className={isActive ? "voice-loop active" : "voice-loop"}>
+    <section className={isActive || isBusy(currentState) ? "voice-loop active" : "voice-loop"}>
       <div className="voice-loop-main">
         <span className="voice-loop-dot" />
         <div>
-          <strong>Voice Loop</strong>
-          <p>{statusText}</p>
+          <strong>Voice Pipeline</strong>
+          <p>{status?.message ?? "Start a hands-free turn."}</p>
+          <span>{currentState} - {formatTimestamp(status?.updatedAtUtc)}</span>
         </div>
       </div>
 
-      {lastTranscript && (
-        <div className="voice-loop-transcript" title={lastTranscript}>
-          {lastTranscript}
-        </div>
-      )}
+      <div className="voice-loop-transcript" title={transcript || aiResponse}>
+        {transcript || aiResponse || "No voice turn yet."}
+      </div>
 
       <div className="voice-loop-actions">
-        {!isActive && (
-          <button className="soft-button" type="button" disabled={disabled} onClick={startLoop}>
-            Start loop
-          </button>
-        )}
-        {isActive && state === "listening" && (
-          <button className="danger-button" type="button" onClick={finishTurn}>
-            Finish turn
-          </button>
-        )}
-        {isActive && state === "ready" && (
-          <button className="soft-button" type="button" disabled={disabled} onClick={listenAgain}>
-            Listen again
+        {!isActive && !pending && (
+          <button className="soft-button" type="button" disabled={disabled} onClick={() => activateLoop("manual")}>
+            Start
           </button>
         )}
         {isActive && (
+          <button className="danger-button" type="button" onClick={finishTurn}>
+            Finish
+          </button>
+        )}
+        {pending && (
+          <button className="primary-button" type="button" onClick={confirmPending}>
+            Confirm
+          </button>
+        )}
+        {pending && (
+          <button className="soft-button" type="button" onClick={cancelPending}>
+            Cancel
+          </button>
+        )}
+        {(isActive || pending) && (
           <button className="soft-button" type="button" onClick={stopLoop}>
-            Stop loop
+            Stop
           </button>
         )}
       </div>
@@ -165,23 +194,28 @@ export function VoiceLoopPanel({
   );
 }
 
-function getStatusText(state: VoiceLoopState, isActive: boolean) {
-  if (!isActive) {
-    return "Start a hands-free turn.";
+function isBusy(state?: VoicePipelineState) {
+  return state ? activeStates.includes(state) : false;
+}
+
+function toStatus(
+  state: VoicePipelineState,
+  message: string,
+  previous?: VoicePipelineStatus | null
+): VoicePipelineStatus {
+  return {
+    state,
+    message,
+    updatedAtUtc: new Date().toISOString(),
+    lastTranscript: previous?.lastTranscript ?? "",
+    lastAiResponse: previous?.lastAiResponse ?? ""
+  };
+}
+
+function formatTimestamp(value?: string) {
+  if (!value) {
+    return "not run";
   }
 
-  switch (state) {
-    case "listening":
-      return "Listening. Click Finish turn when done speaking.";
-    case "transcribing":
-      return "Transcribing local audio.";
-    case "thinking":
-      return "Sending transcript to Jarvis.";
-    case "speaking":
-      return "Speaking the response.";
-    case "ready":
-      return "Turn complete. Ready for the next one.";
-    default:
-      return "Voice loop ready.";
-  }
+  return new Date(value).toLocaleTimeString();
 }

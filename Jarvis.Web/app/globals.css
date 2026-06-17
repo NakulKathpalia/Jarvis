@@ -1005,7 +1005,8 @@ span {
   min-width: 140px;
 }
 
-.voice-setup-card {
+.voice-setup-card,
+.diagnostics-card {
   display: grid;
   gap: 10px;
   border: 1px solid var(--line);
@@ -1026,6 +1027,19 @@ span {
 }
 
 .voice-setup-row span {
+  overflow-wrap: anywhere;
+}
+
+.diagnostics-health,
+.diagnostics-warnings {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.diagnostics-warnings span {
+  color: #fbbf24;
   overflow-wrap: anywhere;
 }
 

@@ -7,10 +7,10 @@ public sealed class PiperService
     private readonly SettingsService _settingsService;
     private readonly string _audioOutputDirectory;
 
-    public PiperService(SettingsService settingsService, string webRootPath)
+    public PiperService(SettingsService settingsService, string audioOutputDirectory)
     {
         _settingsService = settingsService;
-        _audioOutputDirectory = Path.Combine(webRootPath, "generated-audio");
+        _audioOutputDirectory = audioOutputDirectory;
         Directory.CreateDirectory(_audioOutputDirectory);
     }
 

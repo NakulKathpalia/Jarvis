@@ -7,32 +7,34 @@ using Jarvis.Services;
 using System.Text.Json.Serialization;
 
 var basePath = AppContext.BaseDirectory;
-var settingsPath = Path.Combine(basePath, "appsettings.json");
-var memoryPath = Path.Combine(basePath, "Memory", "memory.json");
-var historyPath = Path.Combine(basePath, "Data", "chat_history.json");
-var commandLogPath = Path.Combine(basePath, "Data", "command_logs.json");
+var pathResolver = new PathResolver(basePath);
+var platformService = new PlatformService();
 
-var settingsService = new SettingsService(settingsPath);
+var settingsService = new SettingsService(pathResolver.SettingsPath);
 await settingsService.LoadAsync();
 
-var memoryService = new MemoryService(memoryPath);
+var memoryService = new MemoryService(pathResolver.MemoryPath);
 await memoryService.LoadAsync();
 
-var chatHistoryService = new ChatHistoryService(historyPath);
+var chatHistoryService = new ChatHistoryService(pathResolver.ChatHistoryPath);
 await chatHistoryService.LoadAsync();
 
-var commandLogService = new CommandLogService(commandLogPath);
+var commandLogService = new CommandLogService(pathResolver.CommandLogPath);
 await commandLogService.LoadAsync();
+
+var voiceHistoryService = new VoiceHistoryService(pathResolver.VoiceHistoryPath);
+await voiceHistoryService.LoadAsync();
 
 using var httpClient = new HttpClient();
 var ollamaService = new OllamaService(httpClient, settingsService);
 var whisperService = new WhisperService(settingsService);
-var piperService = new PiperService(settingsService, Path.Combine(basePath, "wwwroot"));
+var piperService = new PiperService(settingsService, pathResolver.GeneratedAudioDirectory);
 var wakeWordService = new WakeWordService(settingsService, whisperService);
 var fileIndexService = new FileIndexService(settingsService);
 var pcCommandParser = new PcCommandParser();
 var commandSafetyService = new CommandSafetyService();
-var pcControlService = new WindowsPcControlService(Path.Combine(basePath, "Data", "screenshots"));
+var settingsValidationService = new SettingsValidationService(settingsService);
+var pcControlService = new WindowsPcControlService(pathResolver.ScreenshotDirectory);
 var pcCommandService = new PcCommandService(pcCommandParser, commandSafetyService, commandLogService, pcControlService);
 var voiceCommandService = new VoiceCommandService(memoryService, fileIndexService, settingsService, pcCommandService);
 var classifierService = new ClassifierService();
@@ -48,6 +50,16 @@ var assistant = new Assistant(
     settingsService,
     memoryService,
     chatHistoryService);
+
+var voicePipelineService = new VoicePipelineService(
+    whisperService,
+    wakeWordService,
+    pcCommandParser,
+    pcCommandService,
+    assistant,
+    piperService,
+    settingsService,
+    voiceHistoryService);
 
 var router = new CommandRouter(classifierService, commandManager, assistant);
 
@@ -76,6 +88,25 @@ app.MapGet("/api/status", async () => Results.Ok(new
     memoryCount = memoryService.Items.Count,
     historyCount = chatHistoryService.Messages.Count
 }));
+
+app.MapGet("/api/diagnostics", async () =>
+{
+    var validation = settingsValidationService.Validate();
+    var ollamaOnline = await ollamaService.IsRunningAsync();
+    return Results.Ok(new DiagnosticsResult(
+        platformService.Current,
+        pathResolver.AppDataDirectory,
+        pathResolver.MemoryPath,
+        pathResolver.LogsDirectory,
+        pathResolver.ScreenshotDirectory,
+        pathResolver.GeneratedAudioDirectory,
+        new ServiceDiagnostic(ollamaOnline, ollamaOnline
+            ? "Ollama is reachable."
+            : "Ollama is not reachable."),
+        new ServiceDiagnostic(whisperService.IsConfigured, whisperService.StatusMessage),
+        new ServiceDiagnostic(piperService.IsConfigured, piperService.StatusMessage),
+        validation.Warnings));
+});
 
 app.MapGet("/api/history", () => Results.Ok(chatHistoryService.Messages));
 
@@ -328,6 +359,42 @@ app.MapPost("/api/voice/transcribe", async (HttpRequest request, CancellationTok
         sizeBytes = audio.Length,
         message = result.Message
     });
+});
+
+app.MapGet("/api/voice/pipeline/status", () => Results.Ok(voicePipelineService.Status));
+
+app.MapGet("/api/voice/history", () => Results.Ok(voiceHistoryService.Items.Take(50)));
+
+app.MapPost("/api/voice/pipeline", async (HttpRequest request, CancellationToken cancellationToken) =>
+{
+    if (!request.HasFormContentType)
+    {
+        return Results.BadRequest(new { error = "Audio upload must be multipart/form-data." });
+    }
+
+    var form = await request.ReadFormAsync(cancellationToken);
+    var audio = form.Files.GetFile("audio");
+    if (audio is null || audio.Length == 0)
+    {
+        return Results.BadRequest(new { error = "Audio file is required." });
+    }
+
+    var requireWakeWord = bool.TryParse(form["requireWakeWord"], out var parsedRequireWakeWord)
+        && parsedRequireWakeWord;
+
+    var result = await voicePipelineService.ProcessAsync(audio, requireWakeWord, cancellationToken);
+    return Results.Ok(result);
+});
+
+app.MapPost("/api/voice/pipeline/confirm", async (VoiceConfirmationRequest request, CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.ConfirmationId))
+    {
+        return Results.BadRequest(new { error = "Confirmation id is required." });
+    }
+
+    var result = await voicePipelineService.ConfirmAsync(request.ConfirmationId.Trim(), cancellationToken);
+    return Results.Ok(result);
 });
 
 app.MapPost("/api/voice/speak", async (SpeakRequest request, CancellationToken cancellationToken) =>

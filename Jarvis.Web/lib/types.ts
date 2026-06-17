@@ -75,6 +75,51 @@ export type VoiceStatus = {
   };
 };
 
+export type VoicePipelineState =
+  | "Idle"
+  | "Listening"
+  | "Recording"
+  | "Transcribing"
+  | "WakeWordChecking"
+  | "CommandDetected"
+  | "AwaitingConfirmation"
+  | "ExecutingCommand"
+  | "GeneratingAIResponse"
+  | "Speaking"
+  | "Completed"
+  | "Error";
+
+export type VoicePipelineResult = {
+  transcript: string;
+  wakeWordDetected: boolean;
+  commandDetected: boolean;
+  commandName: string;
+  requiresConfirmation: boolean;
+  aiResponse: string;
+  audioUrl: string;
+  state: VoicePipelineState;
+  success: boolean;
+  message: string;
+  confirmationId?: string | null;
+};
+
+export type VoicePipelineStatus = {
+  state: VoicePipelineState;
+  updatedAtUtc: string;
+  lastTranscript: string;
+  lastAiResponse: string;
+  message: string;
+};
+
+export type VoiceHistoryItem = {
+  id: string;
+  timestampUtc: string;
+  transcript: string;
+  response: string;
+  state: VoicePipelineState;
+  success: boolean;
+};
+
 export type VoiceCommandResult = {
   handled: boolean;
   requiresConfirmation: boolean;
@@ -138,4 +183,22 @@ export type PcCommandExecutionResult = {
   message: string;
   confirmationToken?: string | null;
   confirmationId?: string | null;
+};
+
+export type ServiceDiagnostic = {
+  healthy: boolean;
+  message: string;
+};
+
+export type DiagnosticsResult = {
+  platform: string;
+  appDataPath: string;
+  memoryPath: string;
+  logsPath: string;
+  screenshotPath: string;
+  generatedAudioPath: string;
+  ollama: ServiceDiagnostic;
+  whisper: ServiceDiagnostic;
+  piper: ServiceDiagnostic;
+  warnings: string[];
 };

@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { TopBar } from "./TopBar";
 import { jarvisApi } from "@/lib/api";
-import type { AppSettings, VoiceStatus } from "@/lib/types";
+import type { AppSettings, DiagnosticsResult, VoiceStatus } from "@/lib/types";
 
 type SettingsPanelProps = {
   settings: AppSettings;
@@ -14,9 +14,11 @@ export function SettingsPanel({ settings, onSave }: SettingsPanelProps) {
   const [draft, setDraft] = useState<AppSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsResult | null>(null);
 
   useEffect(() => {
     jarvisApi.voiceStatus().then(setVoiceStatus).catch(() => setVoiceStatus(null));
+    jarvisApi.diagnostics().then(setDiagnostics).catch(() => setDiagnostics(null));
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -24,6 +26,7 @@ export function SettingsPanel({ settings, onSave }: SettingsPanelProps) {
     setIsSaving(true);
     await onSave(draft);
     setVoiceStatus(await jarvisApi.voiceStatus());
+    setDiagnostics(await jarvisApi.diagnostics());
     setIsSaving(false);
   }
 
@@ -52,6 +55,47 @@ export function SettingsPanel({ settings, onSave }: SettingsPanelProps) {
             </span>
           </div>
         </div>
+
+        {diagnostics && (
+          <div className="diagnostics-card wide-field">
+            <div className="voice-setup-row">
+              <strong>Platform</strong>
+              <span>{diagnostics.platform}</span>
+            </div>
+            <div className="voice-setup-row">
+              <strong>App Data</strong>
+              <span>{diagnostics.appDataPath}</span>
+            </div>
+            <div className="voice-setup-row">
+              <strong>Memory</strong>
+              <span>{diagnostics.memoryPath}</span>
+            </div>
+            <div className="voice-setup-row">
+              <strong>Logs</strong>
+              <span>{diagnostics.logsPath}</span>
+            </div>
+            <div className="voice-setup-row">
+              <strong>Screenshots</strong>
+              <span>{diagnostics.screenshotPath}</span>
+            </div>
+            <div className="voice-setup-row">
+              <strong>Audio</strong>
+              <span>{diagnostics.generatedAudioPath}</span>
+            </div>
+            <div className="diagnostics-health">
+              <span className={diagnostics.ollama.healthy ? "online" : "offline"}>Ollama: {diagnostics.ollama.message}</span>
+              <span className={diagnostics.whisper.healthy ? "online" : "offline"}>Whisper: {diagnostics.whisper.message}</span>
+              <span className={diagnostics.piper.healthy ? "online" : "offline"}>Piper: {diagnostics.piper.message}</span>
+            </div>
+            {diagnostics.warnings.length > 0 && (
+              <div className="diagnostics-warnings">
+                {diagnostics.warnings.map((warning) => (
+                  <span key={warning}>{warning}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <label>
           <span>Ollama URL</span>

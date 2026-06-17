@@ -56,10 +56,8 @@ export function ChatPanel({
       />
 
       <VoiceLoopPanel
-        autoSpeak={autoSpeak}
         disabled={isBusy}
-        onSend={onVoiceCommand}
-        onSpeak={onSpeak}
+        onRefresh={onRefresh}
         onToast={onToast}
         wakeSignal={wakeSignal}
       />
