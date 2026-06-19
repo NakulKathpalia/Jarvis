@@ -12,5 +12,6 @@ public interface IPathResolver
     string ChatHistoryPath { get; }
     string ChatSessionsPath { get; }
     string CommandLogPath { get; }
+    string InteractionLogPath { get; }
     string SettingsPath { get; }
 }

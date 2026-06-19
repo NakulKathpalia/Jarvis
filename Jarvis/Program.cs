@@ -25,6 +25,9 @@ await chatSessionService.LoadAsync();
 var commandLogService = new CommandLogService(pathResolver.CommandLogPath);
 await commandLogService.LoadAsync();
 
+var interactionLogService = new InteractionLogService(pathResolver.InteractionLogPath);
+await interactionLogService.LoadAsync();
+
 var voiceHistoryService = new VoiceHistoryService(pathResolver.VoiceHistoryPath);
 await voiceHistoryService.LoadAsync();
 
@@ -38,7 +41,7 @@ var pcCommandParser = new PcCommandParser();
 var commandSafetyService = new CommandSafetyService();
 var settingsValidationService = new SettingsValidationService(settingsService);
 var pcControlService = new WindowsPcControlService(pathResolver.ScreenshotDirectory);
-var pcCommandService = new PcCommandService(pcCommandParser, commandSafetyService, commandLogService, pcControlService);
+var pcCommandService = new PcCommandService(pcCommandParser, commandSafetyService, commandLogService, pcControlService, interactionLogService);
 var voiceCommandService = new VoiceCommandService(memoryService, fileIndexService, settingsService, pcCommandService);
 var classifierService = new ClassifierService();
 
@@ -62,7 +65,8 @@ var voicePipelineService = new VoicePipelineService(
     assistant,
     piperService,
     settingsService,
-    voiceHistoryService);
+    voiceHistoryService,
+    interactionLogService);
 
 var router = new CommandRouter(classifierService, commandManager, assistant);
 
@@ -74,12 +78,22 @@ if (args.Contains("--cli", StringComparer.OrdinalIgnoreCase))
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.UseUrls("http://localhost:5055");
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
 var app = builder.Build();
+app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -113,6 +127,47 @@ app.MapGet("/api/diagnostics", async () =>
 
 app.MapGet("/api/history", () => Results.Ok(chatHistoryService.Messages));
 
+app.MapGet("/api/interactions/logs", (int? limit) =>
+{
+    var take = Math.Clamp(limit.GetValueOrDefault(100), 1, 500);
+    return Results.Ok(interactionLogService.Logs.Take(take));
+});
+
+app.MapPost("/api/interactions/logs", async (InteractionLogRequest request, CancellationToken cancellationToken) =>
+{
+    await interactionLogService.AddAsync(new InteractionLogEntry
+    {
+        Source = request.Source,
+        Type = request.Type,
+        Stage = request.Stage,
+        Input = request.Input ?? string.Empty,
+        Output = request.Output ?? string.Empty,
+        Status = request.Status,
+        Message = request.Message ?? string.Empty,
+        Error = request.Error ?? string.Empty,
+        Metadata = request.Metadata ?? []
+    }, cancellationToken);
+
+    return Results.Ok(new { logged = true });
+});
+
+app.MapDelete("/api/interactions/logs", async (CancellationToken cancellationToken) =>
+{
+    await interactionLogService.ClearAsync(cancellationToken);
+    return Results.Ok(new { cleared = true });
+});
+
+app.MapGet("/api/interactions/status", () =>
+{
+    var logs = interactionLogService.Logs;
+    return Results.Ok(new InteractionStatusResult(
+        true,
+        logs.FirstOrDefault(),
+        logs.FirstOrDefault(log => log.Source == InteractionSource.Voice && log.Type == InteractionType.Transcription),
+        logs.FirstOrDefault(log => log.Type == InteractionType.CommandParsing),
+        logs.FirstOrDefault(log => log.Status == InteractionStatus.Failed || log.Type == InteractionType.Error)));
+});
+
 app.MapPost("/api/chat", async (ChatRequest request, CancellationToken cancellationToken) =>
 {
     if (string.IsNullOrWhiteSpace(request.Message))
@@ -141,9 +196,29 @@ app.MapPost("/api/assistant/input", async (AssistantInputRequest request, Cancel
     }
 
     var message = request.Message.Trim();
+    await interactionLogService.AddAsync(
+        InteractionSource.Chat,
+        InteractionType.UserInput,
+        "submitted",
+        InteractionStatus.Started,
+        "User submitted text.",
+        message,
+        cancellationToken: cancellationToken);
     await chatSessionService.AddMessageAsync(session.Id, ChatMessage.User(message), cancellationToken);
 
     var parsedCommand = pcCommandParser.Parse(message);
+    await interactionLogService.AddAsync(
+        InteractionSource.Chat,
+        InteractionType.CommandParsing,
+        "parser-first",
+        parsedCommand.Action == PcControlAction.Unknown ? InteractionStatus.Skipped : InteractionStatus.Success,
+        parsedCommand.Action == PcControlAction.Unknown
+            ? "No local command detected."
+            : $"Detected command {parsedCommand.Action}.",
+        message,
+        parsedCommand.Target,
+        cancellationToken: cancellationToken);
+
     if (parsedCommand.Action != PcControlAction.Unknown)
     {
         var commandResult = await pcCommandService.ExecuteAsync(message, cancellationToken: cancellationToken);
@@ -168,6 +243,15 @@ app.MapPost("/api/assistant/input", async (AssistantInputRequest request, Cancel
     if (TryBuildLocalAssistantResponse(message, out var localResponse))
     {
         await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(localResponse), cancellationToken);
+        await interactionLogService.AddAsync(
+            InteractionSource.System,
+            InteractionType.SystemStatus,
+            "local-response",
+            InteractionStatus.Success,
+            "Local assistant status response generated.",
+            message,
+            localResponse,
+            cancellationToken: cancellationToken);
         return Results.Ok(new AssistantInputResponse(
             "chat",
             true,
@@ -181,6 +265,14 @@ app.MapPost("/api/assistant/input", async (AssistantInputRequest request, Cancel
     }
 
     var refreshedSession = chatSessionService.Get(session.Id);
+    await interactionLogService.AddAsync(
+        InteractionSource.Chat,
+        InteractionType.AiFallback,
+        "fallback",
+        InteractionStatus.Started,
+        "Routing to Ollama.",
+        message,
+        cancellationToken: cancellationToken);
     var response = await assistant.GenerateSessionResponseAsync(
         message,
         refreshedSession?.Messages ?? [ChatMessage.User(message)],
@@ -190,6 +282,15 @@ app.MapPost("/api/assistant/input", async (AssistantInputRequest request, Cancel
     {
         await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(response), cancellationToken);
     }
+    await interactionLogService.AddAsync(
+        InteractionSource.Chat,
+        InteractionType.AiResponse,
+        "ollama-response",
+        string.IsNullOrWhiteSpace(response) ? InteractionStatus.Failed : InteractionStatus.Success,
+        "AI response completed.",
+        message,
+        response,
+        cancellationToken: cancellationToken);
 
     return Results.Ok(new AssistantInputResponse(
         "chat",
@@ -211,6 +312,15 @@ app.MapPost("/api/assistant/confirm", async (AssistantConfirmRequest request, Ca
     }
 
     var result = await pcCommandService.ConfirmAsync(request.ConfirmationId, cancellationToken);
+    await interactionLogService.AddAsync(
+        InteractionSource.Chat,
+        InteractionType.Confirmation,
+        "accepted",
+        result.Handled ? InteractionStatus.Success : InteractionStatus.Failed,
+        result.Message,
+        request.ConfirmationId,
+        result.Target,
+        cancellationToken: cancellationToken);
 
     ChatSession? session = null;
     if (!string.IsNullOrWhiteSpace(request.ChatSessionId))
@@ -441,6 +551,15 @@ app.MapPost("/api/commands/confirm", async (PcCommandConfirmRequest request, Can
     }
 
     var result = await pcCommandService.ConfirmAsync(request.ConfirmationId.Trim(), cancellationToken);
+    await interactionLogService.AddAsync(
+        InteractionSource.Control,
+        InteractionType.Confirmation,
+        "accepted",
+        result.Handled ? InteractionStatus.Success : InteractionStatus.Failed,
+        result.Message,
+        request.ConfirmationId,
+        result.Target,
+        cancellationToken: cancellationToken);
     return Results.Ok(result);
 });
 
@@ -520,7 +639,26 @@ app.MapPost("/api/voice/transcribe", async (HttpRequest request, CancellationTok
         return Results.BadRequest(new { error = "Audio file is required." });
     }
 
+    await interactionLogService.AddAsync(
+        InteractionSource.Voice,
+        InteractionType.Transcription,
+        "whisper-start",
+        InteractionStatus.Started,
+        "Audio uploaded for transcription.",
+        audio.FileName,
+        $"{audio.Length} bytes",
+        cancellationToken: cancellationToken);
     var result = await whisperService.TranscribeAsync(audio, cancellationToken);
+    await interactionLogService.AddAsync(
+        InteractionSource.Voice,
+        InteractionType.Transcription,
+        "whisper-result",
+        result.Succeeded ? InteractionStatus.Success : InteractionStatus.Failed,
+        result.Message,
+        audio.FileName,
+        result.Transcript,
+        result.Succeeded ? string.Empty : result.Message,
+        cancellationToken: cancellationToken);
     return Results.Ok(new
     {
         transcript = result.Transcript,
@@ -554,7 +692,26 @@ app.MapPost("/api/voice/pipeline", async (HttpRequest request, CancellationToken
     var requireWakeWord = bool.TryParse(form["requireWakeWord"], out var parsedRequireWakeWord)
         && parsedRequireWakeWord;
 
+    await interactionLogService.AddAsync(
+        InteractionSource.Voice,
+        InteractionType.VoiceRecording,
+        "audio-uploaded",
+        InteractionStatus.Success,
+        "Voice pipeline audio uploaded.",
+        audio.FileName,
+        $"{audio.Length} bytes",
+        cancellationToken: cancellationToken);
     var result = await voicePipelineService.ProcessAsync(audio, requireWakeWord, cancellationToken);
+    await interactionLogService.AddAsync(
+        InteractionSource.Voice,
+        result.CommandDetected ? InteractionType.CommandExecution : InteractionType.AiFallback,
+        result.State.ToString(),
+        result.Success ? InteractionStatus.Success : InteractionStatus.Failed,
+        result.Message,
+        result.Transcript,
+        result.CommandDetected ? result.CommandName : result.AiResponse,
+        result.Success ? string.Empty : result.Message,
+        cancellationToken: cancellationToken);
     return Results.Ok(result);
 });
 
@@ -566,6 +723,16 @@ app.MapPost("/api/voice/pipeline/confirm", async (VoiceConfirmationRequest reque
     }
 
     var result = await voicePipelineService.ConfirmAsync(request.ConfirmationId.Trim(), cancellationToken);
+    await interactionLogService.AddAsync(
+        InteractionSource.Voice,
+        InteractionType.Confirmation,
+        "accepted",
+        result.Success ? InteractionStatus.Success : InteractionStatus.Failed,
+        result.Message,
+        request.ConfirmationId,
+        result.CommandName,
+        result.Success ? string.Empty : result.Message,
+        cancellationToken: cancellationToken);
     return Results.Ok(result);
 });
 
@@ -576,7 +743,26 @@ app.MapPost("/api/voice/speak", async (SpeakRequest request, CancellationToken c
         return Results.BadRequest(new { error = "Text is required." });
     }
 
-    var result = await piperService.SpeakAsync(request.Text.Trim(), cancellationToken);
+    var text = request.Text.Trim();
+    await interactionLogService.AddAsync(
+        InteractionSource.Voice,
+        InteractionType.Tts,
+        "piper-start",
+        InteractionStatus.Started,
+        "Sending text to Piper.",
+        text,
+        cancellationToken: cancellationToken);
+    var result = await piperService.SpeakAsync(text, cancellationToken);
+    await interactionLogService.AddAsync(
+        InteractionSource.Voice,
+        InteractionType.Tts,
+        "piper-result",
+        result.Succeeded ? InteractionStatus.Success : InteractionStatus.Failed,
+        result.Message,
+        text,
+        result.AudioUrl,
+        result.Succeeded ? string.Empty : result.Message,
+        cancellationToken: cancellationToken);
     return Results.Ok(new
     {
         audioUrl = result.AudioUrl,

@@ -41,10 +41,32 @@ export function VoiceRecorderButton({
 
   async function startRecording() {
     try {
+      void jarvisApi.logInteraction({
+        source: "Voice",
+        type: "VoiceRecording",
+        stage: "mic-clicked",
+        status: "Started",
+        message: `${title} microphone recording requested.`
+      }).catch(() => undefined);
       captureRef.current = await startVoiceCapture();
       setState("recording");
+      void jarvisApi.logInteraction({
+        source: "Voice",
+        type: "VoiceRecording",
+        stage: "recording-started",
+        status: "Success",
+        message: `${title} recording started.`
+      }).catch(() => undefined);
       onToast(`${title} recording started`);
     } catch (error) {
+      void jarvisApi.logInteraction({
+        source: "Voice",
+        type: "Error",
+        stage: "recording-start-failed",
+        status: "Failed",
+        message: "Microphone recording failed to start.",
+        error: error instanceof Error ? error.message : "Microphone permission failed"
+      }).catch(() => undefined);
       onToast(error instanceof Error ? error.message : "Microphone permission failed");
       setState("idle");
     }
@@ -59,6 +81,13 @@ export function VoiceRecorderButton({
 
     setState("processing");
     captureRef.current = null;
+    void jarvisApi.logInteraction({
+      source: "Voice",
+      type: "VoiceRecording",
+      stage: "recording-stopped",
+      status: "Success",
+      message: `${title} recording stopped; uploading audio.`
+    }).catch(() => undefined);
 
     try {
       const wav = await capture.stop();
@@ -70,6 +99,14 @@ export function VoiceRecorderButton({
         onToast(result.message || "No transcript returned");
       }
     } catch (error) {
+      void jarvisApi.logInteraction({
+        source: "Voice",
+        type: "Error",
+        stage: "transcription-request-failed",
+        status: "Failed",
+        message: "Voice transcription request failed.",
+        error: error instanceof Error ? error.message : "Voice transcription failed"
+      }).catch(() => undefined);
       onToast(error instanceof Error ? error.message : "Voice transcription failed");
     } finally {
       setState("idle");

@@ -24,5 +24,6 @@ public sealed class PathResolver : IPathResolver
     public string ChatHistoryPath => Path.Combine(AppDataDirectory, "chat_history.json");
     public string ChatSessionsPath => Path.Combine(AppDataDirectory, "chat_sessions.json");
     public string CommandLogPath => Path.Combine(AppDataDirectory, "command_logs.json");
+    public string InteractionLogPath => Path.Combine(AppDataDirectory, "interaction_logs.json");
     public string SettingsPath => Path.Combine(_basePath, "appsettings.json");
 }

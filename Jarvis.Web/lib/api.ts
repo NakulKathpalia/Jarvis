@@ -6,6 +6,11 @@ import type {
   ChatSessionSummary,
   DiagnosticsResult,
   FileSearchResult,
+  InteractionLogEntry,
+  InteractionSource,
+  InteractionStatus,
+  InteractionStatusResult,
+  InteractionType,
   JarvisStatus,
   MemoryItem,
   MemoryFormValues,
@@ -21,14 +26,30 @@ import type {
   VoiceStatus
 } from "./types";
 
+export const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_JARVIS_API_URL ?? "http://localhost:5055"
+).replace(/\/$/, "");
+
+function apiUrl(path: string) {
+  return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers ?? {})
-    },
-    ...options
-  });
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(path), {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers ?? {})
+      },
+      ...options
+    });
+  } catch (error) {
+    if (!path.startsWith("/api/interactions")) {
+      void rawLogInteraction("frontend-network-error", path, error instanceof Error ? error.message : "Network error");
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
@@ -38,13 +59,37 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     } catch {
       // Keep the default error.
     }
+    if (!path.startsWith("/api/interactions")) {
+      void rawLogInteraction("frontend-api-error", path, message);
+    }
     throw new Error(message);
   }
 
   return response.json() as Promise<T>;
 }
 
+async function rawLogInteraction(stage: string, input: string, error: string) {
+  try {
+    await fetch(apiUrl("/api/interactions/logs"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "System",
+        type: "Error",
+        stage,
+        input,
+        status: "Failed",
+        message: "Frontend API request failed.",
+        error
+      })
+    });
+  } catch {
+    // If the backend is down, the UI status banner is the useful signal.
+  }
+}
+
 export const jarvisApi = {
+  apiBaseUrl: API_BASE_URL,
   status: () => request<JarvisStatus>("/api/status"),
   diagnostics: () => request<DiagnosticsResult>("/api/diagnostics"),
   history: () => request<ChatMessage[]>("/api/history"),
@@ -83,7 +128,7 @@ export const jarvisApi = {
     const formData = new FormData();
     formData.append("audio", audio, `jarvis-voice-${Date.now()}.webm`);
 
-    const response = await fetch("/api/voice/transcribe", {
+    const response = await fetch(apiUrl("/api/voice/transcribe"), {
       method: "POST",
       body: formData
     });
@@ -117,7 +162,7 @@ export const jarvisApi = {
     formData.append("audio", audio, `jarvis-pipeline-${Date.now()}.webm`);
     formData.append("requireWakeWord", String(requireWakeWord));
 
-    const response = await fetch("/api/voice/pipeline", {
+    const response = await fetch(apiUrl("/api/voice/pipeline"), {
       method: "POST",
       body: formData
     });
@@ -217,5 +262,24 @@ export const jarvisApi = {
     request<PcCommandExecutionResult>("/api/commands/confirm", {
       method: "POST",
       body: JSON.stringify({ confirmationId })
+    }),
+  interactionLogs: (limit = 100) =>
+    request<InteractionLogEntry[]>(`/api/interactions/logs?limit=${limit}`),
+  interactionStatus: () => request<InteractionStatusResult>("/api/interactions/status"),
+  clearInteractionLogs: () => request<{ cleared: boolean }>("/api/interactions/logs", { method: "DELETE" }),
+  logInteraction: (entry: {
+    source: InteractionSource;
+    type: InteractionType;
+    stage: string;
+    input?: string;
+    output?: string;
+    status: InteractionStatus;
+    message?: string;
+    error?: string;
+    metadata?: Record<string, unknown>;
+  }) =>
+    request<{ logged: boolean }>("/api/interactions/logs", {
+      method: "POST",
+      body: JSON.stringify(entry)
     })
 };

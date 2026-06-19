@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityLogPanel } from "./ActivityLogPanel";
 import { AppLayout } from "./AppLayout";
 import { ChatPanel } from "./ChatPanel";
 import { ControlPanel } from "./ControlPanel";
@@ -19,6 +20,7 @@ import type {
   ChatMessage,
   ChatSession,
   ChatSessionSummary,
+  InteractionStatusResult,
   JarvisStatus,
   MemoryFormValues,
   MemoryItem,
@@ -45,6 +47,8 @@ export function AppShell() {
   const [pendingAssistantCommand, setPendingAssistantCommand] = useState<PendingAssistantCommand | null>(null);
   const [lastAssistantAction, setLastAssistantAction] = useState<AssistantInputResponse | null>(null);
   const [assistantActivity, setAssistantActivity] = useState<AssistantActivity>("idle");
+  const [interactionStatus, setInteractionStatus] = useState<InteractionStatusResult | null>(null);
+  const [backendError, setBackendError] = useState("");
   const [toast, setToast] = useState("");
   const [isBusy, setIsBusy] = useState(false);
 
@@ -54,7 +58,14 @@ export function AppShell() {
   }, []);
 
   const refreshStatus = useCallback(async () => {
-    setStatus(await jarvisApi.status());
+    try {
+      setStatus(await jarvisApi.status());
+      setInteractionStatus(await jarvisApi.interactionStatus());
+      setBackendError("");
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : "Backend unreachable");
+      throw error;
+    }
   }, []);
 
   const refreshChats = useCallback(async () => {
@@ -300,6 +311,11 @@ export function AppShell() {
         />
       }
     >
+      <AssistantStatusStrip
+        backendError={backendError}
+        status={interactionStatus}
+      />
+
       {activeView === "chat" && (
         <ChatPanel
           autoSpeak={settings?.autoSpeakResponses ?? false}
@@ -345,6 +361,8 @@ export function AppShell() {
         <VoicePanel disabled={isBusy} onRefresh={refreshAll} onToast={showToast} />
       )}
 
+      {activeView === "activity" && <ActivityLogPanel />}
+
       {activeView === "settings" && settings && (
         <SettingsPanel settings={settings} onSave={saveSettings} />
       )}
@@ -353,5 +371,43 @@ export function AppShell() {
 
       <Toast message={toast} />
     </AppLayout>
+  );
+}
+
+function AssistantStatusStrip({
+  backendError,
+  status
+}: {
+  backendError: string;
+  status: InteractionStatusResult | null;
+}) {
+  const isDisconnected = Boolean(backendError);
+
+  return (
+    <div className={`border-b px-4 py-3 sm:px-6 lg:px-8 ${
+      isDisconnected
+        ? "border-jarvis-danger/40 bg-jarvis-danger/15"
+        : "border-jarvis-border/70 bg-jarvis-panel/65"
+    }`}>
+      <div className="mx-auto grid max-w-6xl gap-2 text-sm lg:grid-cols-4">
+        <StatusItem
+          label="Backend"
+          value={isDisconnected ? "Jarvis backend is not running on localhost:5055." : "Connected"}
+          danger={isDisconnected}
+        />
+        <StatusItem label="Last action" value={status?.lastAction?.message ?? "No activity yet"} />
+        <StatusItem label="Last transcript" value={status?.lastVoiceTranscript?.output || status?.lastVoiceTranscript?.message || "None"} />
+        <StatusItem label="Last command/error" value={status?.lastError?.error || status?.lastCommandParsed?.message || "None"} danger={Boolean(status?.lastError)} />
+      </div>
+    </div>
+  );
+}
+
+function StatusItem({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-xs font-black uppercase tracking-[0.16em] text-jarvis-faint">{label}</div>
+      <div className={`mt-1 truncate ${danger ? "text-rose-200" : "text-jarvis-muted"}`} title={value}>{value}</div>
+    </div>
   );
 }

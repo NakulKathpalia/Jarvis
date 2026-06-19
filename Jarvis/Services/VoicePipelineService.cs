@@ -13,6 +13,7 @@ public sealed class VoicePipelineService
     private readonly PiperService _piperService;
     private readonly SettingsService _settingsService;
     private readonly VoiceHistoryService _voiceHistoryService;
+    private readonly InteractionLogService? _interactionLogService;
 
     private VoicePipelineStatus _status = new(
         VoicePipelineState.Idle,
@@ -29,7 +30,8 @@ public sealed class VoicePipelineService
         Assistant assistant,
         PiperService piperService,
         SettingsService settingsService,
-        VoiceHistoryService voiceHistoryService)
+        VoiceHistoryService voiceHistoryService,
+        InteractionLogService? interactionLogService = null)
     {
         _whisperService = whisperService;
         _wakeWordService = wakeWordService;
@@ -39,6 +41,7 @@ public sealed class VoicePipelineService
         _piperService = piperService;
         _settingsService = settingsService;
         _voiceHistoryService = voiceHistoryService;
+        _interactionLogService = interactionLogService;
     }
 
     public VoicePipelineStatus Status => _status;
@@ -63,6 +66,7 @@ public sealed class VoicePipelineService
         var transcript = transcription.Transcript.Trim();
         SetState(VoicePipelineState.WakeWordChecking, "Checking wake word.", transcript);
         var wakeWord = _wakeWordService.CheckTranscript(transcript);
+        await LogAsync(InteractionType.WakeWordCheck, "wake-word", wakeWord.Detected ? InteractionStatus.Success : InteractionStatus.Skipped, wakeWord.Message, transcript, wakeWord.Phrase, cancellationToken: cancellationToken);
         if (requireWakeWord && !wakeWord.Detected)
         {
             return await CompleteAsync(new VoicePipelineResult(
@@ -79,6 +83,7 @@ public sealed class VoicePipelineService
         }
 
         var command = _pcCommandParser.Parse(transcript);
+        await LogAsync(InteractionType.CommandParsing, "voice-parser", command.Action == PcControlAction.Unknown ? InteractionStatus.Skipped : InteractionStatus.Success, command.Action == PcControlAction.Unknown ? "No voice command detected." : $"Detected voice command {command.Action}.", transcript, command.Target, cancellationToken: cancellationToken);
         if (command.Action != PcControlAction.Unknown)
         {
             return await ProcessCommandAsync(transcript, wakeWord.Detected, cancellationToken);
@@ -114,6 +119,7 @@ public sealed class VoicePipelineService
         CancellationToken cancellationToken)
     {
         SetState(VoicePipelineState.CommandDetected, "Local command detected.", transcript);
+        await LogAsync(InteractionType.CommandExecution, "voice-command-start", InteractionStatus.Started, "Executing or preparing local voice command.", transcript, cancellationToken: cancellationToken);
         var commandResult = await _pcCommandService.ExecuteAsync(transcript, cancellationToken: cancellationToken);
 
         if (commandResult.RequiresConfirmation)
@@ -155,6 +161,7 @@ public sealed class VoicePipelineService
         CancellationToken cancellationToken)
     {
         SetState(VoicePipelineState.GeneratingAIResponse, "Generating AI response.", transcript);
+        await LogAsync(InteractionType.AiFallback, "voice-fallback", InteractionStatus.Started, "Voice input routed to AI fallback.", transcript, cancellationToken: cancellationToken);
         var response = await _assistant.GenerateResponseAsync(transcript, cancellationToken: cancellationToken);
         var audioUrl = string.Empty;
         var message = "AI response generated.";
@@ -162,7 +169,9 @@ public sealed class VoicePipelineService
         if (_settingsService.Current.AutoSpeakResponses && !string.IsNullOrWhiteSpace(response))
         {
             SetState(VoicePipelineState.Speaking, "Generating Piper speech.", transcript, response);
+            await LogAsync(InteractionType.Tts, "voice-piper-start", InteractionStatus.Started, "Generating Piper speech for voice response.", response, cancellationToken: cancellationToken);
             var speech = await _piperService.SpeakAsync(response, cancellationToken);
+            await LogAsync(InteractionType.Tts, "voice-piper-result", speech.Succeeded ? InteractionStatus.Success : InteractionStatus.Failed, speech.Message, response, speech.AudioUrl, speech.Succeeded ? string.Empty : speech.Message, cancellationToken);
             audioUrl = speech.AudioUrl;
             message = speech.Succeeded ? "AI response generated with speech." : speech.Message;
         }
@@ -221,5 +230,29 @@ public sealed class VoicePipelineService
             state,
             false,
             message);
+    }
+
+    private Task LogAsync(
+        InteractionType type,
+        string stage,
+        InteractionStatus status,
+        string message,
+        string input = "",
+        string output = "",
+        string error = "",
+        CancellationToken cancellationToken = default)
+    {
+        return _interactionLogService is null
+            ? Task.CompletedTask
+            : _interactionLogService.AddAsync(
+                InteractionSource.Voice,
+                type,
+                stage,
+                status,
+                message,
+                input,
+                output,
+                error,
+                cancellationToken: cancellationToken);
     }
 }

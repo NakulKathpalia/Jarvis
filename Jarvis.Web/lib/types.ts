@@ -1,4 +1,4 @@
-export type ViewKey = "chat" | "memory" | "files" | "control" | "voice" | "settings" | "diagnostics";
+export type ViewKey = "chat" | "memory" | "files" | "control" | "voice" | "activity" | "settings" | "diagnostics";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -230,4 +230,42 @@ export type DiagnosticsResult = {
   whisper: ServiceDiagnostic;
   piper: ServiceDiagnostic;
   warnings: string[];
+};
+
+export type InteractionSource = "Chat" | "Voice" | "Control" | "System";
+export type InteractionType =
+  | "UserInput"
+  | "VoiceRecording"
+  | "Transcription"
+  | "WakeWordCheck"
+  | "CommandParsing"
+  | "Confirmation"
+  | "CommandExecution"
+  | "AiFallback"
+  | "AiResponse"
+  | "Tts"
+  | "Error"
+  | "SystemStatus";
+export type InteractionStatus = "Started" | "Success" | "Failed" | "Pending" | "Cancelled" | "Skipped";
+
+export type InteractionLogEntry = {
+  id: string;
+  timestampUtc: string;
+  source: InteractionSource;
+  type: InteractionType;
+  stage: string;
+  input: string;
+  output: string;
+  status: InteractionStatus;
+  message: string;
+  error: string;
+  metadata: Record<string, unknown>;
+};
+
+export type InteractionStatusResult = {
+  backendConnected: boolean;
+  lastAction?: InteractionLogEntry | null;
+  lastVoiceTranscript?: InteractionLogEntry | null;
+  lastCommandParsed?: InteractionLogEntry | null;
+  lastError?: InteractionLogEntry | null;
 };

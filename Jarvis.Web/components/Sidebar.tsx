@@ -22,6 +22,7 @@ const navItems: Array<{ key: ViewKey; label: string; symbol: string }> = [
   { key: "files", label: "Files", symbol: "F" },
   { key: "control", label: "Control", symbol: "P" },
   { key: "voice", label: "Voice", symbol: "V" },
+  { key: "activity", label: "Activity", symbol: "A" },
   { key: "settings", label: "Settings", symbol: "S" },
   { key: "diagnostics", label: "Diagnostics", symbol: "D" }
 ];

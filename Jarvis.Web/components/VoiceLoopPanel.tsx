@@ -49,6 +49,13 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
     }
 
     try {
+      void jarvisApi.logInteraction({
+        source: "Voice",
+        type: "VoiceRecording",
+        stage: source === "wake" ? "wake-recording-start" : "pipeline-recording-start",
+        status: "Started",
+        message: source === "wake" ? "Wake word activated voice recording." : "Voice pipeline recording started."
+      }).catch(() => undefined);
       captureRef.current = await startVoiceCapture();
       setIsActive(true);
       setStatus({
@@ -60,6 +67,14 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
       });
       onToast(source === "wake" ? "Wake word activated. Recording." : "Recording voice turn");
     } catch (error) {
+      void jarvisApi.logInteraction({
+        source: "Voice",
+        type: "Error",
+        stage: "pipeline-recording-start-failed",
+        status: "Failed",
+        message: "Voice pipeline recording failed to start.",
+        error: error instanceof Error ? error.message : "Microphone permission failed"
+      }).catch(() => undefined);
       setIsActive(false);
       setStatus(toStatus("Error", error instanceof Error ? error.message : "Microphone permission failed"));
       onToast(error instanceof Error ? error.message : "Microphone permission failed");
@@ -74,6 +89,13 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
 
     captureRef.current = null;
     setStatus(toStatus("Transcribing", "Sending audio to the local voice pipeline.", status));
+    void jarvisApi.logInteraction({
+      source: "Voice",
+      type: "VoiceRecording",
+      stage: "pipeline-recording-stopped",
+      status: "Success",
+      message: "Voice pipeline recording stopped; uploading audio."
+    }).catch(() => undefined);
 
     try {
       const wav = await capture.stop();
@@ -81,6 +103,14 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
       await handlePipelineResult(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Voice pipeline failed";
+      void jarvisApi.logInteraction({
+        source: "Voice",
+        type: "Error",
+        stage: "pipeline-request-failed",
+        status: "Failed",
+        message: "Voice pipeline request failed.",
+        error: message
+      }).catch(() => undefined);
       setStatus(toStatus("Error", message, status));
       onToast(message);
     } finally {

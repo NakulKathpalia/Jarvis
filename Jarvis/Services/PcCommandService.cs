@@ -7,6 +7,7 @@ public sealed class PcCommandService
     private readonly PcCommandParser _parser;
     private readonly CommandSafetyService _safetyService;
     private readonly CommandLogService _logService;
+    private readonly InteractionLogService? _interactionLogService;
     private readonly IPcControlService _pcControlService;
     private readonly Dictionary<string, PendingPcCommand> _pendingConfirmations = new(StringComparer.OrdinalIgnoreCase);
 
@@ -14,12 +15,14 @@ public sealed class PcCommandService
         PcCommandParser parser,
         CommandSafetyService safetyService,
         CommandLogService logService,
-        IPcControlService pcControlService)
+        IPcControlService pcControlService,
+        InteractionLogService? interactionLogService = null)
     {
         _parser = parser;
         _safetyService = safetyService;
         _logService = logService;
         _pcControlService = pcControlService;
+        _interactionLogService = interactionLogService;
     }
 
     public IReadOnlyCollection<PendingPcCommand> PendingConfirmations =>
@@ -62,11 +65,20 @@ public sealed class PcCommandService
 
         var command = _parser.Parse(input);
         var safetyLevel = _safetyService.GetSafetyLevel(command.Action);
+        await LogInteractionAsync(
+            InteractionType.CommandParsing,
+            "parse",
+            safetyLevel == CommandSafetyLevel.Blocked ? InteractionStatus.Failed : InteractionStatus.Success,
+            $"Parsed {command.Action} with safety {safetyLevel}.",
+            command.OriginalInput,
+            command.Target,
+            cancellationToken);
 
         if (safetyLevel == CommandSafetyLevel.Blocked)
         {
             const string message = "Blocked unknown or unsupported system command.";
             await LogAsync(command, safetyLevel, CommandExecutionStatus.Blocked, message, cancellationToken);
+            await LogInteractionAsync(InteractionType.Error, "blocked", InteractionStatus.Failed, message, command.OriginalInput, command.Target, cancellationToken);
             return new PcCommandExecutionResult(false, false, command.Action.ToString(), command.Target, message);
         }
 
@@ -75,6 +87,7 @@ public sealed class PcCommandService
             var pending = CreatePending(command, safetyLevel);
             var message = $"Confirmation required before running {command.Action}: {DescribeTarget(command)}";
             await LogAsync(command, safetyLevel, CommandExecutionStatus.PendingConfirmation, message, cancellationToken);
+            await LogInteractionAsync(InteractionType.Confirmation, "pending", InteractionStatus.Pending, message, command.OriginalInput, command.Target, cancellationToken);
             return new PcCommandExecutionResult(
                 true,
                 true,
@@ -110,6 +123,14 @@ public sealed class PcCommandService
         var message = await _pcControlService.ExecuteAsync(command, cancellationToken);
         var status = IsFailureMessage(message) ? CommandExecutionStatus.Failed : CommandExecutionStatus.Completed;
         await LogAsync(command, safetyLevel, status, message, cancellationToken);
+        await LogInteractionAsync(
+            InteractionType.CommandExecution,
+            command.Action.ToString(),
+            status == CommandExecutionStatus.Completed ? InteractionStatus.Success : InteractionStatus.Failed,
+            message,
+            command.OriginalInput,
+            command.Target,
+            cancellationToken);
 
         return new PcCommandExecutionResult(
             true,
@@ -186,5 +207,27 @@ public sealed class PcCommandService
     private static string DescribeTarget(PcCommand command)
     {
         return string.IsNullOrWhiteSpace(command.Target) ? command.Action.ToString() : command.Target;
+    }
+
+    private Task LogInteractionAsync(
+        InteractionType type,
+        string stage,
+        InteractionStatus status,
+        string message,
+        string input,
+        string output,
+        CancellationToken cancellationToken)
+    {
+        return _interactionLogService is null
+            ? Task.CompletedTask
+            : _interactionLogService.AddAsync(
+                InteractionSource.Control,
+                type,
+                stage,
+                status,
+                message,
+                input,
+                output,
+                cancellationToken: cancellationToken);
     }
 }
