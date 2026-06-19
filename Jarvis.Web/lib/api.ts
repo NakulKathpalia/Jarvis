@@ -1,5 +1,6 @@
 import type {
   AppSettings,
+  AssistantInputResponse,
   ChatMessage,
   ChatSession,
   ChatSessionSummary,
@@ -63,6 +64,16 @@ export const jarvisApi = {
     request<{ response: string; session: ChatSession }>(`/api/chats/${encodeURIComponent(id)}/messages`, {
       method: "POST",
       body: JSON.stringify({ message })
+    }),
+  assistantInput: (message: string, chatSessionId?: string | null) =>
+    request<AssistantInputResponse>("/api/assistant/input", {
+      method: "POST",
+      body: JSON.stringify({ message, chatSessionId })
+    }),
+  confirmAssistantCommand: (confirmationId: string, chatSessionId?: string | null) =>
+    request<AssistantInputResponse>("/api/assistant/confirm", {
+      method: "POST",
+      body: JSON.stringify({ confirmationId, chatSessionId })
     }),
   deleteChat: (id: string) =>
     request<ChatSessionSummary[]>(`/api/chats/${encodeURIComponent(id)}`, {

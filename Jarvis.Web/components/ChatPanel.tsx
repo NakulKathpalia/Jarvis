@@ -8,10 +8,20 @@ import { VoiceLoopPanel } from "./VoiceLoopPanel";
 import { WakeWordPanel } from "./WakeWordPanel";
 import { PendingVoiceCommand, VoiceConfirmationCard } from "./VoiceConfirmationCard";
 import { AssistantOrb } from "./ui/AssistantOrb";
+import { AssistantActionCard } from "./ui/AssistantActionCard";
 import { ChatCard } from "./ui/ChatCard";
 import { PromptChip } from "./ui/PromptChip";
 import { StatusBadge } from "./ui/StatusBadge";
-import type { ChatMessage, ChatSessionSummary, JarvisStatus } from "@/lib/types";
+import type { AssistantInputResponse, ChatMessage, ChatSessionSummary, JarvisStatus } from "@/lib/types";
+
+type PendingAssistantCommand = {
+  confirmationId: string;
+  command: string;
+  target: string;
+  message: string;
+};
+
+type AssistantActivity = "idle" | "thinking" | "executing" | "speaking" | "error";
 
 type ChatPanelProps = {
   messages: ChatMessage[];
@@ -21,6 +31,9 @@ type ChatPanelProps = {
   isBusy: boolean;
   autoSpeak: boolean;
   pendingVoiceCommand: PendingVoiceCommand | null;
+  pendingAssistantCommand: PendingAssistantCommand | null;
+  lastAssistantAction: AssistantInputResponse | null;
+  assistantActivity: AssistantActivity;
   onRefresh: () => Promise<void>;
   onNewChat: () => Promise<void>;
   onOpenChat: (id: string) => Promise<void>;
@@ -29,16 +42,19 @@ type ChatPanelProps = {
   onVoiceCommand: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
   onConfirmVoiceCommand: () => Promise<void>;
   onCancelVoiceCommand: () => void;
+  onConfirmAssistantCommand: () => Promise<void>;
+  onCancelAssistantCommand: () => void;
   onSpeak: (text: string) => Promise<void>;
   onToast: (message: string) => void;
 };
 
 const promptChips = [
   "Open YouTube",
-  "Search my files",
-  "Remember something",
-  "Check diagnostics",
-  "Voice command"
+  "Open Downloads",
+  "Take Screenshot",
+  "Search Files",
+  "Diagnostics",
+  "Voice Status"
 ];
 
 export function ChatPanel({
@@ -47,6 +63,9 @@ export function ChatPanel({
   activeChatId,
   status,
   isBusy,
+  pendingAssistantCommand,
+  lastAssistantAction,
+  assistantActivity,
   pendingVoiceCommand,
   onRefresh,
   onNewChat,
@@ -56,6 +75,8 @@ export function ChatPanel({
   onVoiceCommand,
   onConfirmVoiceCommand,
   onCancelVoiceCommand,
+  onConfirmAssistantCommand,
+  onCancelAssistantCommand,
   onSpeak,
   onToast
 }: ChatPanelProps) {
@@ -75,7 +96,7 @@ export function ChatPanel({
       <header className="border-b border-jarvis-border/70 px-4 py-5 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-4">
-            <AssistantOrb size="md" active={isBusy || status?.online} />
+            <AssistantOrb size="md" active={isBusy || status?.online} state={assistantActivity} />
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-2xl font-black text-jarvis-text sm:text-3xl">Jarvis Assistant</h2>
@@ -117,7 +138,7 @@ export function ChatPanel({
           <div className="grid gap-6 rounded-[2rem] border border-jarvis-border bg-jarvis-panel/60 p-5 shadow-card sm:p-7">
             <div className="flex flex-wrap gap-2">
               {promptChips.map((chip) => (
-                <PromptChip key={chip} label={chip} onClick={() => void onSend(chip)} />
+                <PromptChip key={chip} label={chip} onClick={() => void handleQuickAction(chip, onSend)} />
               ))}
             </div>
             <div>
@@ -150,7 +171,33 @@ export function ChatPanel({
       )}
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <MessageList messages={messages} isBusy={isBusy} onSpeak={onSpeak} />
+        <MessageList
+          messages={messages}
+          isBusy={isBusy}
+          hiddenAssistantMessages={hiddenAssistantMessages(pendingAssistantCommand, lastAssistantAction)}
+          onSpeak={onSpeak}
+        />
+        {pendingAssistantCommand && (
+          <AssistantActionCard
+            title={formatCommandTitle(pendingAssistantCommand.command, pendingAssistantCommand.target)}
+            message={confirmationCopy(pendingAssistantCommand)}
+            state="confirm"
+            command={pendingAssistantCommand.command}
+            target={pendingAssistantCommand.target}
+            disabled={isBusy}
+            onConfirm={() => void onConfirmAssistantCommand()}
+            onCancel={onCancelAssistantCommand}
+          />
+        )}
+        {!pendingAssistantCommand && lastAssistantAction?.type === "command" && (
+          <AssistantActionCard
+            title={formatResultTitle(lastAssistantAction.command)}
+            message={lastAssistantAction.message}
+            state={lastAssistantAction.handled ? "result" : "error"}
+            command={lastAssistantAction.command}
+            target={lastAssistantAction.target}
+          />
+        )}
         {isBusy && messages.length > 0 && (
           <div className="mx-auto flex max-w-4xl gap-2 px-4 pb-4 text-jarvis-green2">
             <span className="h-2 w-2 animate-thinking-dot rounded-full bg-jarvis-green" />
@@ -172,4 +219,57 @@ export function ChatPanel({
       />
     </section>
   );
+}
+
+function handleQuickAction(
+  chip: string,
+  onSend: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>
+) {
+  if (chip === "Search Files") {
+    return onSend("search web for local files");
+  }
+
+  if (chip === "Diagnostics") {
+    return onSend("check diagnostics");
+  }
+
+  if (chip === "Voice Status") {
+    return onSend("voice status");
+  }
+
+  return onSend(chip);
+}
+
+function confirmationCopy(command: PendingAssistantCommand) {
+  const target = command.target || command.command;
+  return `${humanizeCommand(command.command)} ${target}?`;
+}
+
+function hiddenAssistantMessages(
+  pendingCommand: PendingAssistantCommand | null,
+  lastAction: AssistantInputResponse | null
+) {
+  return [
+    pendingCommand ? storedConfirmationMessage(pendingCommand) : "",
+    lastAction?.type === "command" ? lastAction.message : ""
+  ].filter(Boolean);
+}
+
+function storedConfirmationMessage(command: PendingAssistantCommand) {
+  const target = command.target || command.command;
+  return `Confirm ${command.command}: ${target}`;
+}
+
+function formatCommandTitle(command: string, target: string) {
+  return target ? `${humanizeCommand(command)}?` : "Confirm action?";
+}
+
+function formatResultTitle(command: string) {
+  return `${humanizeCommand(command)} completed`;
+}
+
+function humanizeCommand(command: string) {
+  return command
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^./, (value) => value.toUpperCase());
 }

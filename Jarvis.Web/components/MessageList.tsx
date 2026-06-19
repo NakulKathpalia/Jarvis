@@ -5,11 +5,15 @@ import type { ChatMessage } from "@/lib/types";
 type MessageListProps = {
   messages: ChatMessage[];
   isBusy?: boolean;
+  hiddenAssistantMessages?: string[];
   onSpeak: (text: string) => Promise<void>;
 };
 
-export function MessageList({ messages, isBusy = false, onSpeak }: MessageListProps) {
-  if (messages.length === 0) {
+export function MessageList({ messages, isBusy = false, hiddenAssistantMessages = [], onSpeak }: MessageListProps) {
+  const visibleMessages = messages.filter((message) =>
+    message.role !== "assistant" || !hiddenAssistantMessages.includes(message.content));
+
+  if (visibleMessages.length === 0) {
     return (
       <div className="grid place-items-center px-5 py-10 text-center">
         <div className="grid max-w-xl place-items-center gap-5">
@@ -27,7 +31,7 @@ export function MessageList({ messages, isBusy = false, onSpeak }: MessageListPr
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-5 px-4 py-6" aria-live="polite">
-      {messages.map((message, index) => (
+      {visibleMessages.map((message, index) => (
         <ChatBubble message={message} onSpeak={onSpeak} key={`${message.role}-${index}-${message.createdAtUtc ?? ""}`} />
       ))}
     </div>

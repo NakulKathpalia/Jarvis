@@ -59,6 +59,21 @@ public sealed class PcCommandParser
             return new PcCommand(PcControlAction.OpenWebsite, website, original);
         }
 
+        if (normalized is "open downloads" or "open downloads folder")
+        {
+            return new PcCommand(PcControlAction.OpenFolder, "downloads", original);
+        }
+
+        if (normalized is "open desktop" or "open desktop folder")
+        {
+            return new PcCommand(PcControlAction.OpenFolder, "desktop", original);
+        }
+
+        if (normalized is "open documents" or "open documents folder")
+        {
+            return new PcCommand(PcControlAction.OpenFolder, "documents", original);
+        }
+
         if (TryStripPrefix(normalized, ["open folder "], out var folder))
         {
             return new PcCommand(PcControlAction.OpenFolder, folder, original);

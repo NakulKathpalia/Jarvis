@@ -66,12 +66,13 @@ public sealed class WindowsPcControlService : IPcControlService
 
     private static string OpenFolder(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+        var resolvedPath = ResolveKnownFolder(path);
+        if (string.IsNullOrWhiteSpace(resolvedPath) || !Directory.Exists(resolvedPath))
         {
             return "Folder was not found.";
         }
 
-        return OpenShellTarget(path, "folder");
+        return OpenShellTarget(resolvedPath, "folder");
     }
 
     private static string OpenFile(string path)
@@ -233,6 +234,19 @@ public sealed class WindowsPcControlService : IPcControlService
     private static string BuildSearchUrl(string query)
     {
         return $"https://www.google.com/search?q={Uri.EscapeDataString(query.Trim())}";
+    }
+
+    private static string ResolveKnownFolder(string path)
+    {
+        return path.Trim().ToLowerInvariant() switch
+        {
+            "downloads" => Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Downloads"),
+            "desktop" => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            "documents" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            _ => Environment.ExpandEnvironmentVariables(path)
+        };
     }
 
     [DllImport("user32.dll")]

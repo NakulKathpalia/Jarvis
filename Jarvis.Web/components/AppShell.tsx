@@ -15,6 +15,7 @@ import type { PendingVoiceCommand } from "./VoiceConfirmationCard";
 import { jarvisApi } from "@/lib/api";
 import type {
   AppSettings,
+  AssistantInputResponse,
   ChatMessage,
   ChatSession,
   ChatSessionSummary,
@@ -24,6 +25,15 @@ import type {
   ViewKey
 } from "@/lib/types";
 
+type PendingAssistantCommand = {
+  confirmationId: string;
+  command: string;
+  target: string;
+  message: string;
+};
+
+type AssistantActivity = "idle" | "thinking" | "executing" | "speaking" | "error";
+
 export function AppShell() {
   const [activeView, setActiveView] = useState<ViewKey>("chat");
   const [status, setStatus] = useState<JarvisStatus | null>(null);
@@ -32,6 +42,9 @@ export function AppShell() {
   const [memory, setMemory] = useState<MemoryItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [pendingVoiceCommand, setPendingVoiceCommand] = useState<PendingVoiceCommand | null>(null);
+  const [pendingAssistantCommand, setPendingAssistantCommand] = useState<PendingAssistantCommand | null>(null);
+  const [lastAssistantAction, setLastAssistantAction] = useState<AssistantInputResponse | null>(null);
+  const [assistantActivity, setAssistantActivity] = useState<AssistantActivity>("idle");
   const [toast, setToast] = useState("");
   const [isBusy, setIsBusy] = useState(false);
 
@@ -104,6 +117,8 @@ export function AppShell() {
 
   async function sendMessage(message: string, options?: { skipAutoSpeak?: boolean }) {
     setIsBusy(true);
+    setAssistantActivity("thinking");
+    setLastAssistantAction(null);
     const session = await ensureActiveChat();
     const optimisticMessages: ChatMessage[] = [
       ...session.messages,
@@ -114,61 +129,79 @@ export function AppShell() {
     setActiveChat({ ...session, messages: optimisticMessages, updatedAtUtc: new Date().toISOString() });
 
     try {
-      const result = await jarvisApi.sendChatMessage(session.id, message);
-      const assistantResponse = result.response || "(empty response)";
-      setActiveChat(result.session);
+      const result = await jarvisApi.assistantInput(message, session.id);
+      const assistantResponse = result.response || result.message || "(empty response)";
+      setActiveChat(result.session ?? session);
+      setLastAssistantAction(result.type === "command" && !result.requiresConfirmation ? result : null);
+      setPendingAssistantCommand(result.requiresConfirmation && result.confirmationId
+        ? {
+            confirmationId: result.confirmationId,
+            command: result.command,
+            target: result.target,
+            message: result.message
+          }
+        : null);
+      setAssistantActivity(result.type === "command" ? "executing" : "thinking");
       await Promise.all([refreshStatus(), refreshChats()]);
-      if (!options?.skipAutoSpeak && settings?.autoSpeakResponses && assistantResponse !== "(empty response)") {
+      if (result.type === "chat" && !options?.skipAutoSpeak && settings?.autoSpeakResponses && assistantResponse !== "(empty response)") {
+        setAssistantActivity("speaking");
         await speakText(assistantResponse);
       }
       return assistantResponse;
     } catch (error) {
+      setAssistantActivity("error");
       showToast(error instanceof Error ? error.message : "Chat failed");
       setActiveChat(await jarvisApi.chatSession(session.id));
       return "";
     } finally {
+      setAssistantActivity("idle");
       setIsBusy(false);
     }
   }
 
-  async function handleVoiceCommand(transcript: string, options?: { skipAutoSpeak?: boolean }) {
-    try {
-      const commandResult = await jarvisApi.voiceCommand(transcript);
-
-      if (commandResult.handled) {
-        setPendingVoiceCommand(null);
-        await Promise.all([refreshStatus(), refreshMemory(), refreshSettings(), refreshChats()]);
-        if (!options?.skipAutoSpeak && settings?.autoSpeakResponses) {
-          await speakText(commandResult.message);
-        }
-        return commandResult.message;
-      }
-
-      if (commandResult.requiresConfirmation) {
-        const pendingCommand: PendingVoiceCommand = {
-          transcript,
-          command: commandResult.command,
-          message: commandResult.message,
-          confirmationValue: commandResult.confirmationValue
-        };
-        setPendingVoiceCommand(pendingCommand);
-        const message = `${commandResult.message} Use Confirm to run it, or Cancel to ignore it.`;
-        const session = await ensureActiveChat();
-        setActiveChat({
-          ...session,
-          messages: [
-            ...session.messages,
-            { role: "user", content: transcript },
-            { role: "assistant", content: message }
-          ]
-        });
-        showToast("Voice command needs confirmation");
-        return message;
-      }
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Voice command failed");
+  async function confirmAssistantCommand() {
+    if (!pendingAssistantCommand) {
+      return;
     }
 
+    setIsBusy(true);
+    setAssistantActivity("executing");
+    try {
+      const result = await jarvisApi.confirmAssistantCommand(
+        pendingAssistantCommand.confirmationId,
+        activeChat?.id
+      );
+      setPendingAssistantCommand(null);
+      setLastAssistantAction(result);
+      if (result.session) {
+        setActiveChat(result.session);
+      }
+      await Promise.all([refreshStatus(), refreshChats()]);
+      showToast(result.message);
+    } catch (error) {
+      setAssistantActivity("error");
+      showToast(error instanceof Error ? error.message : "Command confirmation failed");
+    } finally {
+      setAssistantActivity("idle");
+      setIsBusy(false);
+    }
+  }
+
+  async function cancelAssistantCommand() {
+    if (!pendingAssistantCommand) {
+      return;
+    }
+
+    const session = await ensureActiveChat();
+    setPendingAssistantCommand(null);
+    setActiveChat({
+      ...session,
+      messages: [...session.messages, { role: "assistant", content: "Command cancelled." }]
+    });
+    showToast("Command cancelled");
+  }
+
+  async function handleVoiceCommand(transcript: string, options?: { skipAutoSpeak?: boolean }) {
     return sendMessage(transcript, options);
   }
 
@@ -276,6 +309,9 @@ export function AppShell() {
           status={status}
           isBusy={isBusy}
           pendingVoiceCommand={pendingVoiceCommand}
+          pendingAssistantCommand={pendingAssistantCommand}
+          lastAssistantAction={lastAssistantAction}
+          assistantActivity={assistantActivity}
           onRefresh={refreshAll}
           onNewChat={createNewChat}
           onOpenChat={openChat}
@@ -284,6 +320,8 @@ export function AppShell() {
           onVoiceCommand={handleVoiceCommand}
           onConfirmVoiceCommand={confirmVoiceCommand}
           onCancelVoiceCommand={() => void cancelVoiceCommand()}
+          onConfirmAssistantCommand={confirmAssistantCommand}
+          onCancelAssistantCommand={() => void cancelAssistantCommand()}
           onSpeak={speakText}
           onToast={showToast}
         />

@@ -202,6 +202,18 @@ export type PcCommandExecutionResult = {
   confirmationId?: string | null;
 };
 
+export type AssistantInputResponse = {
+  type: "command" | "chat";
+  handled: boolean;
+  requiresConfirmation: boolean;
+  command: string;
+  target: string;
+  message: string;
+  response?: string | null;
+  confirmationId?: string | null;
+  session?: ChatSession | null;
+};
+
 export type ServiceDiagnostic = {
   healthy: boolean;
   message: string;

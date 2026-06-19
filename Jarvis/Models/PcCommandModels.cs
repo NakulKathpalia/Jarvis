@@ -76,3 +76,18 @@ public sealed record PcCommandExecutionResult(
     string Message,
     string? ConfirmationToken = null,
     string? ConfirmationId = null);
+
+public sealed record AssistantInputRequest(string Message, string? ChatSessionId = null);
+
+public sealed record AssistantConfirmRequest(string ConfirmationId, string? ChatSessionId = null);
+
+public sealed record AssistantInputResponse(
+    string Type,
+    bool Handled,
+    bool RequiresConfirmation,
+    string Command,
+    string Target,
+    string Message,
+    string? Response,
+    string? ConfirmationId,
+    ChatSession? Session);

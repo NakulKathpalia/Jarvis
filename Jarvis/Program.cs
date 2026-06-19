@@ -124,6 +124,117 @@ app.MapPost("/api/chat", async (ChatRequest request, CancellationToken cancellat
     return Results.Ok(new { response });
 });
 
+app.MapPost("/api/assistant/input", async (AssistantInputRequest request, CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Message))
+    {
+        return Results.BadRequest(new { error = "Message is required." });
+    }
+
+    var session = string.IsNullOrWhiteSpace(request.ChatSessionId)
+        ? await chatSessionService.CreateAsync(cancellationToken: cancellationToken)
+        : chatSessionService.Get(request.ChatSessionId);
+
+    if (session is null)
+    {
+        return Results.NotFound(new { error = "Chat session not found." });
+    }
+
+    var message = request.Message.Trim();
+    await chatSessionService.AddMessageAsync(session.Id, ChatMessage.User(message), cancellationToken);
+
+    var parsedCommand = pcCommandParser.Parse(message);
+    if (parsedCommand.Action != PcControlAction.Unknown)
+    {
+        var commandResult = await pcCommandService.ExecuteAsync(message, cancellationToken: cancellationToken);
+        var assistantMessage = commandResult.RequiresConfirmation
+            ? BuildConfirmationMessage(commandResult)
+            : commandResult.Message;
+
+        await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(assistantMessage), cancellationToken);
+
+        return Results.Ok(new AssistantInputResponse(
+            "command",
+            commandResult.Handled,
+            commandResult.RequiresConfirmation,
+            commandResult.Command,
+            commandResult.Target,
+            commandResult.Message,
+            null,
+            commandResult.ConfirmationId ?? commandResult.ConfirmationToken,
+            chatSessionService.Get(session.Id)));
+    }
+
+    if (TryBuildLocalAssistantResponse(message, out var localResponse))
+    {
+        await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(localResponse), cancellationToken);
+        return Results.Ok(new AssistantInputResponse(
+            "chat",
+            true,
+            false,
+            string.Empty,
+            string.Empty,
+            localResponse,
+            localResponse,
+            null,
+            chatSessionService.Get(session.Id)));
+    }
+
+    var refreshedSession = chatSessionService.Get(session.Id);
+    var response = await assistant.GenerateSessionResponseAsync(
+        message,
+        refreshedSession?.Messages ?? [ChatMessage.User(message)],
+        cancellationToken: cancellationToken);
+
+    if (!string.IsNullOrWhiteSpace(response))
+    {
+        await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(response), cancellationToken);
+    }
+
+    return Results.Ok(new AssistantInputResponse(
+        "chat",
+        true,
+        false,
+        string.Empty,
+        string.Empty,
+        response,
+        response,
+        null,
+        chatSessionService.Get(session.Id)));
+});
+
+app.MapPost("/api/assistant/confirm", async (AssistantConfirmRequest request, CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.ConfirmationId))
+    {
+        return Results.BadRequest(new { error = "Confirmation id is required." });
+    }
+
+    var result = await pcCommandService.ConfirmAsync(request.ConfirmationId, cancellationToken);
+
+    ChatSession? session = null;
+    if (!string.IsNullOrWhiteSpace(request.ChatSessionId))
+    {
+        session = chatSessionService.Get(request.ChatSessionId);
+        if (session is not null)
+        {
+            await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(result.Message), cancellationToken);
+            session = chatSessionService.Get(session.Id);
+        }
+    }
+
+    return Results.Ok(new AssistantInputResponse(
+        "command",
+        result.Handled,
+        false,
+        result.Command,
+        result.Target,
+        result.Message,
+        null,
+        null,
+        session));
+});
+
 app.MapGet("/api/chats", () => Results.Ok(chatSessionService.GetSummaries()));
 
 app.MapGet("/api/chats/{id}", (string id) =>
@@ -564,6 +675,49 @@ static async Task RunCliAsync(SettingsService settingsService, OllamaService oll
     }
 
     Console.WriteLine("Goodbye.");
+}
+
+string BuildConfirmationMessage(PcCommandExecutionResult result)
+{
+    var target = string.IsNullOrWhiteSpace(result.Target) ? result.Command : result.Target;
+    return $"Confirm {result.Command}: {target}";
+}
+
+bool TryBuildLocalAssistantResponse(string input, out string response)
+{
+    var normalized = input.Trim().TrimEnd('.', '!', '?').ToLowerInvariant();
+
+    if (normalized is "diagnostics" or "check diagnostics" or "show diagnostics")
+    {
+        var warnings = settingsValidationService.Validate().Warnings;
+        response = $"Diagnostics: platform {platformService.Current}. Memory: {pathResolver.MemoryPath}. Logs: {pathResolver.LogsDirectory}. Warnings: {(warnings.Count == 0 ? "none" : string.Join("; ", warnings))}";
+        return true;
+    }
+
+    if (normalized is "voice status" or "check voice status")
+    {
+        response = $"Voice status: Whisper - {whisperService.StatusMessage}. Piper - {piperService.StatusMessage}. Wake word - {wakeWordService.StatusMessage}.";
+        return true;
+    }
+
+    if (normalized is "search files" or "search my files")
+    {
+        response = "Tell me what to search for, for example: search files for resume. You can also use the Files panel for advanced local file search.";
+        return true;
+    }
+
+    if (normalized.StartsWith("search files for ", StringComparison.OrdinalIgnoreCase))
+    {
+        var query = input.Trim()["search files for ".Length..].Trim();
+        var results = fileIndexService.SearchDetailed(query, 5);
+        response = results.Count == 0
+            ? $"No indexed files matched \"{query}\"."
+            : $"Top file matches for \"{query}\": {string.Join("; ", results.Select(result => result.RelativePath))}";
+        return true;
+    }
+
+    response = string.Empty;
+    return false;
 }
 
 public sealed record ChatRequest(string Message);
