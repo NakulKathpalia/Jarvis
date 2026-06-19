@@ -46,6 +46,14 @@ public sealed class AgentPlanner
                 "Input requests opening an application.");
         }
 
+        if (normalized.StartsWith("open ", StringComparison.OrdinalIgnoreCase))
+        {
+            return new AgentDecision(
+                AgentAction.OpenApp,
+                trimmed["open ".Length..].Trim(),
+                "Input requests opening a local app or known target.");
+        }
+
         if (LooksLikeSensitiveLocalCommand(normalized))
         {
             return new AgentDecision(

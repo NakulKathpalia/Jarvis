@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Jarvis.Core\Jarvis.Core.csproj" />
+    <ProjectReference Include="..\Jarvis.Agent\Jarvis.Agent.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
