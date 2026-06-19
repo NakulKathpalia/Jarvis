@@ -19,4 +19,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Jarvis.Core\Jarvis.Core.csproj" />
+    <ProjectReference Include="..\Jarvis.Tools\Jarvis.Tools.csproj" />
+    <ProjectReference Include="..\Jarvis.Agent\Jarvis.Agent.csproj" />
+  </ItemGroup>
+
 </Project>
