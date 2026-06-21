@@ -7,6 +7,9 @@ public sealed class ChatSession
     [JsonPropertyName("id")]
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
 
+    [JsonPropertyName("userId")]
+    public string UserId { get; set; } = string.Empty;
+
     [JsonPropertyName("title")]
     public string Title { get; set; } = "New chat";
 

@@ -1,24 +1,38 @@
 using System.Text.Json;
 using Jarvis.Models;
+using Jarvis.Repositories;
+using Jarvis.Users;
 
 namespace Jarvis.Data;
 
 public sealed class ChatSessionService
 {
     private readonly string _sessionsPath;
+    private readonly IChatRepository? _repository;
+    private readonly JarvisUserContext _userContext;
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
     private readonly List<ChatSession> _sessions = [];
     private readonly SemaphoreSlim _lock = new(1, 1);
 
-    public ChatSessionService(string sessionsPath)
+    public ChatSessionService(string sessionsPath, IChatRepository? repository = null, JarvisUserContext? userContext = null)
     {
         _sessionsPath = sessionsPath;
+        _repository = repository;
+        _userContext = userContext ?? new JarvisUserContext();
     }
 
     public IReadOnlyCollection<ChatSession> Sessions => _sessions;
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
+        if (_repository is not null)
+        {
+            var storedSessions = await _repository.GetSessionsAsync(_userContext.UserId, cancellationToken);
+            _sessions.Clear();
+            _sessions.AddRange(storedSessions.OrderByDescending(session => session.UpdatedAtUtc));
+            return;
+        }
+
         Directory.CreateDirectory(Path.GetDirectoryName(_sessionsPath) ?? ".");
         if (!File.Exists(_sessionsPath))
         {
@@ -51,6 +65,7 @@ public sealed class ChatSessionService
         var session = new ChatSession
         {
             Id = Guid.NewGuid().ToString("N"),
+            UserId = _userContext.UserId,
             Title = string.IsNullOrWhiteSpace(title) ? "New chat" : title.Trim(),
             CreatedAtUtc = now,
             UpdatedAtUtc = now
@@ -60,6 +75,12 @@ public sealed class ChatSessionService
         try
         {
             _sessions.Insert(0, session);
+            if (_repository is not null)
+            {
+                await _repository.UpsertSessionAsync(_userContext.UserId, session, cancellationToken);
+                return session;
+            }
+
             await SaveAsync(cancellationToken);
         }
         finally
@@ -77,6 +98,8 @@ public sealed class ChatSessionService
         {
             var session = Get(id) ?? throw new InvalidOperationException("Chat session not found.");
             session.Messages.Add(message);
+            message.UserId = _userContext.UserId;
+            message.ChatSessionId = id;
             session.UpdatedAtUtc = DateTime.UtcNow;
             if (session.Title.Equals("New chat", StringComparison.OrdinalIgnoreCase)
                 && message.Role.Equals("user", StringComparison.OrdinalIgnoreCase))
@@ -84,7 +107,15 @@ public sealed class ChatSessionService
                 session.Title = CreateTitle(message.Content);
             }
 
-            await SaveAsync(cancellationToken);
+            if (_repository is not null)
+            {
+                await _repository.AddMessageAsync(_userContext.UserId, id, message, cancellationToken);
+                await _repository.UpsertSessionAsync(_userContext.UserId, session, cancellationToken);
+            }
+            else
+            {
+                await SaveAsync(cancellationToken);
+            }
         }
         finally
         {
@@ -100,7 +131,14 @@ public sealed class ChatSessionService
             var removed = _sessions.RemoveAll(session => session.Id.Equals(id, StringComparison.OrdinalIgnoreCase)) > 0;
             if (removed)
             {
-                await SaveAsync(cancellationToken);
+                if (_repository is not null)
+                {
+                    await _repository.DeleteSessionAsync(_userContext.UserId, id, cancellationToken);
+                }
+                else
+                {
+                    await SaveAsync(cancellationToken);
+                }
             }
 
             return removed;

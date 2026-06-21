@@ -107,6 +107,37 @@ POST /api/connected-apps/{provider}/connect
 POST /api/connected-apps/{provider}/disconnect
 ```
 
+## Local MongoDB Storage
+
+Jarvis prefers Local MongoDB when it is running on the user's PC. MongoDB Atlas is not used.
+
+Default connection:
+
+```text
+mongodb://localhost:27017
+```
+
+Default database:
+
+```text
+jarvis_local
+```
+
+Optional overrides:
+
+```powershell
+$env:JARVIS_MONGODB_URI="mongodb://localhost:27017"
+$env:JARVIS_MONGODB_DATABASE="jarvis_local"
+```
+
+On startup, Jarvis pings MongoDB. If MongoDB is available, Jarvis:
+
+- Creates indexes and the default local owner user.
+- Runs the JSON-to-Mongo migration once.
+- Stores memories, chat sessions/messages, settings, audit logs, command history, voice history, and connected app state in MongoDB.
+
+If MongoDB is not available, Jarvis falls back to the existing JSON files. Migration leaves JSON files in place, so rollback is simply stopping MongoDB or changing the MongoDB connection variables and restarting Jarvis.
+
 ## Local Assets
 
 Keep local models, tool binaries, generated audio, and temporary files out of git. The project is designed to stay local-first and should not depend on cloud AI APIs.

@@ -32,7 +32,11 @@ public sealed record VoicePipelineResult(
 public sealed class VoiceHistoryItem
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string UserId { get; set; } = string.Empty;
+    public string DeviceId { get; set; } = Environment.MachineName;
     public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public string Transcript { get; set; } = string.Empty;
     public string Response { get; set; } = string.Empty;
     public VoicePipelineState State { get; set; } = VoicePipelineState.Idle;

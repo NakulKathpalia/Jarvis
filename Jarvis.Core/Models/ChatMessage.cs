@@ -4,6 +4,10 @@ namespace Jarvis.Models;
 
 public sealed class ChatMessage
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string UserId { get; set; } = string.Empty;
+    public string ChatSessionId { get; set; } = string.Empty;
+
     [JsonPropertyName("role")]
     public string Role { get; set; } = string.Empty;
 
@@ -11,6 +15,7 @@ public sealed class ChatMessage
     public string Content { get; set; } = string.Empty;
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public static ChatMessage System(string content) => new() { Role = "system", Content = content };
     public static ChatMessage User(string content) => new() { Role = "user", Content = content };

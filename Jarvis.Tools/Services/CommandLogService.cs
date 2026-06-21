@@ -1,12 +1,16 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Jarvis.Models;
+using Jarvis.Repositories;
+using Jarvis.Users;
 
 namespace Jarvis.Services;
 
 public sealed class CommandLogService
 {
     private readonly string _logPath;
+    private readonly ICommandHistoryRepository? _repository;
+    private readonly JarvisUserContext _userContext;
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
@@ -15,9 +19,11 @@ public sealed class CommandLogService
     private readonly List<PcCommandLogEntry> _logs = [];
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    public CommandLogService(string logPath)
+    public CommandLogService(string logPath, ICommandHistoryRepository? repository = null, JarvisUserContext? userContext = null)
     {
         _logPath = logPath;
+        _repository = repository;
+        _userContext = userContext ?? new JarvisUserContext();
         _jsonOptions.Converters.Add(new JsonStringEnumConverter());
     }
 
@@ -25,6 +31,14 @@ public sealed class CommandLogService
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
+        if (_repository is not null)
+        {
+            var storedLogs = await _repository.GetRecentAsync(_userContext.UserId, 200, cancellationToken);
+            _logs.Clear();
+            _logs.AddRange(storedLogs.OrderByDescending(log => log.TimestampUtc).Take(200));
+            return;
+        }
+
         Directory.CreateDirectory(Path.GetDirectoryName(_logPath) ?? ".");
         if (!File.Exists(_logPath))
         {
@@ -44,7 +58,11 @@ public sealed class CommandLogService
         try
         {
             entry.Id = string.IsNullOrWhiteSpace(entry.Id) ? Guid.NewGuid().ToString() : entry.Id;
+            entry.UserId = _userContext.UserId;
+            entry.DeviceId = _userContext.DeviceId;
             entry.TimestampUtc = entry.TimestampUtc == default ? DateTime.UtcNow : entry.TimestampUtc;
+            entry.CreatedAtUtc = entry.CreatedAtUtc == default ? entry.TimestampUtc : entry.CreatedAtUtc;
+            entry.UpdatedAtUtc = DateTime.UtcNow;
             _logs.Insert(0, entry);
 
             if (_logs.Count > 200)
@@ -52,7 +70,14 @@ public sealed class CommandLogService
                 _logs.RemoveRange(200, _logs.Count - 200);
             }
 
-            await SaveAsync(cancellationToken);
+            if (_repository is not null)
+            {
+                await _repository.AddAsync(_userContext.UserId, entry, cancellationToken);
+            }
+            else
+            {
+                await SaveAsync(cancellationToken);
+            }
         }
         finally
         {

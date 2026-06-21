@@ -1,23 +1,37 @@
 using System.Text.Json;
 using Jarvis.Models;
+using Jarvis.Repositories;
+using Jarvis.Users;
 
 namespace Jarvis.Memory;
 
 public sealed class MemoryService
 {
     private readonly string _memoryPath;
+    private readonly IMemoryRepository? _repository;
+    private readonly JarvisUserContext _userContext;
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
     private readonly List<MemoryItem> _items = [];
 
-    public MemoryService(string memoryPath)
+    public MemoryService(string memoryPath, IMemoryRepository? repository = null, JarvisUserContext? userContext = null)
     {
         _memoryPath = memoryPath;
+        _repository = repository;
+        _userContext = userContext ?? new JarvisUserContext();
     }
 
     public IReadOnlyCollection<MemoryItem> Items => _items;
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
+        if (_repository is not null)
+        {
+            var storedItems = await _repository.GetForUserAsync(_userContext.UserId, cancellationToken);
+            _items.Clear();
+            _items.AddRange(storedItems.Select(NormalizeItem).OrderByDescending(item => item.UpdatedAtUtc));
+            return;
+        }
+
         Directory.CreateDirectory(Path.GetDirectoryName(_memoryPath) ?? ".");
         if (!File.Exists(_memoryPath))
         {
@@ -42,6 +56,7 @@ public sealed class MemoryService
         var item = NormalizeItem(new MemoryItem
         {
             Id = Guid.NewGuid().ToString(),
+            UserId = _userContext.UserId,
             Text = text,
             Category = category,
             Tags = tags?.ToList() ?? new List<string>(),
@@ -150,6 +165,11 @@ public sealed class MemoryService
 
     private Task SaveAsync(CancellationToken cancellationToken = default)
     {
+        if (_repository is not null)
+        {
+            return Task.WhenAll(_items.Select(item => _repository.UpsertAsync(_userContext.UserId, item, cancellationToken)));
+        }
+
         var json = JsonSerializer.Serialize(_items, _jsonOptions);
         return File.WriteAllTextAsync(_memoryPath, json, cancellationToken);
     }
@@ -157,6 +177,7 @@ public sealed class MemoryService
     private static MemoryItem NormalizeItem(MemoryItem item)
     {
         item.Text = item.Text?.Trim() ?? string.Empty;
+        item.UserId = string.IsNullOrWhiteSpace(item.UserId) ? JarvisUserContext.DefaultOwnerUserId : item.UserId;
         item.Category = string.IsNullOrWhiteSpace(item.Category) ? "General" : item.Category.Trim();
         item.Tags = NormalizeTags(item.Tags);
         item.Importance = NormalizeImportance(item.Importance);

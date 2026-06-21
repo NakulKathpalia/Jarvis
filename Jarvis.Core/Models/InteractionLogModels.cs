@@ -39,7 +39,11 @@ public enum InteractionStatus
 public sealed class InteractionLogEntry
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string UserId { get; set; } = string.Empty;
+    public string DeviceId { get; set; } = Environment.MachineName;
     public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public InteractionSource Source { get; set; } = InteractionSource.System;
     public InteractionType Type { get; set; } = InteractionType.SystemStatus;
     public string Stage { get; set; } = string.Empty;

@@ -5,33 +5,117 @@ using Jarvis.Core;
 using Jarvis.Data;
 using Jarvis.Memory;
 using Jarvis.Models;
+using Jarvis.Mongo;
+using Jarvis.Migrations;
+using Jarvis.Repositories;
+using Jarvis.Repositories.Mongo;
 using Jarvis.Security;
 using Jarvis.Services;
+using Jarvis.Users;
 using System.Text.Json.Serialization;
 
 var basePath = AppContext.BaseDirectory;
 var pathResolver = new PathResolver(basePath);
 var platformService = new PlatformService();
+var userContext = new JarvisUserContext();
 
-var settingsService = new SettingsService(pathResolver.SettingsPath);
+MongoDocumentConventions.Register();
+IMemoryRepository? memoryRepository = null;
+IChatRepository? chatRepository = null;
+IChatHistoryRepository? chatHistoryRepository = null;
+ISettingsRepository? settingsRepository = null;
+IAuditLogRepository? auditLogRepository = null;
+ICommandHistoryRepository? commandHistoryRepository = null;
+IVoiceHistoryRepository? voiceHistoryRepository = null;
+IConnectedAppRepository? connectedAppRepository = null;
+IReadOnlyCollection<ConnectedAppInfo>? connectedApps = null;
+
+var mongoOptions = new MongoOptions
+{
+    ConnectionString = Environment.GetEnvironmentVariable("JARVIS_MONGODB_URI") ?? "mongodb://localhost:27017",
+    DatabaseName = Environment.GetEnvironmentVariable("JARVIS_MONGODB_DATABASE") ?? "jarvis_local"
+};
+
+try
+{
+    var mongoContext = new MongoContext(mongoOptions);
+    if (await mongoContext.IsAvailableAsync())
+    {
+        await new MongoInitializer(mongoContext).InitializeAsync();
+
+        memoryRepository = new MongoMemoryRepository(mongoContext);
+        chatRepository = new MongoChatRepository(mongoContext);
+        chatHistoryRepository = new MongoChatHistoryRepository(mongoContext);
+        settingsRepository = new MongoSettingsRepository(mongoContext);
+        auditLogRepository = new MongoAuditLogRepository(mongoContext);
+        commandHistoryRepository = new MongoCommandHistoryRepository(mongoContext);
+        voiceHistoryRepository = new MongoVoiceHistoryRepository(mongoContext);
+        connectedAppRepository = new MongoConnectedAppRepository(mongoContext);
+
+        var migrationRepository = new MongoMigrationRepository(mongoContext);
+        var migrationService = new FileStorageMigrationService(
+            new FileStorageMigrationPaths(
+                pathResolver.MemoryPath,
+                pathResolver.ChatHistoryPath,
+                pathResolver.ChatSessionsPath,
+                pathResolver.SettingsPath,
+                pathResolver.InteractionLogPath,
+                pathResolver.CommandLogPath,
+                pathResolver.VoiceHistoryPath),
+            userContext,
+            migrationRepository,
+            memoryRepository,
+            chatRepository,
+            chatHistoryRepository,
+            settingsRepository,
+            auditLogRepository,
+            commandHistoryRepository,
+            voiceHistoryRepository);
+        await migrationService.RunAsync();
+
+        connectedApps = await connectedAppRepository.GetForUserAsync(userContext.UserId);
+        if (connectedApps.Count == 0)
+        {
+            foreach (var connectedApp in ConnectedAppService.GetDefaultApps())
+            {
+                await connectedAppRepository.UpsertAsync(userContext.UserId, connectedApp);
+            }
+
+            connectedApps = await connectedAppRepository.GetForUserAsync(userContext.UserId);
+        }
+
+        Console.WriteLine($"MongoDB storage enabled: {mongoOptions.DatabaseName}");
+    }
+    else
+    {
+        Console.WriteLine("MongoDB is not reachable. Falling back to JSON file storage.");
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"MongoDB storage disabled: {ex.Message}");
+    Console.WriteLine("Falling back to JSON file storage.");
+}
+
+var settingsService = new SettingsService(pathResolver.SettingsPath, settingsRepository, userContext);
 await settingsService.LoadAsync();
 
-var memoryService = new MemoryService(pathResolver.MemoryPath);
+var memoryService = new MemoryService(pathResolver.MemoryPath, memoryRepository, userContext);
 await memoryService.LoadAsync();
 
-var chatHistoryService = new ChatHistoryService(pathResolver.ChatHistoryPath);
+var chatHistoryService = new ChatHistoryService(pathResolver.ChatHistoryPath, chatHistoryRepository, userContext);
 await chatHistoryService.LoadAsync();
 
-var chatSessionService = new ChatSessionService(pathResolver.ChatSessionsPath);
+var chatSessionService = new ChatSessionService(pathResolver.ChatSessionsPath, chatRepository, userContext);
 await chatSessionService.LoadAsync();
 
-var commandLogService = new CommandLogService(pathResolver.CommandLogPath);
+var commandLogService = new CommandLogService(pathResolver.CommandLogPath, commandHistoryRepository, userContext);
 await commandLogService.LoadAsync();
 
-var interactionLogService = new InteractionLogService(pathResolver.InteractionLogPath);
+var interactionLogService = new InteractionLogService(pathResolver.InteractionLogPath, auditLogRepository, userContext);
 await interactionLogService.LoadAsync();
 
-var voiceHistoryService = new VoiceHistoryService(pathResolver.VoiceHistoryPath);
+var voiceHistoryService = new VoiceHistoryService(pathResolver.VoiceHistoryPath, voiceHistoryRepository, userContext);
 await voiceHistoryService.LoadAsync();
 
 using var httpClient = new HttpClient();
@@ -61,7 +145,7 @@ var pcCommandService = new PcCommandService(
 var voiceCommandService = new VoiceCommandService(memoryService, fileIndexService, settingsService, pcCommandService);
 var classifierService = new ClassifierService();
 IAuthService authService = new LocalAuthService();
-IConnectedAppService connectedAppService = new ConnectedAppService();
+IConnectedAppService connectedAppService = new ConnectedAppService(connectedApps);
 
 var commandManager = Commands.Create(
     memoryService,

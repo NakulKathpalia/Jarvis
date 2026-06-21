@@ -47,7 +47,11 @@ public sealed record PcCommandCatalogItem(
 public sealed class PcCommandLogEntry
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string UserId { get; set; } = string.Empty;
+    public string DeviceId { get; set; } = Environment.MachineName;
     public DateTime TimestampUtc { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public string OriginalInput { get; set; } = string.Empty;
     public string ParsedCommand { get; set; } = string.Empty;
     public string Target { get; set; } = string.Empty;
