@@ -59,6 +59,7 @@ public static class JarvisApplication
         ICommandHistoryRepository? commandHistoryRepository = null;
         IVoiceHistoryRepository? voiceHistoryRepository = null;
         IConnectedAppRepository? connectedAppRepository = null;
+        IDeviceRepository? deviceRepository = null;
         IReadOnlyCollection<ConnectedAppInfo>? connectedApps = null;
 
         var mongoOptions = new MongoOptions
@@ -82,6 +83,7 @@ public static class JarvisApplication
                 commandHistoryRepository = new MongoCommandHistoryRepository(mongoContext);
                 voiceHistoryRepository = new MongoVoiceHistoryRepository(mongoContext);
                 connectedAppRepository = new MongoConnectedAppRepository(mongoContext);
+                deviceRepository = new MongoDeviceRepository(mongoContext);
 
                 var migrationRepository = new MongoMigrationRepository(mongoContext);
                 var migrationService = new FileStorageMigrationService(
@@ -114,6 +116,16 @@ public static class JarvisApplication
 
                     connectedApps = await connectedAppRepository.GetForUserAsync(userContext.UserId);
                 }
+
+                await deviceRepository.UpsertAsync(new DeviceRecord
+                {
+                    Id = userContext.DeviceId,
+                    UserId = userContext.UserId,
+                    DeviceName = Environment.MachineName,
+                    DeviceType = userContext.SessionType.ToString(),
+                    Trusted = userContext.TrustedDevice,
+                    LastSeenAtUtc = DateTime.UtcNow
+                });
 
                 Console.WriteLine($"MongoDB storage enabled: {mongoOptions.DatabaseName}");
             }
@@ -160,9 +172,10 @@ public static class JarvisApplication
         var commandRiskClassifier = new CommandRiskClassifier();
         var settingsValidationService = new SettingsValidationService(settingsService);
         var auditLogger = new AuditLogger(pathResolver.SecurityAuditLogPath);
+        var permissionService = new PermissionService(userContext);
         var securityService = new SecurityService(
             new InputValidator(),
-            new PermissionService(),
+            permissionService,
             auditLogger);
         var pcControlService = new WindowsPcControlService(pathResolver.ScreenshotDirectory);
         var pcCommandService = new PcCommandService(
@@ -214,6 +227,7 @@ public static class JarvisApplication
             CommandLogService = commandLogService,
             InteractionLogService = interactionLogService,
             VoiceHistoryService = voiceHistoryService,
+            PermissionService = permissionService,
             OllamaService = ollamaService,
             WhisperService = whisperService,
             PiperService = piperService,

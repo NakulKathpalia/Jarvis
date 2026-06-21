@@ -22,6 +22,7 @@ public static class EndpointBootstrapper
         var commandLogService = runtime.CommandLogService;
         var interactionLogService = runtime.InteractionLogService;
         var voiceHistoryService = runtime.VoiceHistoryService;
+        var permissionService = runtime.PermissionService;
         var ollamaService = runtime.OllamaService;
         var whisperService = runtime.WhisperService;
         var piperService = runtime.PiperService;
@@ -60,11 +61,23 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/connected-apps/{provider}/connect", (string provider) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.ConnectorManageOwn);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             return Results.Ok(connectedAppService.Connect(provider));
         });
         
         app.MapPost("/api/connected-apps/{provider}/disconnect", (string provider) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.ConnectorManageOwn);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             return Results.Ok(connectedAppService.Disconnect(provider));
         });
         
@@ -100,6 +113,12 @@ public static class EndpointBootstrapper
         
         app.MapGet("/api/interactions/logs", (int? limit) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.AuditReadOwn);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             var take = Math.Clamp(limit.GetValueOrDefault(100), 1, 500);
             return Results.Ok(interactionLogService.Logs.Take(take));
         });
@@ -124,6 +143,12 @@ public static class EndpointBootstrapper
         
         app.MapDelete("/api/interactions/logs", async (CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.AuditReadOwn);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             await interactionLogService.ClearAsync(cancellationToken);
             return Results.Ok(new { cleared = true });
         });
@@ -141,6 +166,12 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/chat", async (ChatRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.ChatWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Message))
             {
                 return Results.BadRequest(new { error = "Message is required." });
@@ -152,6 +183,12 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/assistant/input", async (AssistantInputRequest request, CancellationToken cancellationToken) =>
         {
+            var chatDenied = DenyIfMissing(PermissionDefinitions.ChatWrite);
+            if (chatDenied is not null)
+            {
+                return chatDenied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Message))
             {
                 return Results.BadRequest(new { error = "Message is required." });
@@ -179,6 +216,12 @@ public static class EndpointBootstrapper
         
             if (message.StartsWith("/", StringComparison.Ordinal))
             {
+                var commandDenied = DenyIfMissing(PermissionDefinitions.CommandsExecute, SecurityRiskLevel.Medium);
+                if (commandDenied is not null)
+                {
+                    return commandDenied;
+                }
+
                 var commandResult = await commandManager.TryExecuteAsync(message, cancellationToken);
                 var commandMessage = string.IsNullOrWhiteSpace(commandResult.Message)
                     ? "Command executed. Check console output."
@@ -199,6 +242,12 @@ public static class EndpointBootstrapper
         
             if (message.Equals(SecurityService.ConfirmationPhrase, StringComparison.Ordinal))
             {
+                var commandDenied = DenyIfMissing(PermissionDefinitions.CommandsExecute, SecurityRiskLevel.Medium);
+                if (commandDenied is not null)
+                {
+                    return commandDenied;
+                }
+
                 var commandResult = await pcCommandService.ExecuteAsync(message, cancellationToken: cancellationToken);
                 await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(commandResult.Message), cancellationToken);
         
@@ -229,6 +278,12 @@ public static class EndpointBootstrapper
         
             if (parsedCommand.Action != PcControlAction.Unknown)
             {
+                var commandDenied = DenyIfMissing(PermissionDefinitions.CommandsExecute, SecurityRiskLevel.Medium);
+                if (commandDenied is not null)
+                {
+                    return commandDenied;
+                }
+
                 var commandResult = await pcCommandService.ExecuteAsync(message, cancellationToken: cancellationToken);
                 var assistantMessage = commandResult.RequiresConfirmation
                     ? BuildConfirmationMessage(commandResult)
@@ -314,6 +369,12 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/assistant/confirm", async (AssistantConfirmRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.CommandsExecute, SecurityRiskLevel.Medium);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.ConfirmationId))
             {
                 return Results.BadRequest(new { error = "Confirmation id is required." });
@@ -353,10 +414,20 @@ public static class EndpointBootstrapper
                 session));
         });
         
-        app.MapGet("/api/chats", () => Results.Ok(chatSessionService.GetSummaries()));
+        app.MapGet("/api/chats", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.ChatRead);
+            return denied ?? Results.Ok(chatSessionService.GetSummaries());
+        });
         
         app.MapGet("/api/chats/{id}", (string id) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.ChatRead);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             var session = chatSessionService.Get(id);
             return session is null
                 ? Results.NotFound(new { error = "Chat session not found." })
@@ -365,12 +436,24 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/chats", async (ChatSessionCreateRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.ChatWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             var session = await chatSessionService.CreateAsync(request.Title, cancellationToken);
             return Results.Ok(session);
         });
         
         app.MapPost("/api/chats/{id}/messages", async (string id, ChatSessionMessageRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.ChatWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Message))
             {
                 return Results.BadRequest(new { error = "Message is required." });
@@ -405,16 +488,32 @@ public static class EndpointBootstrapper
         
         app.MapDelete("/api/chats/{id}", async (string id, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.ChatWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             var deleted = await chatSessionService.DeleteAsync(id, cancellationToken);
             return deleted
                 ? Results.Ok(chatSessionService.GetSummaries())
                 : Results.NotFound(new { error = "Chat session not found." });
         });
         
-        app.MapGet("/api/memory", () => Results.Ok(memoryService.Items));
+        app.MapGet("/api/memory", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            return denied ?? Results.Ok(memoryService.Items);
+        });
         
         app.MapPost("/api/memory", async (MemoryRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Text))
             {
                 return Results.BadRequest(new { error = "Memory text is required." });
@@ -431,12 +530,24 @@ public static class EndpointBootstrapper
         
         app.MapGet("/api/memory/search", (string? q, string? category, string? tag, int? minImportance) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             var results = memoryService.Search(q ?? string.Empty, category, tag, minImportance);
             return Results.Ok(results);
         });
         
         app.MapPut("/api/memory/{id}", async (string id, MemoryUpdateRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Text))
             {
                 return Results.BadRequest(new { error = "Memory text is required." });
@@ -457,6 +568,12 @@ public static class EndpointBootstrapper
         
         app.MapDelete("/api/memory/{id}", async (string id, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             var removed = await memoryService.DeleteAsync(id, cancellationToken);
             return removed is null
                 ? Results.NotFound(new { error = "Memory not found." })
@@ -465,14 +582,30 @@ public static class EndpointBootstrapper
         
         app.MapDelete("/api/memory", async (CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             await memoryService.ClearAsync(cancellationToken);
             return Results.Ok(memoryService.Items);
         });
         
-        app.MapGet("/api/settings", () => Results.Ok(settingsService.Current));
+        app.MapGet("/api/settings", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.SettingsRead);
+            return denied ?? Results.Ok(settingsService.Current);
+        });
         
         app.MapPost("/api/settings", async (AppSettings request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.SettingsWriteOwn, SecurityRiskLevel.Medium);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             settingsService.Current.OllamaBaseUrl = request.OllamaBaseUrl;
             settingsService.Current.Model = request.Model;
             settingsService.Current.SystemPrompt = request.SystemPrompt;
@@ -495,23 +628,47 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/files/index", async (CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.FilesRead, SecurityRiskLevel.Medium);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             var count = await fileIndexService.RebuildAsync(cancellationToken);
             return Results.Ok(new { count });
         });
         
         app.MapGet("/api/files/search", (string q) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.FilesRead, SecurityRiskLevel.Medium);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             return Results.Ok(fileIndexService.Search(q));
         });
         
         app.MapGet("/api/files/search-detailed", (string q, int? limit) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.FilesRead, SecurityRiskLevel.Medium);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             var results = fileIndexService.SearchDetailed(q, limit.GetValueOrDefault(25));
             return Results.Ok(results);
         });
         
         app.MapPost("/api/files/open", (FileOpenRequest request) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.FilesRead, SecurityRiskLevel.Medium);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Path))
             {
                 return Results.BadRequest(new { error = "Path is required." });
@@ -525,6 +682,12 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/files/open-folder", (FileOpenRequest request) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.FilesRead, SecurityRiskLevel.Medium);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Path))
             {
                 return Results.BadRequest(new { error = "Path is required." });
@@ -536,12 +699,26 @@ public static class EndpointBootstrapper
                 : Results.BadRequest(new { error = "Unable to open folder." });
         });
         
-        app.MapGet("/api/commands/catalog", () => Results.Ok(pcCommandService.Catalog));
+        app.MapGet("/api/commands/catalog", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.CommandsExecute, SecurityRiskLevel.Medium);
+            return denied ?? Results.Ok(pcCommandService.Catalog);
+        });
         
-        app.MapGet("/api/commands/logs", () => Results.Ok(commandLogService.Logs.Take(50)));
+        app.MapGet("/api/commands/logs", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.AuditReadOwn);
+            return denied ?? Results.Ok(commandLogService.Logs.Take(50));
+        });
         
         app.MapPost("/api/commands/execute", async (PcCommandExecuteRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.CommandsExecute, SecurityRiskLevel.Medium);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Input))
             {
                 return Results.BadRequest(new { error = "Command input is required." });
@@ -553,6 +730,12 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/commands/confirm", async (PcCommandConfirmRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.CommandsExecute, SecurityRiskLevel.Medium);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.ConfirmationId))
             {
                 return Results.BadRequest(new { error = "Confirmation id is required." });
@@ -571,7 +754,15 @@ public static class EndpointBootstrapper
             return Results.Ok(result);
         });
         
-        app.MapGet("/api/voice/status", () => Results.Ok(new
+        app.MapGet("/api/voice/status", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            return Results.Ok(new
         {
             whisper = new
             {
@@ -599,9 +790,18 @@ public static class EndpointBootstrapper
                 settingsService.Current.WakeWordDetectorPath,
                 settingsService.Current.WakeWordModelPath
             }
-        }));
+        });
+        });
         
-        app.MapGet("/api/voice/wake-status", () => Results.Ok(new
+        app.MapGet("/api/voice/wake-status", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            return Results.Ok(new
         {
             enabled = settingsService.Current.WakeWordEnabled,
             configured = wakeWordService.IsConfigured,
@@ -610,10 +810,17 @@ public static class EndpointBootstrapper
             settingsService.Current.WakeWordPhrase,
             settingsService.Current.WakeWordDetectorPath,
             settingsService.Current.WakeWordModelPath
-        }));
+        });
+        });
         
         app.MapPost("/api/voice/wake-check", (WakeWordCheckRequest request) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Transcript))
             {
                 return Results.BadRequest(new { error = "Transcript is required." });
@@ -622,19 +829,38 @@ public static class EndpointBootstrapper
             return Results.Ok(wakeWordService.CheckTranscript(request.Transcript));
         });
         
-        app.MapGet("/api/voice/commands", () => Results.Ok(voiceCommandService.GetCatalog()));
+        app.MapGet("/api/voice/commands", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            return denied ?? Results.Ok(voiceCommandService.GetCatalog());
+        });
         
-        app.MapGet("/api/voice/tts-status", () => Results.Ok(new
+        app.MapGet("/api/voice/tts-status", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            return Results.Ok(new
         {
             configured = piperService.IsConfigured,
             message = piperService.StatusMessage,
             settingsService.Current.PiperExecutablePath,
             settingsService.Current.PiperModelPath,
             settingsService.Current.AutoSpeakResponses
-        }));
+        });
+        });
         
         app.MapPost("/api/voice/transcribe", async (HttpRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (!request.HasFormContentType)
             {
                 return Results.BadRequest(new { error = "Audio upload must be multipart/form-data." });
@@ -679,12 +905,26 @@ public static class EndpointBootstrapper
             });
         });
         
-        app.MapGet("/api/voice/pipeline/status", () => Results.Ok(voicePipelineService.Status));
+        app.MapGet("/api/voice/pipeline/status", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            return denied ?? Results.Ok(voicePipelineService.Status);
+        });
         
-        app.MapGet("/api/voice/history", () => Results.Ok(voiceHistoryService.Items.Take(50)));
+        app.MapGet("/api/voice/history", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            return denied ?? Results.Ok(voiceHistoryService.Items.Take(50));
+        });
         
         app.MapPost("/api/voice/pipeline", async (HttpRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (!request.HasFormContentType)
             {
                 return Results.BadRequest(new { error = "Audio upload must be multipart/form-data." });
@@ -725,6 +965,12 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/voice/pipeline/confirm", async (VoiceConfirmationRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.ConfirmationId))
             {
                 return Results.BadRequest(new { error = "Confirmation id is required." });
@@ -746,6 +992,12 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/voice/speak", async (SpeakRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Text))
             {
                 return Results.BadRequest(new { error = "Text is required." });
@@ -782,6 +1034,12 @@ public static class EndpointBootstrapper
         
         app.MapPost("/api/voice/command", async (VoiceCommandRequest request, CancellationToken cancellationToken) =>
         {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Transcript))
             {
                 return Results.BadRequest(new { error = "Transcript is required." });
@@ -844,6 +1102,18 @@ public static class EndpointBootstrapper
         
             response = string.Empty;
             return false;
+        }
+
+        IResult? DenyIfMissing(
+            string permission,
+            SecurityRiskLevel riskLevel = SecurityRiskLevel.Safe,
+            string resource = "",
+            string action = "")
+        {
+            var result = permissionService.Evaluate(permission, riskLevel, resource, action);
+            return result.Decision == PermissionDecision.Deny
+                ? Results.Problem(result.Reason, statusCode: StatusCodes.Status403Forbidden)
+                : null;
         }
 
         return app;

@@ -20,6 +20,7 @@ public sealed class JarvisRuntime
     public required CommandLogService CommandLogService { get; init; }
     public required InteractionLogService InteractionLogService { get; init; }
     public required VoiceHistoryService VoiceHistoryService { get; init; }
+    public required PermissionService PermissionService { get; init; }
     public required OllamaService OllamaService { get; init; }
     public required WhisperService WhisperService { get; init; }
     public required PiperService PiperService { get; init; }

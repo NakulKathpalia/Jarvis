@@ -4,7 +4,7 @@ public enum UserRole
 {
     Owner,
     Admin,
+    PowerUser,
     User,
-    Guest,
-    Service
+    Guest
 }
