@@ -4,6 +4,7 @@ export type ViewKey =
   | "memory"
   | "control"
   | "files"
+  | "tools"
   | "auth"
   | "connectedApps"
   | "security"

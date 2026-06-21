@@ -94,8 +94,9 @@ export function ControlPanel({ onToast }: ControlPanelProps) {
 
       <div className="simple-grid">
         {commandSections.map((section) => (
-          <article className="simple-card" key={section.title}>
+          <article className={section.title === "System Actions" ? "simple-card danger-zone-card" : "simple-card"} key={section.title}>
             <h3>{section.title}</h3>
+            {section.title === "System Actions" && <p>These actions require confirmation before execution.</p>}
             <div className="action-list">
               {section.actions.map((action) => (
                 <button type="button" key={action} onClick={() => void runCommand(action)} disabled={isRunning}>

@@ -6,11 +6,12 @@ import type { AuthProviderInfo, AuthStatus } from "@/lib/types";
 
 type AuthPanelProps = {
   onToast: (message: string) => void;
+  onAuthChanged?: () => Promise<void>;
 };
 
 type AuthTab = "signin" | "signup";
 
-export function AuthPanel({ onToast }: AuthPanelProps) {
+export function AuthPanel({ onToast, onAuthChanged }: AuthPanelProps) {
   const [activeTab, setActiveTab] = useState<AuthTab>("signin");
   const [status, setStatus] = useState<AuthStatus | null>(null);
   const [providers, setProviders] = useState<AuthProviderInfo[]>([]);
@@ -42,6 +43,7 @@ export function AuthPanel({ onToast }: AuthPanelProps) {
         : await authApi.signUp(email, password, name);
       setStatus(result.status);
       setMessage(result.message);
+      await onAuthChanged?.();
       onToast(result.message);
     } catch (error) {
       onToast(error instanceof Error ? error.message : "Auth request failed");
@@ -56,6 +58,7 @@ export function AuthPanel({ onToast }: AuthPanelProps) {
       const result = await authApi.signOut();
       setStatus(result.status);
       setMessage(result.message);
+      await onAuthChanged?.();
       onToast(result.message);
     } catch (error) {
       onToast(error instanceof Error ? error.message : "Sign out failed");

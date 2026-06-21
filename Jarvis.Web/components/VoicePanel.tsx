@@ -5,7 +5,6 @@ import { TopBar } from "./TopBar";
 import { VoiceCommandHelpPanel } from "./VoiceCommandHelpPanel";
 import { VoiceLoopPanel } from "./VoiceLoopPanel";
 import { WakeWordPanel } from "./WakeWordPanel";
-import { AssistantOrb } from "./ui/AssistantOrb";
 import { PanelCard } from "./ui/PanelCard";
 import { StatusBadge } from "./ui/StatusBadge";
 import { jarvisApi } from "@/lib/api";
@@ -40,18 +39,28 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
       <TopBar title="Voice" subtitle="Microphone to Whisper, command routing, Ollama, and Piper" />
 
       <div className="grid w-full max-w-5xl gap-5">
-        <PanelCard className="grid place-items-center gap-5 text-center">
-          <AssistantOrb size="lg" active={isActive(status?.state)} label="Mic" />
+        <PanelCard className="voice-summary-card">
+          <div className="voice-summary-dot" />
           <div>
-            <div className="flex justify-center">
+            <div className="flex">
               <StatusBadge tone={isActive(status?.state) ? "green" : status?.state === "Error" ? "red" : "neutral"}>
                 {status?.state ?? "Idle"}
               </StatusBadge>
             </div>
-            <h3 className="mt-4 text-2xl font-black text-jarvis-text">Voice Pipeline</h3>
-            <p className="mt-2 max-w-2xl text-sm leading-7 text-jarvis-muted">
+            <h3>Voice Pipeline</h3>
+            <p>
               {status?.message ?? "Start a voice turn to record, transcribe, detect commands, and optionally speak back."}
             </p>
+            <div className="voice-last-grid">
+              <div>
+                <strong>Last transcript</strong>
+                <span>{status?.lastTranscript || "None yet"}</span>
+              </div>
+              <div>
+                <strong>Last AI response</strong>
+                <span>{status?.lastAiResponse || "None yet"}</span>
+              </div>
+            </div>
           </div>
         </PanelCard>
 

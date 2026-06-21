@@ -1,7 +1,7 @@
 "use client";
 
-import { ThemeMode, themeOptions } from "@/lib/theme";
 import type { ChatSessionSummary, JarvisStatus, ViewKey } from "@/lib/types";
+import { useMemo, useState } from "react";
 
 type SidebarProps = {
   activeView: ViewKey;
@@ -12,37 +12,10 @@ type SidebarProps = {
   onOpenChat: (id: string) => Promise<void>;
   status: JarvisStatus | null;
   memoryCount: number;
-  themeMode: ThemeMode;
-  onThemeModeChange: (mode: ThemeMode) => void;
 };
 
 const navSections: Array<{ title: string; items: Array<{ key: ViewKey; label: string; icon: string }> }> = [
-  {
-    title: "Main",
-    items: [
-      { key: "chat", label: "Chat", icon: "C" },
-      { key: "voice", label: "Voice", icon: "V" },
-      { key: "memory", label: "Memory", icon: "M" },
-      { key: "control", label: "PC Control", icon: "P" },
-      { key: "files", label: "Files", icon: "F" }
-    ]
-  },
-  {
-    title: "Platform",
-    items: [
-      { key: "auth", label: "Auth", icon: "A" },
-      { key: "connectedApps", label: "Connected Apps", icon: "L" },
-      { key: "security", label: "Security", icon: "S" }
-    ]
-  },
-  {
-    title: "System",
-    items: [
-      { key: "settings", label: "Settings", icon: "G" },
-      { key: "diagnostics", label: "Diagnostics", icon: "D" },
-      { key: "activity", label: "Activity", icon: "Y" }
-    ]
-  }
+  { title: "Main", items: [{ key: "chat", label: "Chat", icon: "C" }] }
 ];
 
 export function Sidebar({
@@ -53,49 +26,70 @@ export function Sidebar({
   onNewChat,
   onOpenChat,
   status,
-  memoryCount,
-  themeMode,
-  onThemeModeChange
+  memoryCount
 }: SidebarProps) {
+  const [query, setQuery] = useState("");
+  const filteredChats = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+      return chats;
+    }
+
+    return chats.filter((chat) =>
+      chat.title.toLowerCase().includes(normalized)
+      || chat.preview.toLowerCase().includes(normalized)
+    );
+  }, [chats, query]);
+
   return (
     <aside className="sidebar">
-      <div className="brand-row">
-        <div className="jarvis-logo">J</div>
-        <div>
-          <h1>JARVIS</h1>
-          <p>Personal AI Assistant</p>
-        </div>
-      </div>
-
-      <button className="new-chat-button" type="button" onClick={() => void onNewChat()}>
-        + New Chat
-      </button>
-
-      <nav className="sidebar-nav" aria-label="Main navigation">
-        {navSections.map((section) => (
-          <div className="sidebar-nav-section" key={section.title}>
-            <div className="sidebar-nav-label">{section.title}</div>
-            {section.items.map((item) => (
-              <button
-                className={activeView === item.key ? "active" : ""}
-                key={item.key}
-                type="button"
-                onClick={() => onChangeView(item.key)}
-              >
-                <span>{item.icon}</span>
-                {item.label}
-              </button>
-            ))}
+      <div className="sidebar-header">
+        <div className="brand-row">
+          <div className="jarvis-logo">J</div>
+          <div>
+            <h1>JARVIS</h1>
+            <p>Personal AI Assistant</p>
           </div>
-        ))}
-      </nav>
+        </div>
+
+        <button className="new-chat-button" type="button" onClick={() => void onNewChat()}>
+          + New Chat
+        </button>
+
+        <label className="sidebar-search">
+          <span>Search Chats</span>
+          <input
+            value={query}
+            placeholder="Search chats"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+
+        <nav className="sidebar-nav" aria-label="Main navigation">
+          {navSections.map((section) => (
+            <div className="sidebar-nav-section" key={section.title}>
+              {section.items.map((item) => (
+                <button
+                  className={activeView === item.key ? "active" : ""}
+                  key={item.key}
+                  type="button"
+                  onClick={() => onChangeView(item.key)}
+                >
+                  <span>{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+      </div>
 
       <section className="recent-chats">
         <div className="section-label">
           <span>Recent</span>
-          <strong>{chats.length}</strong>
+          <strong>{filteredChats.length}</strong>
         </div>
-        {chats.slice(0, 5).map((chat) => (
+        {filteredChats.map((chat) => (
           <button
             className={chat.id === activeChatId ? "chat-link active" : "chat-link"}
             key={chat.id}
@@ -109,6 +103,10 @@ export function Sidebar({
       </section>
 
       <div className="sidebar-bottom">
+        <button className="sidebar-settings-button" type="button" onClick={() => onChangeView("tools")}>
+          <span>S</span>
+          Tools & Settings
+        </button>
         <div className="status-pill">
           <span className={status?.online ? "dot online" : "dot"} />
           Local AI
@@ -121,21 +119,13 @@ export function Sidebar({
           <span>Memory</span>
           <strong>{memoryCount}</strong>
         </div>
-        <fieldset className="theme-fieldset">
-          <legend>Theme</legend>
-          {themeOptions.map((option) => (
-            <label key={option.value}>
-              <input
-                checked={themeMode === option.value}
-                name="theme"
-                type="radio"
-                value={option.value}
-                onChange={() => onThemeModeChange(option.value)}
-              />
-              {option.value === ThemeMode.System ? "System" : option.label}
-            </label>
-          ))}
-        </fieldset>
+        <div className="sidebar-user-compact">
+          <div className="user-avatar">U</div>
+          <div>
+            <strong>Local User</strong>
+            <span>Placeholder account</span>
+          </div>
+        </div>
       </div>
     </aside>
   );

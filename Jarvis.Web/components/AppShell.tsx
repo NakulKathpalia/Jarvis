@@ -12,15 +12,20 @@ import { FilesPanel } from "./FilesPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { SettingsPanel } from "./SettingsPanel";
 import { Sidebar } from "./Sidebar";
+import { SecurityPanel } from "./SecurityPanel";
 import { JarvisStatusPanel } from "./JarvisStatusPanel";
+import { ToolsPanel } from "./ToolsPanel";
+import { TopNavbar } from "./TopNavbar";
 import { Toast } from "./Toast";
 import { VoicePanel } from "./VoicePanel";
 import type { PendingVoiceCommand } from "./VoiceConfirmationCard";
+import { authApi } from "@/lib/authApi";
 import { jarvisApi } from "@/lib/api";
 import { ThemeMode, ThemeService } from "@/lib/theme";
 import type {
   AppSettings,
   AssistantInputResponse,
+  AuthStatus,
   ChatMessage,
   ChatSession,
   ChatSessionSummary,
@@ -47,6 +52,7 @@ export function AppShell() {
   const [activeChat, setActiveChat] = useState<ChatSession | null>(null);
   const [memory, setMemory] = useState<MemoryItem[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
   const [pendingVoiceCommand, setPendingVoiceCommand] = useState<PendingVoiceCommand | null>(null);
   const [pendingAssistantCommand, setPendingAssistantCommand] = useState<PendingAssistantCommand | null>(null);
   const [lastAssistantAction, setLastAssistantAction] = useState<AssistantInputResponse | null>(null);
@@ -56,6 +62,7 @@ export function AppShell() {
   const [toast, setToast] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(ThemeMode.System);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -85,9 +92,13 @@ export function AppShell() {
     setSettings(await jarvisApi.settings());
   }, []);
 
+  const refreshAuth = useCallback(async () => {
+    setAuthStatus(await authApi.status());
+  }, []);
+
   const refreshAll = useCallback(async () => {
-    await Promise.all([refreshStatus(), refreshChats(), refreshMemory(), refreshSettings()]);
-  }, [refreshChats, refreshMemory, refreshSettings, refreshStatus]);
+    await Promise.all([refreshStatus(), refreshChats(), refreshMemory(), refreshSettings(), refreshAuth()]);
+  }, [refreshAuth, refreshChats, refreshMemory, refreshSettings, refreshStatus]);
 
   useEffect(() => {
     refreshAll().catch((error: Error) => showToast(error.message));
@@ -307,6 +318,8 @@ export function AppShell() {
     ThemeService.apply(nextMode);
   }
 
+  const viewMeta = getViewMeta(activeView);
+
   async function speakText(text: string) {
     try {
       const result = await jarvisApi.speak(text);
@@ -324,6 +337,8 @@ export function AppShell() {
 
   return (
     <AppLayout
+      mobileSidebarOpen={mobileSidebarOpen}
+      onCloseMobileSidebar={() => setMobileSidebarOpen(false)}
       sidebar={
         <Sidebar
           activeView={activeView}
@@ -334,8 +349,17 @@ export function AppShell() {
           onOpenChat={openChat}
           status={status}
           memoryCount={memory.length}
-          themeMode={themeMode}
-          onThemeModeChange={changeThemeMode}
+        />
+      }
+      topbar={
+        <TopNavbar
+          title={viewMeta.title}
+          subtitle={viewMeta.subtitle}
+          authStatus={authStatus}
+          onChangeView={setActiveView}
+          onAuthChanged={refreshAuth}
+          onToast={showToast}
+          onToggleSidebar={() => setMobileSidebarOpen((current) => !current)}
         />
       }
       rightPanel={
@@ -394,7 +418,9 @@ export function AppShell() {
 
       {activeView === "activity" && <ActivityLogPanel />}
 
-      {activeView === "auth" && <AuthPanel onToast={showToast} />}
+      {activeView === "tools" && <ToolsPanel onChangeView={setActiveView} />}
+
+      {activeView === "auth" && <AuthPanel onToast={showToast} onAuthChanged={refreshAuth} />}
 
       {activeView === "connectedApps" && <ConnectedAppsPanel onToast={showToast} />}
 
@@ -410,23 +436,43 @@ export function AppShell() {
       {activeView === "diagnostics" && <DiagnosticsPanel />}
 
       {activeView === "security" && (
-        <section className="tool-panel">
-          <div className="page-header">
-            <h2>Security</h2>
-            <p>Commands pass through validation, risk classification, permission checks, confirmation, execution, and audit logging.</p>
-          </div>
-          <div className="simple-grid">
-            {["Input Sanitization", "Intent Detection", "Security Validation", "Permission Check", "Confirmation Check", "Audit Log"].map((item) => (
-              <article className="simple-card" key={item}>
-                <h3>{item}</h3>
-                <p>Enabled in the backend security foundation.</p>
-              </article>
-            ))}
-          </div>
-        </section>
+        <SecurityPanel
+          interactionStatus={interactionStatus}
+          pendingAssistantCommand={pendingAssistantCommand}
+          lastAssistantAction={lastAssistantAction}
+        />
       )}
 
       <Toast message={toast} />
     </AppLayout>
   );
+}
+
+function getViewMeta(view: ViewKey) {
+  switch (view) {
+    case "chat":
+      return { title: "Jarvis", subtitle: "Chat with local tools and secure command routing" };
+    case "tools":
+      return { title: "Tools & Settings", subtitle: "Voice, memory, files, security, account, and diagnostics" };
+    case "voice":
+      return { title: "Voice", subtitle: "Wake word and local voice pipeline" };
+    case "memory":
+      return { title: "Memory", subtitle: "Local private facts and search" };
+    case "control":
+      return { title: "PC Control", subtitle: "Commands checked by Jarvis Security" };
+    case "files":
+      return { title: "Files", subtitle: "Local file indexing and search" };
+    case "auth":
+      return { title: "Auth", subtitle: "Placeholder local sign in and future OAuth" };
+    case "connectedApps":
+      return { title: "Connected Apps", subtitle: "Future external app connections" };
+    case "security":
+      return { title: "Security", subtitle: "Command risk and audit overview" };
+    case "settings":
+      return { title: "Settings", subtitle: "Runtime configuration and appearance" };
+    case "diagnostics":
+      return { title: "Diagnostics", subtitle: "Runtime health and local paths" };
+    case "activity":
+      return { title: "Activity", subtitle: "Interaction and audit timeline" };
+  }
 }

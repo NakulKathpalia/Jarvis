@@ -47,11 +47,9 @@ const suggestions = [
 
 export function ChatPanel({
   messages,
-  status,
   isBusy,
   pendingAssistantCommand,
   lastAssistantAction,
-  assistantActivity,
   onSend,
   onVoiceCommand,
   onConfirmAssistantCommand,
@@ -66,18 +64,6 @@ export function ChatPanel({
 
   return (
     <section className="chat-screen">
-      <header className="chat-header">
-        <div>
-          <h2>Jarvis</h2>
-          <p>Chat, voice, memory, and PC control</p>
-        </div>
-        <div className="header-pills">
-          <span>Secure Mode On</span>
-          <span>{assistantActivity === "idle" ? "Voice Idle" : titleCase(assistantActivity)}</span>
-          <span>{status?.online ? "Local AI Ready" : "Local AI Offline"}</span>
-        </div>
-      </header>
-
       <div className="chat-scroll">
         <div className="chat-content">
           {messages.length === 0 && (
@@ -133,8 +119,4 @@ export function ChatPanel({
       <Composer disabled={isBusy} onSend={onSend} onVoiceCommand={onVoiceCommand} onToast={onToast} />
     </section>
   );
-}
-
-function titleCase(value: string) {
-  return value.slice(0, 1).toUpperCase() + value.slice(1);
 }
