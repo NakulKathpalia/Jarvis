@@ -1,16 +1,18 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { TopBar } from "./TopBar";
 import { jarvisApi } from "@/lib/api";
+import { ThemeMode, themeOptions } from "@/lib/theme";
 import type { AppSettings, DiagnosticsResult, VoiceStatus } from "@/lib/types";
 
 type SettingsPanelProps = {
   settings: AppSettings;
+  themeMode: ThemeMode;
+  onThemeModeChange: (mode: ThemeMode) => void;
   onSave: (settings: AppSettings) => Promise<void>;
 };
 
-export function SettingsPanel({ settings, onSave }: SettingsPanelProps) {
+export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }: SettingsPanelProps) {
   const [draft, setDraft] = useState<AppSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
@@ -32,9 +34,31 @@ export function SettingsPanel({ settings, onSave }: SettingsPanelProps) {
 
   return (
     <section className="tool-panel">
-      <TopBar title="Settings" subtitle="Local runtime configuration" />
+      <div className="page-header">
+        <h2>Settings</h2>
+        <p>Local runtime configuration and appearance.</p>
+      </div>
 
       <form className="settings-form" onSubmit={handleSubmit}>
+        <div className="settings-section wide-field">
+          <h3>Appearance</h3>
+          <p>Choose how Jarvis should render the interface.</p>
+          <div className="theme-radio-group">
+            {themeOptions.map((option) => (
+              <label key={option.value}>
+                <input
+                  checked={themeMode === option.value}
+                  name="appearance-theme"
+                  type="radio"
+                  value={option.value}
+                  onChange={() => onThemeModeChange(option.value)}
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div className="voice-setup-card wide-field">
           <div className="voice-setup-row">
             <strong>Whisper</strong>

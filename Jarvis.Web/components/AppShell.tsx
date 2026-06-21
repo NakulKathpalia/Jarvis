@@ -10,10 +10,12 @@ import { FilesPanel } from "./FilesPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { SettingsPanel } from "./SettingsPanel";
 import { Sidebar } from "./Sidebar";
+import { JarvisStatusPanel } from "./JarvisStatusPanel";
 import { Toast } from "./Toast";
 import { VoicePanel } from "./VoicePanel";
 import type { PendingVoiceCommand } from "./VoiceConfirmationCard";
 import { jarvisApi } from "@/lib/api";
+import { ThemeMode, ThemeService } from "@/lib/theme";
 import type {
   AppSettings,
   AssistantInputResponse,
@@ -51,6 +53,7 @@ export function AppShell() {
   const [backendError, setBackendError] = useState("");
   const [toast, setToast] = useState("");
   const [isBusy, setIsBusy] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(ThemeMode.System);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -87,6 +90,22 @@ export function AppShell() {
   useEffect(() => {
     refreshAll().catch((error: Error) => showToast(error.message));
   }, [refreshAll, showToast]);
+
+  useEffect(() => {
+    const initialMode = ThemeService.getInitialMode();
+    setThemeMode(initialMode);
+    ThemeService.apply(initialMode);
+
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    const handleThemeChange = () => {
+      if (ThemeService.getInitialMode() === ThemeMode.System) {
+        ThemeService.apply(ThemeMode.System);
+      }
+    };
+
+    media.addEventListener("change", handleThemeChange);
+    return () => media.removeEventListener("change", handleThemeChange);
+  }, []);
 
   const visibleMessages = useMemo(
     () => (activeChat?.messages ?? []).filter((message) => message.role !== "system"),
@@ -281,6 +300,11 @@ export function AppShell() {
     showToast("Settings saved");
   }
 
+  function changeThemeMode(nextMode: ThemeMode) {
+    setThemeMode(nextMode);
+    ThemeService.apply(nextMode);
+  }
+
   async function speakText(text: string) {
     try {
       const result = await jarvisApi.speak(text);
@@ -308,14 +332,19 @@ export function AppShell() {
           onOpenChat={openChat}
           status={status}
           memoryCount={memory.length}
+          themeMode={themeMode}
+          onThemeModeChange={changeThemeMode}
+        />
+      }
+      rightPanel={
+        <JarvisStatusPanel
+          status={status}
+          interactionStatus={interactionStatus}
+          pendingAssistantCommand={pendingAssistantCommand}
+          lastAssistantAction={lastAssistantAction}
         />
       }
     >
-      <AssistantStatusStrip
-        backendError={backendError}
-        status={interactionStatus}
-      />
-
       {activeView === "chat" && (
         <ChatPanel
           autoSpeak={settings?.autoSpeakResponses ?? false}
@@ -364,50 +393,34 @@ export function AppShell() {
       {activeView === "activity" && <ActivityLogPanel />}
 
       {activeView === "settings" && settings && (
-        <SettingsPanel settings={settings} onSave={saveSettings} />
+        <SettingsPanel
+          settings={settings}
+          themeMode={themeMode}
+          onThemeModeChange={changeThemeMode}
+          onSave={saveSettings}
+        />
       )}
 
       {activeView === "diagnostics" && <DiagnosticsPanel />}
 
+      {activeView === "security" && (
+        <section className="tool-panel">
+          <div className="page-header">
+            <h2>Security</h2>
+            <p>Commands pass through validation, risk classification, permission checks, confirmation, execution, and audit logging.</p>
+          </div>
+          <div className="simple-grid">
+            {["Input Sanitization", "Intent Detection", "Security Validation", "Permission Check", "Confirmation Check", "Audit Log"].map((item) => (
+              <article className="simple-card" key={item}>
+                <h3>{item}</h3>
+                <p>Enabled in the backend security foundation.</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <Toast message={toast} />
     </AppLayout>
-  );
-}
-
-function AssistantStatusStrip({
-  backendError,
-  status
-}: {
-  backendError: string;
-  status: InteractionStatusResult | null;
-}) {
-  const isDisconnected = Boolean(backendError);
-
-  return (
-    <div className={`border-b px-4 py-3 sm:px-6 lg:px-8 ${
-      isDisconnected
-        ? "border-jarvis-danger/40 bg-jarvis-danger/15"
-        : "border-jarvis-border/70 bg-jarvis-panel/65"
-    }`}>
-      <div className="mx-auto grid max-w-6xl gap-2 text-sm lg:grid-cols-4">
-        <StatusItem
-          label="Backend"
-          value={isDisconnected ? "Jarvis backend is not running on localhost:5055." : "Connected"}
-          danger={isDisconnected}
-        />
-        <StatusItem label="Last action" value={status?.lastAction?.message ?? "No activity yet"} />
-        <StatusItem label="Last transcript" value={status?.lastVoiceTranscript?.output || status?.lastVoiceTranscript?.message || "None"} />
-        <StatusItem label="Last command/error" value={status?.lastError?.error || status?.lastCommandParsed?.message || "None"} danger={Boolean(status?.lastError)} />
-      </div>
-    </div>
-  );
-}
-
-function StatusItem({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <div className="text-xs font-black uppercase tracking-[0.16em] text-jarvis-faint">{label}</div>
-      <div className={`mt-1 truncate ${danger ? "text-rose-200" : "text-jarvis-muted"}`} title={value}>{value}</div>
-    </div>
   );
 }

@@ -1,4 +1,4 @@
-export type ViewKey = "chat" | "memory" | "files" | "control" | "voice" | "activity" | "settings" | "diagnostics";
+export type ViewKey = "chat" | "voice" | "memory" | "control" | "files" | "security" | "settings" | "activity" | "diagnostics";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
