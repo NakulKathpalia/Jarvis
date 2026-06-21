@@ -1,5 +1,13 @@
 namespace Jarvis.Models;
 
+public enum VoiceMode
+{
+    PushToTalk,
+    WakeWord,
+    AlwaysListening,
+    Hybrid
+}
+
 public enum VoicePipelineState
 {
     Idle,

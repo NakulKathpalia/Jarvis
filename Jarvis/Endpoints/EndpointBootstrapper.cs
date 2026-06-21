@@ -22,6 +22,8 @@ public static class EndpointBootstrapper
         var commandLogService = runtime.CommandLogService;
         var interactionLogService = runtime.InteractionLogService;
         var voiceHistoryService = runtime.VoiceHistoryService;
+        var voiceSettingsService = runtime.VoiceSettingsService;
+        var speechToTextService = runtime.SpeechToTextService;
         var permissionService = runtime.PermissionService;
         var ollamaService = runtime.OllamaService;
         var whisperService = runtime.WhisperService;
@@ -611,6 +613,10 @@ public static class EndpointBootstrapper
             settingsService.Current.SystemPrompt = request.SystemPrompt;
             settingsService.Current.MaxHistoryMessages = Math.Max(1, request.MaxHistoryMessages);
             settingsService.Current.FileIndexRoot = request.FileIndexRoot;
+            settingsService.Current.VoiceMode = request.VoiceMode;
+            settingsService.Current.AutoExecuteCommands = request.AutoExecuteCommands;
+            settingsService.Current.VoiceLanguage = request.VoiceLanguage;
+            settingsService.Current.NoiseSuppression = request.NoiseSuppression;
             settingsService.Current.WhisperExecutablePath = request.WhisperExecutablePath;
             settingsService.Current.WhisperModelPath = request.WhisperModelPath;
             settingsService.Current.WhisperLanguage = request.WhisperLanguage;
@@ -764,13 +770,22 @@ public static class EndpointBootstrapper
 
             return Results.Ok(new
         {
+            mode = settingsService.Current.VoiceMode,
+            implementedMode = "PushToTalk",
+            autoExecuteCommands = settingsService.Current.AutoExecuteCommands,
+            voiceLanguage = voiceSettingsService.Language,
+            noiseSuppression = settingsService.Current.NoiseSuppression,
             whisper = new
             {
-                configured = whisperService.IsConfigured,
-                message = whisperService.StatusMessage,
+                configured = speechToTextService.IsConfigured,
+                message = speechToTextService.StatusMessage,
                 settingsService.Current.WhisperExecutablePath,
                 settingsService.Current.WhisperModelPath,
-                settingsService.Current.WhisperLanguage
+                settingsService.Current.WhisperLanguage,
+                settingsService.Current.VoiceLanguage,
+                engine = "Faster-Whisper",
+                preferredDevice = "cuda",
+                fallbackDevice = "cpu"
             },
             piper = new
             {

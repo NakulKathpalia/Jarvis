@@ -6,6 +6,7 @@ using Jarvis.Data;
 using Jarvis.Memory;
 using Jarvis.Security;
 using Jarvis.Services;
+using Jarvis.Voice;
 
 namespace Jarvis.Startup;
 
@@ -20,11 +21,15 @@ public sealed class JarvisRuntime
     public required CommandLogService CommandLogService { get; init; }
     public required InteractionLogService InteractionLogService { get; init; }
     public required VoiceHistoryService VoiceHistoryService { get; init; }
+    public required VoiceSettingsService VoiceSettingsService { get; init; }
+    public required SpeechToTextService SpeechToTextService { get; init; }
+    public required VoiceActivityDetector VoiceActivityDetector { get; init; }
+    public required VoiceCommandProcessor VoiceCommandProcessor { get; init; }
     public required PermissionService PermissionService { get; init; }
     public required OllamaService OllamaService { get; init; }
     public required WhisperService WhisperService { get; init; }
     public required PiperService PiperService { get; init; }
-    public required WakeWordService WakeWordService { get; init; }
+    public required Jarvis.Services.WakeWordService WakeWordService { get; init; }
     public required FileIndexService FileIndexService { get; init; }
     public required PcCommandParser PcCommandParser { get; init; }
     public required PcCommandService PcCommandService { get; init; }

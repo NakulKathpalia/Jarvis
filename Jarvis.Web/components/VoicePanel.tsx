@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { TopBar } from "./TopBar";
 import { VoiceCommandHelpPanel } from "./VoiceCommandHelpPanel";
 import { VoiceLoopPanel } from "./VoiceLoopPanel";
-import { WakeWordPanel } from "./WakeWordPanel";
 import { PanelCard } from "./ui/PanelCard";
 import { StatusBadge } from "./ui/StatusBadge";
 import { jarvisApi } from "@/lib/api";
@@ -17,7 +16,6 @@ type VoicePanelProps = {
 };
 
 export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
-  const [wakeSignal, setWakeSignal] = useState(0);
   const [status, setStatus] = useState<VoicePipelineStatus | null>(null);
   const [history, setHistory] = useState<VoiceHistoryItem[]>([]);
 
@@ -36,7 +34,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
 
   return (
     <section className="tool-panel">
-      <TopBar title="Voice" subtitle="Microphone to Whisper, command routing, Ollama, and Piper" />
+      <TopBar title="Voice" subtitle="Push-to-talk speech detection, Faster-Whisper, and secure command routing" />
 
       <div className="grid w-full max-w-5xl gap-5">
         <PanelCard className="voice-summary-card">
@@ -49,7 +47,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
             </div>
             <h3>Voice Pipeline</h3>
             <p>
-              {status?.message ?? "Start a voice turn to record, transcribe, detect commands, and optionally speak back."}
+              {status?.message ?? "Start listening, speak a command, then stop to transcribe and route through Jarvis Security."}
             </p>
             <div className="voice-last-grid">
               <div>
@@ -64,8 +62,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
           </div>
         </PanelCard>
 
-        <VoiceLoopPanel disabled={disabled} onRefresh={refreshVoice} onToast={onToast} wakeSignal={wakeSignal} />
-        <WakeWordPanel onToast={onToast} onWakeActivated={() => setWakeSignal((current) => current + 1)} />
+        <VoiceLoopPanel disabled={disabled} onRefresh={refreshVoice} onToast={onToast} />
         <VoiceCommandHelpPanel onToast={onToast} />
 
         <PanelCard className="grid gap-3">
@@ -94,8 +91,6 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
 function isActive(state?: string) {
   return state === "Recording"
     || state === "Transcribing"
-    || state === "WakeWordChecking"
     || state === "ExecutingCommand"
-    || state === "GeneratingAIResponse"
-    || state === "Speaking";
+    || state === "GeneratingAIResponse";
 }

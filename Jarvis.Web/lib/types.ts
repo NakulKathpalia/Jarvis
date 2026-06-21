@@ -106,6 +106,10 @@ export type AppSettings = {
   systemPrompt: string;
   maxHistoryMessages: number;
   fileIndexRoot: string;
+  voiceMode: "PushToTalk" | "WakeWord" | "AlwaysListening" | "Hybrid";
+  autoExecuteCommands: boolean;
+  voiceLanguage: string;
+  noiseSuppression: boolean;
   whisperExecutablePath: string;
   whisperModelPath: string;
   whisperLanguage: string;
@@ -127,12 +131,21 @@ export type JarvisStatus = {
 };
 
 export type VoiceStatus = {
+  mode: "PushToTalk" | "WakeWord" | "AlwaysListening" | "Hybrid";
+  implementedMode: "PushToTalk";
+  autoExecuteCommands: boolean;
+  voiceLanguage: string;
+  noiseSuppression: boolean;
   whisper: {
     configured: boolean;
     message: string;
     whisperExecutablePath: string;
     whisperModelPath: string;
     whisperLanguage: string;
+    voiceLanguage: string;
+    engine: string;
+    preferredDevice: string;
+    fallbackDevice: string;
   };
   piper: {
     configured: boolean;

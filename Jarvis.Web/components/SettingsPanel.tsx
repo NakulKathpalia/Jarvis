@@ -158,18 +158,61 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
         </label>
 
         <label>
-          <span>Whisper Executable</span>
+          <span>Voice Mode</span>
+          <select
+            value={draft.voiceMode}
+            onChange={(event) => setDraft({ ...draft, voiceMode: event.target.value as AppSettings["voiceMode"] })}
+          >
+            <option value="PushToTalk">Push to Talk</option>
+            <option value="WakeWord">Wake Word (future)</option>
+            <option value="AlwaysListening">Always Listening (future)</option>
+            <option value="Hybrid">Hybrid (future)</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Voice Language</span>
+          <select
+            value={draft.voiceLanguage}
+            onChange={(event) => setDraft({ ...draft, voiceLanguage: event.target.value })}
+          >
+            <option value="en">English</option>
+            <option value="hi">Hindi</option>
+            <option value="auto">Hinglish / Auto</option>
+          </select>
+        </label>
+
+        <label className="toggle-field">
           <input
-            placeholder="C:\\tools\\whisper.cpp\\build\\bin\\Release\\whisper-cli.exe"
+            checked={draft.autoExecuteCommands}
+            type="checkbox"
+            onChange={(event) => setDraft({ ...draft, autoExecuteCommands: event.target.checked })}
+          />
+          <span>Auto-execute recognized safe commands</span>
+        </label>
+
+        <label className="toggle-field">
+          <input
+            checked={draft.noiseSuppression}
+            type="checkbox"
+            onChange={(event) => setDraft({ ...draft, noiseSuppression: event.target.checked })}
+          />
+          <span>Noise suppression preference</span>
+        </label>
+
+        <label>
+          <span>Faster-Whisper Executable</span>
+          <input
+            placeholder="C:\\tools\\faster-whisper\\faster-whisper.exe"
             value={draft.whisperExecutablePath}
             onChange={(event) => setDraft({ ...draft, whisperExecutablePath: event.target.value })}
           />
         </label>
 
         <label>
-          <span>Whisper Model</span>
+          <span>Faster-Whisper Model</span>
           <input
-            placeholder="C:\\models\\ggml-base.en.bin"
+            placeholder="large-v3 or C:\\models\\faster-whisper-large-v3"
             value={draft.whisperModelPath}
             onChange={(event) => setDraft({ ...draft, whisperModelPath: event.target.value })}
           />
@@ -178,7 +221,7 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
         <label>
           <span>Whisper Language</span>
           <input
-            placeholder="auto"
+            placeholder="legacy compatibility; use Voice Language above"
             value={draft.whisperLanguage}
             onChange={(event) => setDraft({ ...draft, whisperLanguage: event.target.value })}
           />

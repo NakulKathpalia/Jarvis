@@ -25,7 +25,11 @@ public sealed class MongoAuditLogRepository : IAuditLogRepository
         entry.UserId = userId;
         entry.TimestampUtc = entry.TimestampUtc == default ? DateTime.UtcNow : entry.TimestampUtc;
         entry.UpdatedAtUtc = DateTime.UtcNow;
-        return _logs.InsertOneAsync(entry, cancellationToken: cancellationToken);
+        return _logs.ReplaceOneAsync(
+            log => log.Id == entry.Id,
+            entry,
+            new ReplaceOptions { IsUpsert = true },
+            cancellationToken);
     }
 
     public Task ClearAsync(string userId, CancellationToken cancellationToken = default) =>

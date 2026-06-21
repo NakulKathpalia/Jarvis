@@ -12,6 +12,7 @@ using Jarvis.Repositories.Mongo;
 using Jarvis.Security;
 using Jarvis.Services;
 using Jarvis.Users;
+using Jarvis.Voice;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -163,9 +164,12 @@ public static class JarvisApplication
 
         var httpClient = new HttpClient();
         var ollamaService = new OllamaService(httpClient, settingsService);
-        var whisperService = new WhisperService(settingsService);
+        var voiceSettingsService = new VoiceSettingsService(settingsService);
+        var speechToTextService = new SpeechToTextService(voiceSettingsService);
+        var voiceActivityDetector = new VoiceActivityDetector();
+        var whisperService = new WhisperService(settingsService, speechToTextService);
         var piperService = new PiperService(settingsService, pathResolver.GeneratedAudioDirectory);
-        var wakeWordService = new WakeWordService(settingsService, whisperService);
+        var wakeWordService = new Jarvis.Services.WakeWordService(settingsService, whisperService);
         var fileIndexService = new FileIndexService(settingsService);
         var pcCommandParser = new PcCommandParser();
         var commandSafetyService = new CommandSafetyService();
@@ -186,7 +190,8 @@ public static class JarvisApplication
             commandLogService,
             pcControlService,
             interactionLogService);
-        var voiceCommandService = new VoiceCommandService(memoryService, fileIndexService, settingsService, pcCommandService);
+        var voiceCommandProcessor = new VoiceCommandProcessor(pcCommandParser, pcCommandService);
+        var voiceCommandService = new VoiceCommandService(voiceCommandProcessor);
         var classifierService = new ClassifierService();
         IAuthService authService = new LocalAuthService();
         IConnectedAppService connectedAppService = new ConnectedAppService(connectedApps);
@@ -204,13 +209,11 @@ public static class JarvisApplication
             chatHistoryService);
 
         var voicePipelineService = new VoicePipelineService(
-            whisperService,
-            wakeWordService,
-            pcCommandParser,
-            pcCommandService,
+            voiceSettingsService,
+            voiceActivityDetector,
+            speechToTextService,
+            voiceCommandProcessor,
             assistant,
-            piperService,
-            settingsService,
             voiceHistoryService,
             interactionLogService);
 
@@ -227,6 +230,10 @@ public static class JarvisApplication
             CommandLogService = commandLogService,
             InteractionLogService = interactionLogService,
             VoiceHistoryService = voiceHistoryService,
+            VoiceSettingsService = voiceSettingsService,
+            SpeechToTextService = speechToTextService,
+            VoiceActivityDetector = voiceActivityDetector,
+            VoiceCommandProcessor = voiceCommandProcessor,
             PermissionService = permissionService,
             OllamaService = ollamaService,
             WhisperService = whisperService,

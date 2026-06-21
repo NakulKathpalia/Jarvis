@@ -9,22 +9,17 @@ type VoiceLoopPanelProps = {
   disabled: boolean;
   onRefresh: () => Promise<void>;
   onToast: (message: string) => void;
-  wakeSignal: number;
 };
-
-type VoiceLoopSource = "manual" | "wake";
 
 const activeStates: VoicePipelineState[] = [
   "Recording",
   "Transcribing",
-  "WakeWordChecking",
   "CommandDetected",
   "ExecutingCommand",
-  "GeneratingAIResponse",
-  "Speaking"
+  "GeneratingAIResponse"
 ];
 
-export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: VoiceLoopPanelProps) {
+export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelProps) {
   const [isActive, setIsActive] = useState(false);
   const [status, setStatus] = useState<VoicePipelineStatus | null>(null);
   const [pending, setPending] = useState<VoicePipelineResult | null>(null);
@@ -34,15 +29,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
     jarvisApi.voicePipelineStatus().then(setStatus).catch(() => undefined);
   }, []);
 
-  useEffect(() => {
-    if (wakeSignal <= 0) {
-      return;
-    }
-
-    void activateLoop("wake");
-  }, [wakeSignal]);
-
-  async function activateLoop(source: VoiceLoopSource) {
+  async function activateLoop() {
     if (disabled || isBusy(status?.state)) {
       onToast("Jarvis is busy.");
       return;
@@ -52,9 +39,9 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
       void jarvisApi.logInteraction({
         source: "Voice",
         type: "VoiceRecording",
-        stage: source === "wake" ? "wake-recording-start" : "pipeline-recording-start",
+        stage: "push-to-talk-start",
         status: "Started",
-        message: source === "wake" ? "Wake word activated voice recording." : "Voice pipeline recording started."
+        message: "Push-to-talk voice recording started."
       }).catch(() => undefined);
       captureRef.current = await startVoiceCapture();
       setIsActive(true);
@@ -63,9 +50,9 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
         updatedAtUtc: new Date().toISOString(),
         lastTranscript: status?.lastTranscript ?? "",
         lastAiResponse: status?.lastAiResponse ?? "",
-        message: source === "wake" ? "Wake word activated. Recording." : "Recording voice turn."
+        message: "Listening. Stop when you finish speaking."
       });
-      onToast(source === "wake" ? "Wake word activated. Recording." : "Recording voice turn");
+      onToast("Listening");
     } catch (error) {
       void jarvisApi.logInteraction({
         source: "Voice",
@@ -165,12 +152,6 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
       return;
     }
 
-    if (result.audioUrl) {
-      setStatus(toStatus("Speaking", "Playing Piper audio.", status));
-      await new Audio(result.audioUrl).play();
-      setStatus(toStatus("Completed", result.message, status));
-    }
-
     await onRefresh();
   }
 
@@ -184,7 +165,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
         <span className="voice-loop-dot" />
         <div>
           <strong>Voice Pipeline</strong>
-          <p>{status?.message ?? "Start a hands-free turn."}</p>
+          <p>{status?.message ?? "Start a push-to-talk voice turn."}</p>
           <span>{currentState} - {formatTimestamp(status?.updatedAtUtc)}</span>
         </div>
       </div>
@@ -195,13 +176,13 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, wakeSignal }: Voi
 
       <div className="voice-loop-actions">
         {!isActive && !pending && (
-          <button className="soft-button" type="button" disabled={disabled} onClick={() => activateLoop("manual")}>
-            Start
+          <button className="soft-button" type="button" disabled={disabled} onClick={activateLoop}>
+            Start Listening
           </button>
         )}
         {isActive && (
           <button className="danger-button" type="button" onClick={finishTurn}>
-            Finish
+            Stop Listening
           </button>
         )}
         {pending && (
