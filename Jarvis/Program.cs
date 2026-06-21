@@ -3,6 +3,7 @@ using Jarvis.Core;
 using Jarvis.Data;
 using Jarvis.Memory;
 using Jarvis.Models;
+using Jarvis.Security;
 using Jarvis.Services;
 using System.Text.Json.Serialization;
 
@@ -39,9 +40,22 @@ var wakeWordService = new WakeWordService(settingsService, whisperService);
 var fileIndexService = new FileIndexService(settingsService);
 var pcCommandParser = new PcCommandParser();
 var commandSafetyService = new CommandSafetyService();
+var commandRiskClassifier = new CommandRiskClassifier();
 var settingsValidationService = new SettingsValidationService(settingsService);
+var auditLogger = new AuditLogger(pathResolver.SecurityAuditLogPath);
+var securityService = new SecurityService(
+    new InputValidator(),
+    new PermissionService(),
+    auditLogger);
 var pcControlService = new WindowsPcControlService(pathResolver.ScreenshotDirectory);
-var pcCommandService = new PcCommandService(pcCommandParser, commandSafetyService, commandLogService, pcControlService, interactionLogService);
+var pcCommandService = new PcCommandService(
+    pcCommandParser,
+    commandSafetyService,
+    commandRiskClassifier,
+    securityService,
+    commandLogService,
+    pcControlService,
+    interactionLogService);
 var voiceCommandService = new VoiceCommandService(memoryService, fileIndexService, settingsService, pcCommandService);
 var classifierService = new ClassifierService();
 
@@ -205,6 +219,26 @@ app.MapPost("/api/assistant/input", async (AssistantInputRequest request, Cancel
         message,
         cancellationToken: cancellationToken);
     await chatSessionService.AddMessageAsync(session.Id, ChatMessage.User(message), cancellationToken);
+
+    if (message.StartsWith("/", StringComparison.Ordinal))
+    {
+        var commandResult = await commandManager.TryExecuteAsync(message, cancellationToken);
+        var commandMessage = string.IsNullOrWhiteSpace(commandResult.Message)
+            ? "Command executed. Check console output."
+            : commandResult.Message;
+        await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(commandMessage), cancellationToken);
+
+        return Results.Ok(new AssistantInputResponse(
+            "command",
+            commandResult.WasHandled,
+            false,
+            string.Empty,
+            string.Empty,
+            commandMessage,
+            null,
+            null,
+            chatSessionService.Get(session.Id)));
+    }
 
     var parsedCommand = pcCommandParser.Parse(message);
     await interactionLogService.AddAsync(

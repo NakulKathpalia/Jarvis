@@ -5,6 +5,7 @@ public interface IPathResolver
     string AppDataDirectory { get; }
     string MemoryDirectory { get; }
     string LogsDirectory { get; }
+    string SecurityLogsDirectory { get; }
     string ScreenshotDirectory { get; }
     string GeneratedAudioDirectory { get; }
     string VoiceHistoryPath { get; }
@@ -13,5 +14,6 @@ public interface IPathResolver
     string ChatSessionsPath { get; }
     string CommandLogPath { get; }
     string InteractionLogPath { get; }
+    string SecurityAuditLogPath { get; }
     string SettingsPath { get; }
 }

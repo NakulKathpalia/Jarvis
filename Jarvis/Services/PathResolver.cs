@@ -10,6 +10,7 @@ public sealed class PathResolver : IPathResolver
         Directory.CreateDirectory(AppDataDirectory);
         Directory.CreateDirectory(MemoryDirectory);
         Directory.CreateDirectory(LogsDirectory);
+        Directory.CreateDirectory(SecurityLogsDirectory);
         Directory.CreateDirectory(ScreenshotDirectory);
         Directory.CreateDirectory(GeneratedAudioDirectory);
     }
@@ -17,6 +18,7 @@ public sealed class PathResolver : IPathResolver
     public string AppDataDirectory => Path.Combine(_basePath, "Data");
     public string MemoryDirectory => Path.Combine(_basePath, "Memory");
     public string LogsDirectory => Path.Combine(AppDataDirectory, "logs");
+    public string SecurityLogsDirectory => Path.Combine(_basePath, "logs");
     public string ScreenshotDirectory => Path.Combine(AppDataDirectory, "screenshots");
     public string GeneratedAudioDirectory => Path.Combine(_basePath, "wwwroot", "generated-audio");
     public string VoiceHistoryPath => Path.Combine(AppDataDirectory, "voice_history.json");
@@ -25,5 +27,6 @@ public sealed class PathResolver : IPathResolver
     public string ChatSessionsPath => Path.Combine(AppDataDirectory, "chat_sessions.json");
     public string CommandLogPath => Path.Combine(AppDataDirectory, "command_logs.json");
     public string InteractionLogPath => Path.Combine(AppDataDirectory, "interaction_logs.json");
+    public string SecurityAuditLogPath => Path.Combine(SecurityLogsDirectory, "security-audit.log");
     public string SettingsPath => Path.Combine(_basePath, "appsettings.json");
 }

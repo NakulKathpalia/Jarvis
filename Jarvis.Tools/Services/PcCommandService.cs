@@ -1,4 +1,5 @@
 using Jarvis.Models;
+using Jarvis.Security;
 
 namespace Jarvis.Services;
 
@@ -6,6 +7,8 @@ public sealed class PcCommandService
 {
     private readonly PcCommandParser _parser;
     private readonly CommandSafetyService _safetyService;
+    private readonly CommandRiskClassifier _riskClassifier;
+    private readonly SecurityService _securityService;
     private readonly CommandLogService _logService;
     private readonly InteractionLogService? _interactionLogService;
     private readonly IPcControlService _pcControlService;
@@ -14,12 +17,16 @@ public sealed class PcCommandService
     public PcCommandService(
         PcCommandParser parser,
         CommandSafetyService safetyService,
+        CommandRiskClassifier riskClassifier,
+        SecurityService securityService,
         CommandLogService logService,
         IPcControlService pcControlService,
         InteractionLogService? interactionLogService = null)
     {
         _parser = parser;
         _safetyService = safetyService;
+        _riskClassifier = riskClassifier;
+        _securityService = securityService;
         _logService = logService;
         _pcControlService = pcControlService;
         _interactionLogService = interactionLogService;
@@ -54,6 +61,11 @@ public sealed class PcCommandService
     {
         RemoveExpiredConfirmations();
 
+        if (input.Trim().Equals(SecurityService.ConfirmationPhrase, StringComparison.Ordinal))
+        {
+            return await ConfirmLatestAsync(cancellationToken);
+        }
+
         if (confirmed)
         {
             var pending = FindPendingByInput(input);
@@ -65,27 +77,30 @@ public sealed class PcCommandService
 
         var command = _parser.Parse(input);
         var safetyLevel = _safetyService.GetSafetyLevel(command.Action);
+        var riskLevel = _riskClassifier.Classify(command);
+        var securityRequest = BuildSecurityRequest(command, riskLevel);
+        var securityDecision = await _securityService.ValidateAsync(securityRequest, cancellationToken);
         await LogInteractionAsync(
             InteractionType.CommandParsing,
             "parse",
-            safetyLevel == CommandSafetyLevel.Blocked ? InteractionStatus.Failed : InteractionStatus.Success,
-            $"Parsed {command.Action} with safety {safetyLevel}.",
+            securityDecision.Allowed || securityDecision.RequiresConfirmation ? InteractionStatus.Success : InteractionStatus.Failed,
+            $"Parsed {command.Action} with risk {riskLevel}.",
             command.OriginalInput,
             command.Target,
             cancellationToken);
 
-        if (safetyLevel == CommandSafetyLevel.Blocked)
+        if (!securityDecision.Allowed && !securityDecision.RequiresConfirmation)
         {
-            const string message = "Blocked unknown or unsupported system command.";
+            var message = $"Blocked by security policy: {securityDecision.Reason}";
             await LogAsync(command, safetyLevel, CommandExecutionStatus.Blocked, message, cancellationToken);
             await LogInteractionAsync(InteractionType.Error, "blocked", InteractionStatus.Failed, message, command.OriginalInput, command.Target, cancellationToken);
             return new PcCommandExecutionResult(false, false, command.Action.ToString(), command.Target, message);
         }
 
-        if (safetyLevel == CommandSafetyLevel.ConfirmationRequired && !confirmed)
+        if (securityDecision.RequiresConfirmation && !confirmed)
         {
-            var pending = CreatePending(command, safetyLevel);
-            var message = $"Confirmation required before running {command.Action}: {DescribeTarget(command)}";
+            var pending = CreatePending(command, safetyLevel, riskLevel);
+            var message = $"This action is risky. Type: {SecurityService.ConfirmationPhrase}";
             await LogAsync(command, safetyLevel, CommandExecutionStatus.PendingConfirmation, message, cancellationToken);
             await LogInteractionAsync(InteractionType.Confirmation, "pending", InteractionStatus.Pending, message, command.OriginalInput, command.Target, cancellationToken);
             return new PcCommandExecutionResult(
@@ -94,11 +109,11 @@ public sealed class PcCommandService
                 command.Action.ToString(),
                 command.Target,
                 message,
-                pending.Id,
-                pending.Id);
+                SecurityService.ConfirmationPhrase,
+                SecurityService.ConfirmationPhrase);
         }
 
-        return await ExecuteKnownCommandAsync(command, safetyLevel, cancellationToken);
+        return await ExecuteKnownCommandAsync(command, safetyLevel, riskLevel, cancellationToken);
     }
 
     public async Task<PcCommandExecutionResult> ConfirmAsync(
@@ -107,21 +122,53 @@ public sealed class PcCommandService
     {
         RemoveExpiredConfirmations();
 
-        if (!_pendingConfirmations.Remove(confirmationId, out var pending))
+        if (!confirmationId.Equals(SecurityService.ConfirmationPhrase, StringComparison.Ordinal))
+        {
+            return new PcCommandExecutionResult(
+                false,
+                true,
+                string.Empty,
+                string.Empty,
+                $"This action is risky. Type: {SecurityService.ConfirmationPhrase}",
+                SecurityService.ConfirmationPhrase,
+                SecurityService.ConfirmationPhrase);
+        }
+
+        return await ConfirmLatestAsync(cancellationToken);
+    }
+
+    private async Task<PcCommandExecutionResult> ConfirmLatestAsync(CancellationToken cancellationToken)
+    {
+        RemoveExpiredConfirmations();
+
+        var pending = _pendingConfirmations.Values
+            .Where(pending => pending.ExpiresAtUtc > DateTime.UtcNow)
+            .OrderByDescending(pending => pending.CreatedAtUtc)
+            .FirstOrDefault();
+
+        if (pending is null)
         {
             return new PcCommandExecutionResult(false, false, string.Empty, string.Empty, "Confirmation expired or not found.");
         }
 
-        return await ExecuteKnownCommandAsync(pending.Command, pending.SafetyLevel, cancellationToken);
+        _pendingConfirmations.Remove(pending.Id);
+        return await ExecuteKnownCommandAsync(pending.Command, pending.SafetyLevel, pending.RiskLevel, cancellationToken);
     }
 
     private async Task<PcCommandExecutionResult> ExecuteKnownCommandAsync(
         PcCommand command,
         CommandSafetyLevel safetyLevel,
+        SecurityRiskLevel riskLevel,
         CancellationToken cancellationToken)
     {
         var message = await _pcControlService.ExecuteAsync(command, cancellationToken);
         var status = IsFailureMessage(message) ? CommandExecutionStatus.Failed : CommandExecutionStatus.Completed;
+        var securityRequest = BuildSecurityRequest(command, riskLevel);
+        await _securityService.AuditExecutionAsync(
+            securityRequest,
+            status == CommandExecutionStatus.Completed,
+            message,
+            cancellationToken);
         await LogAsync(command, safetyLevel, status, message, cancellationToken);
         await LogInteractionAsync(
             InteractionType.CommandExecution,
@@ -142,11 +189,17 @@ public sealed class PcCommandService
 
     private PendingPcCommand CreatePending(PcCommand command, CommandSafetyLevel safetyLevel)
     {
+        return CreatePending(command, safetyLevel, _riskClassifier.Classify(command));
+    }
+
+    private PendingPcCommand CreatePending(PcCommand command, CommandSafetyLevel safetyLevel, SecurityRiskLevel riskLevel)
+    {
         var pending = new PendingPcCommand
         {
             Id = Guid.NewGuid().ToString("N"),
             Command = command,
             SafetyLevel = safetyLevel,
+            RiskLevel = riskLevel,
             CreatedAtUtc = DateTime.UtcNow,
             ExpiresAtUtc = DateTime.UtcNow.AddMinutes(2)
         };
@@ -207,6 +260,16 @@ public sealed class PcCommandService
     private static string DescribeTarget(PcCommand command)
     {
         return string.IsNullOrWhiteSpace(command.Target) ? command.Action.ToString() : command.Target;
+    }
+
+    private static SecurityRequest BuildSecurityRequest(PcCommand command, SecurityRiskLevel riskLevel)
+    {
+        return new SecurityRequest(
+            "pc-command",
+            command.OriginalInput,
+            command.Action.ToString(),
+            command.Target,
+            riskLevel);
     }
 
     private Task LogInteractionAsync(

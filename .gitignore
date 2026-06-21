@@ -1,5 +1,11 @@
 .vs/
 .tmp/
+.env
+*.key
+*.pem
+secrets.json
+logs/
+jarvis_memory.db
 
 **/bin/
 **/obj/

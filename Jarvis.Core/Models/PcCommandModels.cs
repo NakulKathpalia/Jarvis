@@ -61,6 +61,7 @@ public sealed class PendingPcCommand
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public PcCommand Command { get; set; } = new(PcControlAction.Unknown, string.Empty, string.Empty);
     public CommandSafetyLevel SafetyLevel { get; set; } = CommandSafetyLevel.ConfirmationRequired;
+    public Jarvis.Security.SecurityRiskLevel RiskLevel { get; set; } = Jarvis.Security.SecurityRiskLevel.Dangerous;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime ExpiresAtUtc { get; set; } = DateTime.UtcNow.AddMinutes(2);
 }

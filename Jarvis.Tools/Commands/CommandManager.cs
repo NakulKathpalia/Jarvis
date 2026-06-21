@@ -11,11 +11,11 @@ public sealed class CommandManager
 
     public IReadOnlyCollection<ICommand> Commands => _commands.ToList();
 
-    public async Task<bool> TryExecuteAsync(string input, CancellationToken cancellationToken = default)
+    public async Task<CommandManagerResult> TryExecuteAsync(string input, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(input) || !input.TrimStart().StartsWith('/'))
         {
-            return false;
+            return CommandManagerResult.NotHandled();
         }
 
         var parts = input.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
@@ -30,10 +30,23 @@ public sealed class CommandManager
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"Unknown command: /{commandName}");
             Console.ResetColor();
-            return true;
+            return CommandManagerResult.Handled($"Unknown command: /{commandName}");
+        }
+
+        if (command is ICommandWithResult commandWithResult)
+        {
+            var message = await commandWithResult.ExecuteWithResultAsync(arguments, cancellationToken);
+            return CommandManagerResult.Handled(message);
         }
 
         await command.ExecuteAsync(arguments, cancellationToken);
-        return true;
+        return CommandManagerResult.Handled();
     }
+}
+
+public sealed record CommandManagerResult(bool WasHandled, string? Message)
+{
+    public static CommandManagerResult Handled(string? message = null) => new(true, message);
+
+    public static CommandManagerResult NotHandled() => new(false, null);
 }

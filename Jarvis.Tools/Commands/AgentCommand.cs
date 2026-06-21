@@ -2,7 +2,7 @@ using Jarvis.Agent;
 
 namespace Jarvis.Commands;
 
-public sealed class AgentCommand : ICommand
+public sealed class AgentCommand : ICommandWithResult
 {
     private readonly AgentPlanner _planner;
 
@@ -17,23 +17,37 @@ public sealed class AgentCommand : ICommand
 
     public Task ExecuteAsync(string arguments, CancellationToken cancellationToken = default)
     {
+        return ExecuteWithResultAsync(arguments, cancellationToken);
+    }
+
+    public Task<string> ExecuteWithResultAsync(string arguments, CancellationToken cancellationToken = default)
+    {
         if (string.IsNullOrWhiteSpace(arguments))
         {
-            Console.WriteLine($"Usage: {Usage}");
-            return Task.CompletedTask;
+            var usage = $"Usage: {Usage}";
+            Console.WriteLine(usage);
+            return Task.FromResult(usage);
         }
 
         var decision = _planner.Plan(arguments);
+        var result = FormatDecision(decision);
 
         // Dry run only: print the decision and never dispatch the action.
-        Console.WriteLine($"Action: {ToDisplayAction(decision.Action)}");
-        Console.WriteLine($"Payload: {arguments.Trim()}");
-        Console.WriteLine($"PlannedAction: {decision.Action}");
-        Console.WriteLine($"Target: {decision.Target}");
-        Console.WriteLine($"Reason: {decision.Reason}");
-        Console.WriteLine($"RequiresConfirmation: {decision.RequiresConfirmation}");
+        Console.WriteLine(result);
 
-        return Task.CompletedTask;
+        return Task.FromResult(result);
+    }
+
+    private static string FormatDecision(AgentDecision decision)
+    {
+        return string.Join(Environment.NewLine,
+        [
+            $"Action: {ToDisplayAction(decision.Action)}",
+            $"PlannedAction: {decision.Action}",
+            $"Target: {decision.Target}",
+            $"Reason: {decision.Reason}",
+            $"RequiresConfirmation: {decision.RequiresConfirmation}"
+        ]);
     }
 
     private static string ToDisplayAction(AgentAction action)
