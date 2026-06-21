@@ -60,7 +60,7 @@ var pcCommandService = new PcCommandService(
     interactionLogService);
 var voiceCommandService = new VoiceCommandService(memoryService, fileIndexService, settingsService, pcCommandService);
 var classifierService = new ClassifierService();
-IAuthService authService = new AuthService();
+IAuthService authService = new LocalAuthService();
 IConnectedAppService connectedAppService = new ConnectedAppService();
 
 var commandManager = Commands.Create(
@@ -119,12 +119,12 @@ app.MapGet("/api/auth/status", () => Results.Ok(authService.GetStatus()));
 
 app.MapGet("/api/auth/providers", () => Results.Ok(authService.GetProviders()));
 
-app.MapPost("/api/auth/signin", (AuthRequest request) =>
+app.MapPost("/api/auth/signin", (SignInRequest request) =>
 {
     return Results.Ok(authService.SignIn(request));
 });
 
-app.MapPost("/api/auth/signup", (AuthRequest request) =>
+app.MapPost("/api/auth/signup", (SignUpRequest request) =>
 {
     return Results.Ok(authService.SignUp(request));
 });

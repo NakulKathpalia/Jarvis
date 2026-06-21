@@ -4,7 +4,7 @@ public interface IAuthService
 {
     AuthStatus GetStatus();
     IReadOnlyCollection<AuthProviderInfo> GetProviders();
-    AuthResponse SignIn(AuthRequest request);
-    AuthResponse SignUp(AuthRequest request);
+    AuthResponse SignIn(SignInRequest request);
+    AuthResponse SignUp(SignUpRequest request);
     AuthResponse SignOut();
 }

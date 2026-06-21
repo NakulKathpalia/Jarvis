@@ -1,9 +1,8 @@
 namespace Jarvis.Auth;
 
-public enum AuthProvider
-{
-    Google,
-    Microsoft,
-    GitHub,
-    Discord
-}
+public sealed record AuthProvider(
+    string Id,
+    string Name,
+    AuthProviderType Type,
+    bool Configured,
+    string Message);

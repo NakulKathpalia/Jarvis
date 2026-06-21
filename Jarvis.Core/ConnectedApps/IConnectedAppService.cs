@@ -4,8 +4,6 @@ public interface IConnectedAppService
 {
     IReadOnlyCollection<ConnectedAppInfo> GetApps();
     ConnectedAppInfo? GetApp(string provider);
-    ConnectedAppOperationResult Connect(string provider);
-    ConnectedAppOperationResult Disconnect(string provider);
+    ConnectedAppConnectionResult Connect(string provider);
+    ConnectedAppConnectionResult Disconnect(string provider);
 }
-
-public sealed record ConnectedAppOperationResult(bool Succeeded, string Message, ConnectedAppInfo? App);

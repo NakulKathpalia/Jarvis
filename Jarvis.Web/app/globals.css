@@ -54,7 +54,9 @@ h1, h2, h3, p { margin: 0; }
 .brand-row p { margin-top: 2px; font-size: 12px; color: var(--muted); }
 .new-chat-button { width: 100%; min-height: 42px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); text-align: left; padding: 0 14px; transition: background 160ms, border-color 160ms; }
 .new-chat-button:hover { background: var(--hover); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
-.sidebar-nav { display: grid; gap: 4px; }
+.sidebar-nav { display: grid; gap: 12px; }
+.sidebar-nav-section { display: grid; gap: 4px; }
+.sidebar-nav-label { padding: 0 10px 2px; color: var(--faint); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .sidebar-nav button { min-height: 40px; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); padding: 0 10px; text-align: left; transition: background 160ms, color 160ms; }
 .sidebar-nav button:hover, .sidebar-nav button.active { background: var(--hover); color: var(--text); }
 .sidebar-nav button.active { box-shadow: inset 3px 0 0 var(--accent); }
@@ -100,7 +102,8 @@ h1, h2, h3, p { margin: 0; }
 .confirmation-card strong { color: var(--text); }
 .confirmation-card p { margin-top: 8px; }
 .confirmation-card div { margin-top: 12px; display: flex; gap: 8px; }
-.confirmation-card button, .command-form button, .action-list button, .send-button { border: 0; border-radius: 10px; background: var(--accent); color: #06202a; padding: 9px 12px; font-weight: 650; }
+.confirmation-card button, .command-form button, .action-list button, .send-button, .primary-action { border: 0; border-radius: 10px; background: var(--accent); color: #06202a; padding: 9px 12px; font-weight: 650; }
+.secondary-action { border: 1px solid var(--border); border-radius: 10px; background: var(--hover); color: var(--text); padding: 9px 12px; font-weight: 650; }
 .confirmation-card button + button { background: var(--hover); color: var(--text); border: 1px solid var(--border); }
 
 .composer-wrap { width: min(760px, calc(100% - 32px)); margin: 0 auto; padding: 12px 0 18px; }
@@ -123,6 +126,25 @@ h1, h2, h3, p { margin: 0; }
 .page-header h2 { font-size: 24px; font-weight: 650; }
 .page-header p { margin-top: 6px; color: var(--muted); }
 .simple-grid { max-width: 960px; margin: 0 auto 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.auth-layout, .connected-app-grid { max-width: 960px; margin: 0 auto 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.auth-card, .auth-status-card, .connected-app-card { min-width: 0; }
+.auth-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.auth-tabs button { min-height: 40px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--muted); }
+.auth-tabs button.active { background: var(--hover); color: var(--text); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.auth-form { display: grid; gap: 12px; }
+.auth-form label { display: grid; gap: 6px; }
+.oauth-grid { display: grid; gap: 8px; margin-top: 14px; }
+.oauth-grid button { display: grid; gap: 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--hover); color: var(--text); padding: 10px 12px; text-align: left; }
+.oauth-grid button span, .muted-note { color: var(--muted); font-size: 12px; }
+.status-stack { display: grid; gap: 6px; margin-top: 12px; color: var(--muted); font-size: 13px; }
+.status-stack strong { color: var(--text); }
+.auth-status-card .secondary-action { margin-top: 14px; }
+.card-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.badge { flex: 0 0 auto; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); padding: 5px 8px; font-size: 12px; }
+.badge.online { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.capability-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 14px 0 0; list-style: none; }
+.capability-list li { border: 1px solid var(--border); border-radius: 999px; color: var(--muted); padding: 6px 9px; font-size: 12px; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .command-form, .settings-form, .tool-form, .memory-form, .memory-search-bar { max-width: 960px; margin: 0 auto 18px; display: grid; gap: 12px; }
 .command-form, .tool-form { grid-template-columns: minmax(0, 1fr) auto; }
 input, textarea { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); padding: 12px 14px; outline: 0; }
@@ -157,7 +179,7 @@ input:focus, textarea:focus { border-color: var(--accent); }
   .sidebar { width: 100%; min-height: auto; border-right: 0; border-bottom: 1px solid var(--border); }
   .sidebar-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chat-header { height: auto; align-items: flex-start; flex-direction: column; padding: 18px; }
-  .suggestion-grid, .simple-grid { grid-template-columns: 1fr; }
+  .suggestion-grid, .simple-grid, .auth-layout, .connected-app-grid { grid-template-columns: 1fr; }
   .message-bubble { max-width: 86%; }
   .composer-box { grid-template-columns: auto minmax(0, 1fr) auto; }
   .composer-box .voice-button:nth-of-type(2) { display: none; }

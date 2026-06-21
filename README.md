@@ -81,6 +81,32 @@ Production URL:
 http://localhost:5055
 ```
 
+## Auth and Connected Apps
+
+Jarvis includes a placeholder authentication and connected apps foundation for future provider integrations. It is safe for local UI testing only:
+
+- Local sign in/sign up creates an in-memory placeholder session for the current backend process.
+- Google, Microsoft, GitHub, and Discord OAuth are listed but not configured.
+- No OAuth client secrets, access tokens, refresh tokens, or real passwords are stored.
+
+Auth endpoints:
+
+```text
+GET  /api/auth/status
+GET  /api/auth/providers
+POST /api/auth/signin
+POST /api/auth/signup
+POST /api/auth/signout
+```
+
+Connected apps endpoints:
+
+```text
+GET  /api/connected-apps
+POST /api/connected-apps/{provider}/connect
+POST /api/connected-apps/{provider}/disconnect
+```
+
 ## Local Assets
 
 Keep local models, tool binaries, generated audio, and temporary files out of git. The project is designed to stay local-first and should not depend on cloud AI APIs.

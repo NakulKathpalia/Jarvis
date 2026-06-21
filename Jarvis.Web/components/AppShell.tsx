@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityLogPanel } from "./ActivityLogPanel";
 import { AppLayout } from "./AppLayout";
+import { AuthPanel } from "./AuthPanel";
 import { ChatPanel } from "./ChatPanel";
+import { ConnectedAppsPanel } from "./ConnectedAppsPanel";
 import { ControlPanel } from "./ControlPanel";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { FilesPanel } from "./FilesPanel";
@@ -391,6 +393,10 @@ export function AppShell() {
       )}
 
       {activeView === "activity" && <ActivityLogPanel />}
+
+      {activeView === "auth" && <AuthPanel onToast={showToast} />}
+
+      {activeView === "connectedApps" && <ConnectedAppsPanel onToast={showToast} />}
 
       {activeView === "settings" && settings && (
         <SettingsPanel

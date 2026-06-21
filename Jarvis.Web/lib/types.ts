@@ -1,4 +1,63 @@
-export type ViewKey = "chat" | "voice" | "memory" | "control" | "files" | "security" | "settings" | "activity" | "diagnostics";
+export type ViewKey =
+  | "chat"
+  | "voice"
+  | "memory"
+  | "control"
+  | "files"
+  | "auth"
+  | "connectedApps"
+  | "security"
+  | "settings"
+  | "activity"
+  | "diagnostics";
+
+export type AuthProviderType = "Local" | "Google" | "Microsoft" | "GitHub" | "Discord";
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  name: string;
+  provider: AuthProviderType;
+};
+
+export type AuthStatus = {
+  isAuthenticated: boolean;
+  user?: AuthUser | null;
+  message: string;
+};
+
+export type AuthProviderInfo = {
+  id: string;
+  name: string;
+  type: AuthProviderType;
+  configured: boolean;
+  message: string;
+};
+
+export type AuthResponse = {
+  succeeded: boolean;
+  message: string;
+  status: AuthStatus;
+};
+
+export type ConnectedAppProvider = "Google" | "Microsoft" | "GitHub" | "Discord";
+export type ConnectedAppStatus = "NotConnected" | "Connected" | "NeedsSetup";
+
+export type ConnectedAppInfo = {
+  provider: ConnectedAppProvider;
+  id: string;
+  name: string;
+  status: ConnectedAppStatus;
+  description: string;
+  configured: boolean;
+  capabilities: string[];
+};
+
+export type ConnectedAppConnectionResult = {
+  succeeded: boolean;
+  message: string;
+  app?: ConnectedAppInfo | null;
+};
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";

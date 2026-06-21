@@ -1,3 +1,8 @@
 namespace Jarvis.Auth;
 
-public sealed record AuthProviderInfo(string Id, string Name, bool Configured, string Message);
+public sealed record AuthProviderInfo(
+    string Id,
+    string Name,
+    AuthProviderType Type,
+    bool Configured,
+    string Message);

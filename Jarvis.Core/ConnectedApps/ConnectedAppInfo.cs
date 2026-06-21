@@ -5,4 +5,6 @@ public sealed record ConnectedAppInfo(
     string Id,
     string Name,
     ConnectedAppStatus Status,
-    string Description);
+    string Description,
+    bool Configured,
+    IReadOnlyList<string> Capabilities);

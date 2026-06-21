@@ -16,14 +16,33 @@ type SidebarProps = {
   onThemeModeChange: (mode: ThemeMode) => void;
 };
 
-const navItems: Array<{ key: ViewKey; label: string; icon: string }> = [
-  { key: "chat", label: "Chat", icon: "C" },
-  { key: "voice", label: "Voice", icon: "V" },
-  { key: "memory", label: "Memory", icon: "M" },
-  { key: "control", label: "PC Control", icon: "P" },
-  { key: "files", label: "Files", icon: "F" },
-  { key: "security", label: "Security", icon: "S" },
-  { key: "settings", label: "Settings", icon: "G" }
+const navSections: Array<{ title: string; items: Array<{ key: ViewKey; label: string; icon: string }> }> = [
+  {
+    title: "Main",
+    items: [
+      { key: "chat", label: "Chat", icon: "C" },
+      { key: "voice", label: "Voice", icon: "V" },
+      { key: "memory", label: "Memory", icon: "M" },
+      { key: "control", label: "PC Control", icon: "P" },
+      { key: "files", label: "Files", icon: "F" }
+    ]
+  },
+  {
+    title: "Platform",
+    items: [
+      { key: "auth", label: "Auth", icon: "A" },
+      { key: "connectedApps", label: "Connected Apps", icon: "L" },
+      { key: "security", label: "Security", icon: "S" }
+    ]
+  },
+  {
+    title: "System",
+    items: [
+      { key: "settings", label: "Settings", icon: "G" },
+      { key: "diagnostics", label: "Diagnostics", icon: "D" },
+      { key: "activity", label: "Activity", icon: "Y" }
+    ]
+  }
 ];
 
 export function Sidebar({
@@ -53,16 +72,21 @@ export function Sidebar({
       </button>
 
       <nav className="sidebar-nav" aria-label="Main navigation">
-        {navItems.map((item) => (
-          <button
-            className={activeView === item.key ? "active" : ""}
-            key={item.key}
-            type="button"
-            onClick={() => onChangeView(item.key)}
-          >
-            <span>{item.icon}</span>
-            {item.label}
-          </button>
+        {navSections.map((section) => (
+          <div className="sidebar-nav-section" key={section.title}>
+            <div className="sidebar-nav-label">{section.title}</div>
+            {section.items.map((item) => (
+              <button
+                className={activeView === item.key ? "active" : ""}
+                key={item.key}
+                type="button"
+                onClick={() => onChangeView(item.key)}
+              >
+                <span>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
         ))}
       </nav>
 
