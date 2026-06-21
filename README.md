@@ -2,38 +2,83 @@
 
 Jarvis is a local-first personal AI assistant built with a C# ASP.NET backend, a Next.js dashboard, Ollama chat, JSON memory, local file indexing, and local voice tooling.
 
-## Development
+## Frontend and Backend Hosting
 
-Start the backend:
+Jarvis has one frontend source app and one backend host:
+
+- `Jarvis.Web` is the Next.js frontend source.
+- `Jarvis` is the ASP.NET backend and API host.
+- `Jarvis/wwwroot` is generated production frontend output. Do not edit it directly.
+
+During development, run the frontend and backend separately:
+
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:5055`
+- The frontend calls backend APIs at `http://localhost:5055`.
+
+For production, build the frontend into `Jarvis/wwwroot` and use the backend URL for both UI and API:
+
+- Production UI and API: `http://localhost:5055`
+
+The frontend defaults to `http://localhost:5055` for API calls through `NEXT_PUBLIC_JARVIS_API_URL`.
+
+## Run the Backend
+
+Start the ASP.NET backend from the repository root:
 
 ```powershell
 dotnet run --project Jarvis\Jarvis.csproj
 ```
 
-Backend URL:
+Backend and API URL:
 
 ```text
 http://localhost:5055
 ```
 
-Start the web dashboard in development mode:
+## Run the Frontend Dev Server
+
+Start the Next.js dev server from the repository root:
 
 ```powershell
 cd Jarvis.Web
 npm run dev
 ```
 
-Dashboard URL:
+Frontend development URL:
 
 ```text
 http://localhost:3000
 ```
 
-Use production builds only when the project is ready for release:
+Use this URL during development. Keep the backend running on `http://localhost:5055` so frontend API calls can reach endpoints such as:
+
+```text
+POST http://localhost:5055/api/assistant/input
+POST http://localhost:5055/api/commands/execute
+```
+
+## Build the Frontend for Production
+
+Build and publish the latest frontend into `Jarvis/wwwroot`:
 
 ```powershell
 cd Jarvis.Web
-npm run build
+npm run build:prod
+```
+
+This exports the Next.js app and replaces the generated production files in `Jarvis/wwwroot`, removing stale static UI files from previous builds.
+
+After building, start the backend:
+
+```powershell
+dotnet run --project Jarvis\Jarvis.csproj
+```
+
+Production URL:
+
+```text
+http://localhost:5055
 ```
 
 ## Local Assets

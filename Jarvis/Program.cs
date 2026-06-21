@@ -1,4 +1,6 @@
 using Jarvis.Commands;
+using Jarvis.Auth;
+using Jarvis.ConnectedApps;
 using Jarvis.Core;
 using Jarvis.Data;
 using Jarvis.Memory;
@@ -58,6 +60,8 @@ var pcCommandService = new PcCommandService(
     interactionLogService);
 var voiceCommandService = new VoiceCommandService(memoryService, fileIndexService, settingsService, pcCommandService);
 var classifierService = new ClassifierService();
+IAuthService authService = new AuthService();
+IConnectedAppService connectedAppService = new ConnectedAppService();
 
 var commandManager = Commands.Create(
     memoryService,
@@ -110,6 +114,34 @@ var app = builder.Build();
 app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+app.MapGet("/api/auth/status", () => Results.Ok(authService.GetStatus()));
+
+app.MapGet("/api/auth/providers", () => Results.Ok(authService.GetProviders()));
+
+app.MapPost("/api/auth/signin", (AuthRequest request) =>
+{
+    return Results.Ok(authService.SignIn(request));
+});
+
+app.MapPost("/api/auth/signup", (AuthRequest request) =>
+{
+    return Results.Ok(authService.SignUp(request));
+});
+
+app.MapPost("/api/auth/signout", () => Results.Ok(authService.SignOut()));
+
+app.MapGet("/api/connected-apps", () => Results.Ok(connectedAppService.GetApps()));
+
+app.MapPost("/api/connected-apps/{provider}/connect", (string provider) =>
+{
+    return Results.Ok(connectedAppService.Connect(provider));
+});
+
+app.MapPost("/api/connected-apps/{provider}/disconnect", (string provider) =>
+{
+    return Results.Ok(connectedAppService.Disconnect(provider));
+});
 
 app.MapGet("/api/status", async () => Results.Ok(new
 {
@@ -237,6 +269,23 @@ app.MapPost("/api/assistant/input", async (AssistantInputRequest request, Cancel
             commandMessage,
             null,
             null,
+            chatSessionService.Get(session.Id)));
+    }
+
+    if (message.Equals(SecurityService.ConfirmationPhrase, StringComparison.Ordinal))
+    {
+        var commandResult = await pcCommandService.ExecuteAsync(message, cancellationToken: cancellationToken);
+        await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(commandResult.Message), cancellationToken);
+
+        return Results.Ok(new AssistantInputResponse(
+            "command",
+            commandResult.Handled,
+            commandResult.RequiresConfirmation,
+            commandResult.Command,
+            commandResult.Target,
+            commandResult.Message,
+            null,
+            commandResult.ConfirmationId ?? commandResult.ConfirmationToken,
             chatSessionService.Get(session.Id)));
     }
 
