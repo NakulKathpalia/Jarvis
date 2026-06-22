@@ -63,8 +63,15 @@ public sealed class VoiceHistoryService
                 DeviceId = _userContext.DeviceId,
                 Transcript = result.Transcript,
                 Response = string.IsNullOrWhiteSpace(result.AiResponse) ? result.Message : result.AiResponse,
+                Command = result.CommandName,
                 State = result.State,
                 Success = result.Success,
+                CommandDetected = result.CommandDetected,
+                CommandExecuted = result.CommandExecuted,
+                ProcessingDurationMs = result.ProcessingDurationMs,
+                SttDurationMs = result.SttDurationMs,
+                CommandDurationMs = result.CommandDurationMs,
+                FailureReason = result.FailureReason,
                 TimestampUtc = DateTime.UtcNow
             };
             _items.Insert(0, item);

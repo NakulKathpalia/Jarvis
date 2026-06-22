@@ -12,8 +12,11 @@ type VoiceLoopPanelProps = {
 };
 
 const activeStates: VoicePipelineState[] = [
+  "Listening",
   "Recording",
+  "Processing",
   "Transcribing",
+  "Understanding",
   "CommandDetected",
   "ExecutingCommand",
   "GeneratingAIResponse"
@@ -24,6 +27,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
   const [status, setStatus] = useState<VoicePipelineStatus | null>(null);
   const [pending, setPending] = useState<VoicePipelineResult | null>(null);
   const captureRef = useRef<VoiceCaptureSession | null>(null);
+  const recordingStartedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     jarvisApi.voicePipelineStatus().then(setStatus).catch(() => undefined);
@@ -44,12 +48,16 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
         message: "Push-to-talk voice recording started."
       }).catch(() => undefined);
       captureRef.current = await startVoiceCapture();
+      recordingStartedAtRef.current = Date.now();
       setIsActive(true);
       setStatus({
+        ...emptyStatus(status),
         state: "Recording",
         updatedAtUtc: new Date().toISOString(),
+        startedAtUtc: new Date().toISOString(),
         lastTranscript: status?.lastTranscript ?? "",
         lastAiResponse: status?.lastAiResponse ?? "",
+        microphoneStatus: "Granted",
         message: "Listening. Stop when you finish speaking."
       });
       onToast("Listening");
@@ -75,7 +83,11 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
     }
 
     captureRef.current = null;
-    setStatus(toStatus("Transcribing", "Sending audio to the local voice pipeline.", status));
+    const recordingDurationMs = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0;
+    setStatus({
+      ...toStatus("Processing", "Encoding and uploading audio to the local voice pipeline.", status),
+      recordingDurationMs
+    });
     void jarvisApi.logInteraction({
       source: "Voice",
       type: "VoiceRecording",
@@ -86,6 +98,11 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
 
     try {
       const wav = await capture.stop();
+      setStatus({
+        ...toStatus("Transcribing", "Audio uploaded. Waiting for Faster-Whisper transcript.", status),
+        recordingDurationMs,
+        audioSizeBytes: wav.size
+      });
       const result = await jarvisApi.runVoicePipeline(wav);
       await handlePipelineResult(result);
     } catch (error) {
@@ -102,6 +119,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
       onToast(message);
     } finally {
       setIsActive(false);
+      recordingStartedAtRef.current = null;
     }
   }
 
@@ -132,6 +150,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
     captureRef.current?.cancel();
     captureRef.current = null;
     setIsActive(false);
+    recordingStartedAtRef.current = null;
     setPending(null);
     setStatus(toStatus("Idle", "Voice loop stopped.", status));
     onToast("Voice loop stopped");
@@ -139,11 +158,26 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
 
   async function handlePipelineResult(result: VoicePipelineResult) {
     setStatus({
+      ...emptyStatus(status),
       state: result.state,
       updatedAtUtc: new Date().toISOString(),
       lastTranscript: result.transcript || status?.lastTranscript || "",
       lastAiResponse: result.aiResponse || status?.lastAiResponse || "",
-      message: result.message
+      message: result.message,
+      voiceSessionId: result.voiceSessionId,
+      startedAtUtc: result.startedAtUtc,
+      endedAtUtc: result.endedAtUtc,
+      audioSizeBytes: result.audioSizeBytes,
+      recordingDurationMs: result.recordingDurationMs,
+      processingDurationMs: result.processingDurationMs,
+      sttDurationMs: result.sttDurationMs,
+      commandDurationMs: result.commandDurationMs,
+      commandDetected: result.commandDetected,
+      commandExecuted: result.commandExecuted,
+      commandName: result.commandName,
+      errorDetails: result.failureReason,
+      lastCompletedStage: result.lastCompletedStage,
+      sttDevice: result.sttDevice
     });
 
     if (result.requiresConfirmation) {
@@ -158,6 +192,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
   const currentState = status?.state ?? "Idle";
   const transcript = status?.lastTranscript ?? "";
   const aiResponse = status?.lastAiResponse ?? "";
+  const details = status ?? emptyStatus(null);
 
   return (
     <section className={isActive || isBusy(currentState) ? "voice-loop active" : "voice-loop"}>
@@ -172,6 +207,16 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
 
       <div className="voice-loop-transcript" title={transcript || aiResponse}>
         {transcript || aiResponse || "No voice turn yet."}
+      </div>
+
+      <div className="voice-diagnostics-grid compact">
+        <Diagnostic label="Microphone" value={details.microphoneStatus || (isActive ? "Granted" : "Not checked")} />
+        <Diagnostic label="Recording" value={formatDuration(details.recordingDurationMs)} />
+        <Diagnostic label="Audio Size" value={formatBytes(details.audioSizeBytes)} />
+        <Diagnostic label="Last Stage" value={details.lastCompletedStage || "None"} />
+        <Diagnostic label="STT" value={details.sttDurationMs ? `${formatDuration(details.sttDurationMs)} ${details.sttDevice || ""}` : "Not run"} />
+        <Diagnostic label="Command" value={details.commandDetected ? `${details.commandName || "Detected"} / ${details.commandExecuted ? "executed" : "not executed"}` : "None"} />
+        <Diagnostic label="Error" value={details.errorDetails || "None"} />
       </div>
 
       <div className="voice-loop-actions">
@@ -215,12 +260,65 @@ function toStatus(
   previous?: VoicePipelineStatus | null
 ): VoicePipelineStatus {
   return {
+    ...emptyStatus(previous),
     state,
     message,
     updatedAtUtc: new Date().toISOString(),
     lastTranscript: previous?.lastTranscript ?? "",
     lastAiResponse: previous?.lastAiResponse ?? ""
   };
+}
+
+function emptyStatus(previous?: VoicePipelineStatus | null): VoicePipelineStatus {
+  return {
+    state: previous?.state ?? "Idle",
+    message: previous?.message ?? "",
+    updatedAtUtc: previous?.updatedAtUtc ?? new Date().toISOString(),
+    lastTranscript: previous?.lastTranscript ?? "",
+    lastAiResponse: previous?.lastAiResponse ?? "",
+    voiceSessionId: previous?.voiceSessionId ?? "",
+    startedAtUtc: previous?.startedAtUtc ?? null,
+    endedAtUtc: previous?.endedAtUtc ?? null,
+    audioSizeBytes: previous?.audioSizeBytes ?? 0,
+    recordingDurationMs: previous?.recordingDurationMs ?? 0,
+    processingDurationMs: previous?.processingDurationMs ?? 0,
+    sttDurationMs: previous?.sttDurationMs ?? 0,
+    commandDurationMs: previous?.commandDurationMs ?? 0,
+    commandDetected: previous?.commandDetected ?? false,
+    commandExecuted: previous?.commandExecuted ?? false,
+    commandName: previous?.commandName ?? "",
+    errorDetails: previous?.errorDetails ?? "",
+    lastCompletedStage: previous?.lastCompletedStage ?? "",
+    microphoneStatus: previous?.microphoneStatus ?? "Not checked",
+    sttDevice: previous?.sttDevice ?? ""
+  };
+}
+
+function Diagnostic({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <strong>{label}</strong>
+      <span>{value}</span>
+    </div>
+  );
+}
+
+function formatDuration(value?: number) {
+  if (!value) {
+    return "0 ms";
+  }
+
+  return value >= 1000 ? `${(value / 1000).toFixed(1)} s` : `${value} ms`;
+}
+
+function formatBytes(value?: number) {
+  if (!value) {
+    return "0 B";
+  }
+
+  return value >= 1024 * 1024
+    ? `${(value / (1024 * 1024)).toFixed(2)} MB`
+    : `${Math.round(value / 1024)} KB`;
 }
 
 function formatTimestamp(value?: string) {

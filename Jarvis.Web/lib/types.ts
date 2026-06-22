@@ -184,7 +184,9 @@ export type VoicePipelineState =
   | "Idle"
   | "Listening"
   | "Recording"
+  | "Processing"
   | "Transcribing"
+  | "Understanding"
   | "WakeWordChecking"
   | "CommandDetected"
   | "AwaitingConfirmation"
@@ -206,6 +208,18 @@ export type VoicePipelineResult = {
   success: boolean;
   message: string;
   confirmationId?: string | null;
+  voiceSessionId: string;
+  startedAtUtc?: string | null;
+  endedAtUtc?: string | null;
+  audioSizeBytes: number;
+  recordingDurationMs: number;
+  processingDurationMs: number;
+  sttDurationMs: number;
+  commandDurationMs: number;
+  failureReason: string;
+  lastCompletedStage: string;
+  sttDevice: string;
+  commandExecuted: boolean;
 };
 
 export type VoicePipelineStatus = {
@@ -214,6 +228,21 @@ export type VoicePipelineStatus = {
   lastTranscript: string;
   lastAiResponse: string;
   message: string;
+  voiceSessionId: string;
+  startedAtUtc?: string | null;
+  endedAtUtc?: string | null;
+  audioSizeBytes: number;
+  recordingDurationMs: number;
+  processingDurationMs: number;
+  sttDurationMs: number;
+  commandDurationMs: number;
+  commandDetected: boolean;
+  commandExecuted: boolean;
+  commandName: string;
+  errorDetails: string;
+  lastCompletedStage: string;
+  microphoneStatus: string;
+  sttDevice: string;
 };
 
 export type VoiceHistoryItem = {
@@ -221,8 +250,29 @@ export type VoiceHistoryItem = {
   timestampUtc: string;
   transcript: string;
   response: string;
+  command: string;
   state: VoicePipelineState;
   success: boolean;
+  commandDetected: boolean;
+  commandExecuted: boolean;
+  processingDurationMs: number;
+  sttDurationMs: number;
+  commandDurationMs: number;
+  failureReason: string;
+};
+
+export type VoiceHealthResult = {
+  microphone: { status: string; message: string };
+  audioCapture: { status: string; message: string };
+  whisper: { available: boolean; message: string; preferredDevice: string; fallbackDevice: string; mode: string };
+  ollama: { available: boolean; message: string };
+  voiceService: { status: VoicePipelineState; message: string; lastCompletedStage: string; errorDetails: string };
+};
+
+export type VoiceDiagnosticsResult = {
+  status: VoicePipelineStatus;
+  recentHistory: VoiceHistoryItem[];
+  recentLogs: InteractionLogEntry[];
 };
 
 export type VoiceCommandResult = {

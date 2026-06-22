@@ -13,7 +13,9 @@ public enum VoicePipelineState
     Idle,
     Listening,
     Recording,
+    Processing,
     Transcribing,
+    Understanding,
     WakeWordChecking,
     CommandDetected,
     AwaitingConfirmation,
@@ -35,7 +37,19 @@ public sealed record VoicePipelineResult(
     VoicePipelineState State,
     bool Success,
     string Message,
-    string? ConfirmationId = null);
+    string? ConfirmationId = null,
+    string VoiceSessionId = "",
+    DateTime? StartedAtUtc = null,
+    DateTime? EndedAtUtc = null,
+    long AudioSizeBytes = 0,
+    long RecordingDurationMs = 0,
+    long ProcessingDurationMs = 0,
+    long SttDurationMs = 0,
+    long CommandDurationMs = 0,
+    string FailureReason = "",
+    string LastCompletedStage = "",
+    string SttDevice = "",
+    bool CommandExecuted = false);
 
 public sealed class VoiceHistoryItem
 {
@@ -47,8 +61,15 @@ public sealed class VoiceHistoryItem
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public string Transcript { get; set; } = string.Empty;
     public string Response { get; set; } = string.Empty;
+    public string Command { get; set; } = string.Empty;
     public VoicePipelineState State { get; set; } = VoicePipelineState.Idle;
     public bool Success { get; set; }
+    public bool CommandDetected { get; set; }
+    public bool CommandExecuted { get; set; }
+    public long ProcessingDurationMs { get; set; }
+    public long SttDurationMs { get; set; }
+    public long CommandDurationMs { get; set; }
+    public string FailureReason { get; set; } = string.Empty;
 }
 
 public sealed record VoicePipelineStatus(
@@ -56,7 +77,22 @@ public sealed record VoicePipelineStatus(
     DateTime UpdatedAtUtc,
     string LastTranscript,
     string LastAiResponse,
-    string Message);
+    string Message,
+    string VoiceSessionId = "",
+    DateTime? StartedAtUtc = null,
+    DateTime? EndedAtUtc = null,
+    long AudioSizeBytes = 0,
+    long RecordingDurationMs = 0,
+    long ProcessingDurationMs = 0,
+    long SttDurationMs = 0,
+    long CommandDurationMs = 0,
+    bool CommandDetected = false,
+    bool CommandExecuted = false,
+    string CommandName = "",
+    string ErrorDetails = "",
+    string LastCompletedStage = "",
+    string MicrophoneStatus = "Browser controlled",
+    string SttDevice = "");
 
 public sealed record VoicePipelineRequest(bool RequireWakeWord = false);
 

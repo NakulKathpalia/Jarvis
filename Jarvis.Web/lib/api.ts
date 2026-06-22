@@ -19,6 +19,8 @@ import type {
   PcCommandLogEntry,
   VoiceCommandCatalogItem,
   VoiceCommandResult,
+  VoiceDiagnosticsResult,
+  VoiceHealthResult,
   VoiceHistoryItem,
   VoicePipelineResult,
   VoicePipelineStatus,
@@ -155,6 +157,8 @@ export const jarvisApi = {
     }>;
   },
   voiceStatus: () => request<VoiceStatus>("/api/voice/status"),
+  voiceHealth: () => request<VoiceHealthResult>("/api/voice/health"),
+  voiceDiagnostics: () => request<VoiceDiagnosticsResult>("/api/voice/diagnostics"),
   voicePipelineStatus: () => request<VoicePipelineStatus>("/api/voice/pipeline/status"),
   voiceHistory: () => request<VoiceHistoryItem[]>("/api/voice/history"),
   runVoicePipeline: async (audio: Blob, requireWakeWord = false) => {

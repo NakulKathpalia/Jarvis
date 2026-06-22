@@ -907,6 +907,68 @@ public static class EndpointBootstrapper
             }
         });
         });
+
+        app.MapGet("/api/voice/health", async (CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var ollamaRunning = await ollamaService.IsRunningAsync(cancellationToken);
+            return Results.Ok(new
+            {
+                microphone = new
+                {
+                    status = "BrowserPermissionRequired",
+                    message = "Microphone permission is checked in the browser when Start Listening is pressed."
+                },
+                audioCapture = new
+                {
+                    status = "Ready",
+                    message = "Push-to-talk capture is available in the web client."
+                },
+                whisper = new
+                {
+                    available = speechToTextService.IsConfigured,
+                    message = speechToTextService.StatusMessage,
+                    preferredDevice = "cuda",
+                    fallbackDevice = "cpu",
+                    mode = speechToTextService.IsConfigured ? "GPU preferred with CPU fallback" : "Not configured"
+                },
+                ollama = new
+                {
+                    available = ollamaRunning,
+                    message = ollamaRunning ? "Ollama is reachable." : "Ollama is not reachable."
+                },
+                voiceService = new
+                {
+                    status = voicePipelineService.Status.State,
+                    message = voicePipelineService.Status.Message,
+                    lastCompletedStage = voicePipelineService.Status.LastCompletedStage,
+                    errorDetails = voicePipelineService.Status.ErrorDetails
+                }
+            });
+        });
+
+        app.MapGet("/api/voice/diagnostics", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            return Results.Ok(new
+            {
+                status = voicePipelineService.Status,
+                recentHistory = voiceHistoryService.Items.Take(10),
+                recentLogs = interactionLogService.Logs
+                    .Where(log => log.Source == InteractionSource.Voice)
+                    .Take(25)
+            });
+        });
         
         app.MapGet("/api/voice/wake-status", () =>
         {

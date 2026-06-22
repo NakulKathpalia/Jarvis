@@ -211,6 +211,15 @@ input:focus, textarea:focus { border-color: var(--accent); }
 .voice-last-grid strong, .voice-last-grid span { display: block; }
 .voice-last-grid strong { color: var(--muted); font-size: 12px; }
 .voice-last-grid span { margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.voice-diagnostics-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.voice-diagnostics-grid.compact { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 0; }
+.voice-diagnostics-grid div, .voice-diagnostic { min-width: 0; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--hover) 45%, transparent); padding: 9px; }
+.voice-diagnostics-grid strong, .voice-diagnostic strong { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+.voice-diagnostics-grid span, .voice-diagnostic span { display: block; margin-top: 5px; color: var(--text); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.voice-diagnostic.ok { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.voice-diagnostic.warn { border-color: color-mix(in srgb, var(--warning) 45%, var(--border)); }
+.voice-history-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.voice-history-meta span { border: 1px solid var(--border); border-radius: 999px; color: var(--muted); padding: 5px 8px; font-size: 12px; }
 .voice-setup-row { display: grid; gap: 6px; padding: 10px 0; border-top: 1px solid var(--border); }
 .voice-setup-row:first-child { border-top: 0; }
 .voice-setup-row strong, label span { color: var(--muted); font-size: 13px; }
