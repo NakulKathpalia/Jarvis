@@ -113,6 +113,7 @@ public sealed class PcCommandParser
     {
         return target.Contains('.', StringComparison.Ordinal)
             || target.Contains("youtube", StringComparison.OrdinalIgnoreCase)
+            || target.Contains("netflix", StringComparison.OrdinalIgnoreCase)
             || target.Contains("google", StringComparison.OrdinalIgnoreCase)
             || target.Contains("github", StringComparison.OrdinalIgnoreCase);
     }

@@ -66,8 +66,13 @@ public sealed class VoiceCommandProcessor
                 result.ConfirmationId ?? result.ConfirmationToken ?? string.Empty);
         }
 
+        if (string.IsNullOrWhiteSpace(result.Command))
+        {
+            return VoiceCommandResult.NoMatch();
+        }
+
         return result.Handled
             ? VoiceCommandResult.Done(result.Command, result.Message)
-            : VoiceCommandResult.NoMatch();
+            : new VoiceCommandResult(false, false, result.Command, result.Message);
     }
 }

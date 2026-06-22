@@ -179,8 +179,9 @@ public sealed class PcCommandService
             command.Target,
             cancellationToken);
 
+        var succeeded = status == CommandExecutionStatus.Completed;
         return new PcCommandExecutionResult(
-            true,
+            succeeded,
             false,
             command.Action.ToString(),
             command.Target,

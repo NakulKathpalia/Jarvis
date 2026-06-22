@@ -181,8 +181,25 @@ public static class EndpointBootstrapper
             {
                 return Results.BadRequest(new { error = "Message is required." });
             }
-        
-            var response = await assistant.GenerateResponseAsync(request.Message.Trim(), cancellationToken: cancellationToken);
+
+            var message = request.Message.Trim();
+            var parsedCommand = pcCommandParser.Parse(message);
+            if (parsedCommand.Action != PcControlAction.Unknown)
+            {
+                var commandDenied = DenyIfMissing(PermissionDefinitions.CommandsExecute, SecurityRiskLevel.Medium);
+                if (commandDenied is not null)
+                {
+                    return commandDenied;
+                }
+
+                var commandResult = await pcCommandService.ExecuteAsync(message, cancellationToken: cancellationToken);
+                var commandResponse = commandResult.RequiresConfirmation
+                    ? BuildConfirmationMessage(commandResult)
+                    : commandResult.Message;
+                return Results.Ok(new { response = commandResponse });
+            }
+
+            var response = await assistant.GenerateResponseAsync(message, cancellationToken: cancellationToken);
             return Results.Ok(new { response });
         });
         

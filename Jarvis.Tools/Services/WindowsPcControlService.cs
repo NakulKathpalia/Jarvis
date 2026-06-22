@@ -12,6 +12,24 @@ public sealed class WindowsPcControlService : IPcControlService
     private const uint KeyEventExtendedKey = 0x0001;
     private const uint KeyEventKeyUp = 0x0002;
 
+    private static readonly IReadOnlyDictionary<string, string> KnownApps =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["notepad"] = "notepad.exe",
+            ["calculator"] = "calc.exe",
+            ["calc"] = "calc.exe",
+            ["chrome"] = "chrome"
+        };
+
+    private static readonly IReadOnlyDictionary<string, string> KnownWebsites =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["youtube"] = "https://www.youtube.com",
+            ["netflix"] = "https://www.netflix.com",
+            ["google"] = "https://www.google.com",
+            ["github"] = "https://github.com"
+        };
+
     private readonly string _screenshotDirectory;
 
     public WindowsPcControlService(string screenshotDirectory)
@@ -24,7 +42,7 @@ public sealed class WindowsPcControlService : IPcControlService
     {
         var message = command.Action switch
         {
-            PcControlAction.OpenApp => OpenShellTarget(command.Target, "app"),
+            PcControlAction.OpenApp => OpenShellTarget(ResolveAppTarget(command.Target), "app"),
             PcControlAction.OpenWebsite => OpenShellTarget(NormalizeWebsite(command.Target), "website"),
             PcControlAction.OpenFolder => OpenFolder(command.Target),
             PcControlAction.OpenFile => OpenFile(command.Target),
@@ -217,6 +235,11 @@ public sealed class WindowsPcControlService : IPcControlService
     private static string NormalizeWebsite(string target)
     {
         var trimmed = target.Trim();
+        if (KnownWebsites.TryGetValue(trimmed, out var knownWebsite))
+        {
+            return knownWebsite;
+        }
+
         if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
             || trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
@@ -229,6 +252,12 @@ public sealed class WindowsPcControlService : IPcControlService
         }
 
         return $"https://{trimmed}";
+    }
+
+    private static string ResolveAppTarget(string target)
+    {
+        var trimmed = target.Trim();
+        return KnownApps.TryGetValue(trimmed, out var appTarget) ? appTarget : trimmed;
     }
 
     private static string BuildSearchUrl(string query)
