@@ -14,6 +14,21 @@ type MemoryEditorFormProps = {
   onCancel?: () => void;
 };
 
+const memoryCategories = [
+  "Identity",
+  "Preferences",
+  "Projects",
+  "Devices",
+  "Education",
+  "Work",
+  "Astrology",
+  "Tarot",
+  "Occult",
+  "Goals",
+  "Health",
+  "General"
+];
+
 export function MemoryEditorForm({
   draft,
   submitLabel,
@@ -37,11 +52,16 @@ export function MemoryEditorForm({
 
       <label>
         <span>Category</span>
-        <input
+        <select
           value={draft.category}
-          placeholder="General"
           onChange={(event) => onChange({ ...draft, category: event.target.value })}
-        />
+        >
+          {memoryCategories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
       </label>
 
       <label>
@@ -104,6 +124,23 @@ export function MemoryEditorForm({
       </label>
 
       <label>
+        <span>Review Status</span>
+        <select
+          value={draft.reviewStatus ?? "Approved"}
+          onChange={(event) =>
+            onChange({
+              ...draft,
+              reviewStatus: event.target.value as MemoryFormValues["reviewStatus"]
+            })
+          }
+        >
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+      </label>
+
+      <label>
         <span>Source</span>
         <input
           value={draft.source}
@@ -111,6 +148,22 @@ export function MemoryEditorForm({
           onChange={(event) => onChange({ ...draft, source: event.target.value })}
         />
       </label>
+
+      {draft.memoryType === "TemporaryContext" && (
+        <label>
+          <span>Expires At</span>
+          <input
+            type="datetime-local"
+            value={toDateTimeLocal(draft.expiresAtUtc)}
+            onChange={(event) =>
+              onChange({
+                ...draft,
+                expiresAtUtc: event.target.value ? new Date(event.target.value).toISOString() : null
+              })
+            }
+          />
+        </label>
+      )}
 
       <div className="memory-actions">
         <button type="submit" disabled={isSaving || !draft.text.trim()}>
@@ -124,4 +177,19 @@ export function MemoryEditorForm({
       </div>
     </form>
   );
+}
+
+function toDateTimeLocal(value?: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60_000);
+  return localDate.toISOString().slice(0, 16);
 }

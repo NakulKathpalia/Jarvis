@@ -29,6 +29,9 @@ export function MemoryCard({
   onApprove,
   onReject
 }: MemoryCardProps) {
+  const expired = isExpired(item);
+  const qualityIndicators = getQualityIndicators(item, expired);
+
   if (editing?.id === item.id) {
     return (
       <MemoryEditorForm
@@ -47,7 +50,7 @@ export function MemoryCard({
   }
 
   return (
-    <article className="list-card memory-card">
+    <article className={expired ? "list-card memory-card expired" : "list-card memory-card"}>
       <div className="memory-card-head">
         <strong>{item.text}</strong>
         <div className="memory-badges">
@@ -59,6 +62,16 @@ export function MemoryCard({
         </div>
       </div>
 
+      {qualityIndicators.length > 0 && (
+        <div className="memory-quality-list">
+          {qualityIndicators.map((indicator) => (
+            <span className={`memory-quality ${indicator.tone}`} key={`${item.id}-${indicator.label}`}>
+              {indicator.label}
+            </span>
+          ))}
+        </div>
+      )}
+
       {item.tags.length > 0 && (
         <div className="memory-tags">
           {item.tags.map((tag) => (
@@ -69,11 +82,46 @@ export function MemoryCard({
         </div>
       )}
 
-      <span>
-        Source {item.source || "Manual"} -{" "}
-        Created {new Date(item.createdAtUtc).toLocaleString()} - Updated{" "}
-        {new Date(item.updatedAtUtc).toLocaleString()}
-      </span>
+      <dl className="memory-meta-grid">
+        <div>
+          <dt>Category</dt>
+          <dd>{item.category}</dd>
+        </div>
+        <div>
+          <dt>Type</dt>
+          <dd>{formatMemoryType(item.memoryType)}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd>{item.reviewStatus ?? "Approved"}</dd>
+        </div>
+        <div>
+          <dt>Importance</dt>
+          <dd>{item.importance}</dd>
+        </div>
+        <div>
+          <dt>Confidence</dt>
+          <dd>{item.confidence ?? 10}</dd>
+        </div>
+        <div>
+          <dt>Source</dt>
+          <dd>{item.source || "Manual"}</dd>
+        </div>
+        <div>
+          <dt>Created</dt>
+          <dd>{formatDate(item.createdAtUtc)}</dd>
+        </div>
+        <div>
+          <dt>Updated</dt>
+          <dd>{formatDate(item.updatedAtUtc)}</dd>
+        </div>
+        {item.memoryType === "TemporaryContext" && (
+          <div>
+            <dt>Expires</dt>
+            <dd>{item.expiresAtUtc ? formatDate(item.expiresAtUtc) : "No expiry set"}</dd>
+          </div>
+        )}
+      </dl>
 
       <div className="memory-actions">
         <button type="button" className="soft-button" onClick={() => onEdit(item)}>
@@ -87,19 +135,61 @@ export function MemoryCard({
         >
           Delete
         </button>
-        {item.memoryType === "SuggestedMemory" && item.reviewStatus === "Pending" && (
-          <>
-            <button type="button" className="soft-button" onClick={() => onApprove(item.id)} disabled={isSaving}>
-              Approve
-            </button>
-            <button type="button" className="soft-button" onClick={() => onReject(item.id)} disabled={isSaving}>
-              Reject
-            </button>
-          </>
+        {item.reviewStatus !== "Approved" && (
+          <button type="button" className="soft-button" onClick={() => onApprove(item.id)} disabled={isSaving}>
+            Approve
+          </button>
+        )}
+        {item.reviewStatus !== "Rejected" && (
+          <button type="button" className="soft-button" onClick={() => onReject(item.id)} disabled={isSaving}>
+            Reject
+          </button>
         )}
       </div>
     </article>
   );
+}
+
+function isExpired(item: MemoryItem) {
+  return Boolean(
+    item.memoryType === "TemporaryContext" &&
+      item.expiresAtUtc &&
+      new Date(item.expiresAtUtc).getTime() <= Date.now()
+  );
+}
+
+function getQualityIndicators(item: MemoryItem, expired: boolean) {
+  const indicators: Array<{ label: string; tone: "good" | "warn" | "danger" | "neutral" }> = [];
+
+  if ((item.confidence ?? 10) >= 8) {
+    indicators.push({ label: "High confidence", tone: "good" });
+  }
+
+  if ((item.confidence ?? 10) <= 4) {
+    indicators.push({ label: "Low confidence", tone: "warn" });
+  }
+
+  if (item.importance >= 8) {
+    indicators.push({ label: "High importance", tone: "good" });
+  }
+
+  if (expired) {
+    indicators.push({ label: "Expired", tone: "danger" });
+  }
+
+  if (item.reviewStatus === "Pending") {
+    indicators.push({ label: "Pending review", tone: "warn" });
+  }
+
+  if (item.reviewStatus === "Rejected") {
+    indicators.push({ label: "Rejected", tone: "danger" });
+  }
+
+  return indicators;
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleString();
 }
 
 function formatMemoryType(value?: string) {

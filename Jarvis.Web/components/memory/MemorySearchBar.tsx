@@ -8,6 +8,8 @@ type MemorySearchBarProps = {
   tag: string;
   memoryType: string;
   reviewStatus: string;
+  minImportance: string;
+  minConfidence: string;
   isSearching: boolean;
   searchActive: boolean;
   onQueryChange: (value: string) => void;
@@ -15,9 +17,26 @@ type MemorySearchBarProps = {
   onTagChange: (value: string) => void;
   onMemoryTypeChange: (value: string) => void;
   onReviewStatusChange: (value: string) => void;
+  onMinImportanceChange: (value: string) => void;
+  onMinConfidenceChange: (value: string) => void;
   onSearch: (event?: FormEvent<HTMLFormElement>) => Promise<void>;
   onReset: () => void;
 };
+
+const memoryCategories = [
+  "Identity",
+  "Preferences",
+  "Projects",
+  "Devices",
+  "Education",
+  "Work",
+  "Astrology",
+  "Tarot",
+  "Occult",
+  "Goals",
+  "Health",
+  "General"
+];
 
 export function MemorySearchBar({
   query,
@@ -25,6 +44,8 @@ export function MemorySearchBar({
   tag,
   memoryType,
   reviewStatus,
+  minImportance,
+  minConfidence,
   isSearching,
   searchActive,
   onQueryChange,
@@ -32,6 +53,8 @@ export function MemorySearchBar({
   onTagChange,
   onMemoryTypeChange,
   onReviewStatusChange,
+  onMinImportanceChange,
+  onMinConfidenceChange,
   onSearch,
   onReset
 }: MemorySearchBarProps) {
@@ -42,11 +65,14 @@ export function MemorySearchBar({
         placeholder="Search memory text"
         onChange={(event) => onQueryChange(event.target.value)}
       />
-      <input
-        value={category}
-        placeholder="Category filter"
-        onChange={(event) => onCategoryChange(event.target.value)}
-      />
+      <select value={category} onChange={(event) => onCategoryChange(event.target.value)}>
+        <option value="">All categories</option>
+        {memoryCategories.map((categoryOption) => (
+          <option key={categoryOption} value={categoryOption}>
+            {categoryOption}
+          </option>
+        ))}
+      </select>
       <input
         value={tag}
         placeholder="Tag filter"
@@ -64,6 +90,22 @@ export function MemorySearchBar({
         <option value="Approved">Approved</option>
         <option value="Rejected">Rejected</option>
       </select>
+      <input
+        type="number"
+        min={1}
+        max={10}
+        value={minImportance}
+        placeholder="Min importance"
+        onChange={(event) => onMinImportanceChange(event.target.value)}
+      />
+      <input
+        type="number"
+        min={1}
+        max={10}
+        value={minConfidence}
+        placeholder="Min confidence"
+        onChange={(event) => onMinConfidenceChange(event.target.value)}
+      />
       <button type="submit" disabled={!searchActive || isSearching}>
         {isSearching ? "Searching" : "Search"}
       </button>

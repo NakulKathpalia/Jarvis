@@ -46,6 +46,6 @@ export function cleanMemoryDraft(draft: MemoryFormValues): MemoryFormValues {
     source: draft.source.trim() || "Manual",
     memoryType: draft.memoryType,
     reviewStatus: draft.reviewStatus,
-    expiresAtUtc: draft.expiresAtUtc
+    expiresAtUtc: draft.memoryType === "TemporaryContext" ? draft.expiresAtUtc : null
   };
 }

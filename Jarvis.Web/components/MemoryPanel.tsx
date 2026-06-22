@@ -33,14 +33,35 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
   const [searchTag, setSearchTag] = useState("");
   const [searchMemoryType, setSearchMemoryType] = useState("");
   const [searchReviewStatus, setSearchReviewStatus] = useState("");
+  const [searchMinImportance, setSearchMinImportance] = useState("");
+  const [searchMinConfidence, setSearchMinConfidence] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
   const searchActive = useMemo(
-    () => Boolean(searchQuery.trim() || searchCategory.trim() || searchTag.trim() || searchMemoryType || searchReviewStatus),
-    [searchCategory, searchMemoryType, searchQuery, searchReviewStatus, searchTag]
+    () =>
+      Boolean(
+        searchQuery.trim() ||
+          searchCategory.trim() ||
+          searchTag.trim() ||
+          searchMemoryType ||
+          searchReviewStatus ||
+          searchMinImportance ||
+          searchMinConfidence
+      ),
+    [
+      searchCategory,
+      searchMemoryType,
+      searchMinConfidence,
+      searchMinImportance,
+      searchQuery,
+      searchReviewStatus,
+      searchTag
+    ]
   );
+
+  const sections = useMemo(() => buildMemorySections(displayItems), [displayItems]);
 
   useEffect(() => {
     if (!searchActive) {
@@ -63,6 +84,8 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
           query: searchQuery,
           category: searchCategory,
           tag: searchTag,
+          minImportance: parseOptionalNumber(searchMinImportance),
+          minConfidence: parseOptionalNumber(searchMinConfidence),
           memoryType: searchMemoryType as MemoryItem["memoryType"] | "",
           reviewStatus: searchReviewStatus as MemoryItem["reviewStatus"] | ""
         })
@@ -78,6 +101,8 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
     setSearchTag("");
     setSearchMemoryType("");
     setSearchReviewStatus("");
+    setSearchMinImportance("");
+    setSearchMinConfidence("");
     setDisplayItems(items);
   }
 
@@ -135,6 +160,8 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
       setSearchTag("");
       setSearchMemoryType("");
       setSearchReviewStatus("");
+      setSearchMinImportance("");
+      setSearchMinConfidence("");
       setDisplayItems([]);
     } finally {
       setIsClearing(false);
@@ -157,7 +184,7 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
     <section className="tool-panel">
       <TopBar
         title="Memory"
-        subtitle="Private facts saved to local JSON"
+        subtitle="Review, search, and curate private memories"
         action={
           <button className="danger-button" type="button" onClick={handleClear} disabled={isClearing}>
             {isClearing ? "Clearing" : "Clear"}
@@ -171,6 +198,8 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
         tag={searchTag}
         memoryType={searchMemoryType}
         reviewStatus={searchReviewStatus}
+        minImportance={searchMinImportance}
+        minConfidence={searchMinConfidence}
         isSearching={isSearching}
         searchActive={searchActive}
         onQueryChange={setSearchQuery}
@@ -178,6 +207,8 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
         onTagChange={setSearchTag}
         onMemoryTypeChange={setSearchMemoryType}
         onReviewStatusChange={setSearchReviewStatus}
+        onMinImportanceChange={setSearchMinImportance}
+        onMinConfidenceChange={setSearchMinConfidence}
         onSearch={runSearch}
         onReset={resetSearch}
       />
@@ -190,13 +221,21 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
         onSubmit={handleAdd}
       />
 
-      <div className="item-list">
+      <div className="memory-review-summary">
+        {sections.map((section) => (
+          <span key={section.title}>
+            {section.title}: <strong>{section.items.length}</strong>
+          </span>
+        ))}
+      </div>
+
+      <div className="memory-section-list">
         {displayItems.length === 0 && <div className="list-empty">No memories saved yet.</div>}
 
-        {displayItems.map((item) => (
-          <MemoryCard
-            key={item.id}
-            item={item}
+        {sections.map((section) => (
+          <MemorySection
+            key={section.title}
+            section={section}
             editing={editing}
             isSaving={isSaving}
             onEdit={(memory) => setEditing(memoryToDraft(memory))}
@@ -211,4 +250,106 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
       </div>
     </section>
   );
+}
+
+type MemorySectionModel = {
+  title: string;
+  description: string;
+  items: MemoryItem[];
+};
+
+type MemorySectionProps = {
+  section: MemorySectionModel;
+  editing: MemoryDraft | null;
+  isSaving: boolean;
+  onEdit: (item: MemoryItem) => void;
+  onCancelEdit: () => void;
+  onEditingChange: (draft: MemoryDraft) => void;
+  onSaveEdit: () => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onApprove: (id: string) => Promise<void>;
+  onReject: (id: string) => Promise<void>;
+};
+
+function MemorySection({
+  section,
+  editing,
+  isSaving,
+  onEdit,
+  onCancelEdit,
+  onEditingChange,
+  onSaveEdit,
+  onDelete,
+  onApprove,
+  onReject
+}: MemorySectionProps) {
+  return (
+    <section className="memory-review-section">
+      <div className="memory-section-heading">
+        <div>
+          <h3>{section.title}</h3>
+          <p>{section.description}</p>
+        </div>
+        <strong>{section.items.length}</strong>
+      </div>
+
+      {section.items.length === 0 ? (
+        <div className="list-empty compact">No memories in this section.</div>
+      ) : (
+        <div className="item-list">
+          {section.items.map((item) => (
+            <MemoryCard
+              key={item.id}
+              item={item}
+              editing={editing}
+              isSaving={isSaving}
+              onEdit={onEdit}
+              onCancelEdit={onCancelEdit}
+              onEditingChange={onEditingChange}
+              onSaveEdit={onSaveEdit}
+              onDelete={onDelete}
+              onApprove={onApprove}
+              onReject={onReject}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function buildMemorySections(items: MemoryItem[]): MemorySectionModel[] {
+  const sorted = [...items].sort((left, right) => new Date(right.updatedAtUtc).getTime() - new Date(left.updatedAtUtc).getTime());
+  return [
+    {
+      title: "Suggested Memories",
+      description: "Pending suggestions waiting for approval, rejection, or edit.",
+      items: sorted.filter((item) => item.memoryType === "SuggestedMemory" && item.reviewStatus === "Pending")
+    },
+    {
+      title: "Permanent Memories",
+      description: "Approved long-term memories available for retrieval.",
+      items: sorted.filter(
+        (item) =>
+          item.memoryType !== "TemporaryContext" &&
+          item.reviewStatus !== "Pending" &&
+          item.reviewStatus !== "Rejected"
+      )
+    },
+    {
+      title: "Temporary Context",
+      description: "Short-lived context. Expired items are not used in retrieval.",
+      items: sorted.filter((item) => item.memoryType === "TemporaryContext" && item.reviewStatus !== "Rejected")
+    },
+    {
+      title: "Rejected Memories",
+      description: "Rejected memories are retained for review and never used in retrieval.",
+      items: sorted.filter((item) => item.reviewStatus === "Rejected")
+    }
+  ];
+}
+
+function parseOptionalNumber(value: string) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
