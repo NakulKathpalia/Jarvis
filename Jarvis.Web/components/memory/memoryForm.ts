@@ -6,7 +6,12 @@ export const emptyMemoryDraft: MemoryFormValues = {
   text: "",
   category: "General",
   tags: [],
-  importance: 3
+  importance: 3,
+  confidence: 10,
+  source: "Manual",
+  memoryType: "PermanentMemory",
+  reviewStatus: null,
+  expiresAtUtc: null
 };
 
 export function memoryToDraft(item: MemoryItem): MemoryDraft {
@@ -15,7 +20,12 @@ export function memoryToDraft(item: MemoryItem): MemoryDraft {
     text: item.text,
     category: item.category,
     tags: item.tags ?? [],
-    importance: item.importance ?? 3
+    importance: item.importance ?? 3,
+    confidence: item.confidence ?? 10,
+    source: item.source ?? "Manual",
+    memoryType: item.memoryType ?? "PermanentMemory",
+    reviewStatus: item.reviewStatus ?? "Approved",
+    expiresAtUtc: item.expiresAtUtc ?? null
   };
 }
 
@@ -31,6 +41,11 @@ export function cleanMemoryDraft(draft: MemoryFormValues): MemoryFormValues {
     text: draft.text.trim(),
     category: draft.category.trim() || "General",
     tags: draft.tags,
-    importance: draft.importance
+    importance: draft.importance,
+    confidence: draft.confidence,
+    source: draft.source.trim() || "Manual",
+    memoryType: draft.memoryType,
+    reviewStatus: draft.reviewStatus,
+    expiresAtUtc: draft.expiresAtUtc
   };
 }

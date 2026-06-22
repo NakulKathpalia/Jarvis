@@ -11,17 +11,23 @@ public sealed class Assistant
     private readonly OllamaService _ollamaService;
     private readonly SettingsService _settingsService;
     private readonly MemoryService _memoryService;
+    private readonly MemoryRetrievalService _memoryRetrievalService;
+    private readonly MemoryContextBuilder _memoryContextBuilder;
     private readonly ChatHistoryService _chatHistoryService;
 
     public Assistant(
         OllamaService ollamaService,
         SettingsService settingsService,
         MemoryService memoryService,
-        ChatHistoryService chatHistoryService)
+        ChatHistoryService chatHistoryService,
+        MemoryRetrievalService? memoryRetrievalService = null,
+        MemoryContextBuilder? memoryContextBuilder = null)
     {
         _ollamaService = ollamaService;
         _settingsService = settingsService;
         _memoryService = memoryService;
+        _memoryRetrievalService = memoryRetrievalService ?? new MemoryRetrievalService(memoryService);
+        _memoryContextBuilder = memoryContextBuilder ?? new MemoryContextBuilder();
         _chatHistoryService = chatHistoryService;
     }
 
@@ -52,7 +58,7 @@ public sealed class Assistant
     {
         await _chatHistoryService.AddAsync(ChatMessage.User(input), cancellationToken);
 
-        var payload = BuildPrompt();
+        var payload = BuildPrompt(input);
         var responseBuilder = new StringBuilder();
         await foreach (var chunk in _ollamaService.StreamChatAsync(payload, cancellationToken))
         {
@@ -79,27 +85,35 @@ public sealed class Assistant
         Func<string, Task>? onChunk = null,
         CancellationToken cancellationToken = default)
     {
-        var prompt = BuildPrompt(sessionMessages);
+        var prompt = BuildPrompt(input, sessionMessages);
         return GenerateFromPromptAsync(prompt, onChunk, cancellationToken);
     }
 
-    private IEnumerable<ChatMessage> BuildPrompt()
+    private IEnumerable<ChatMessage> BuildPrompt(string input)
     {
-        return BuildPrompt(_chatHistoryService.GetRecent(_settingsService.Current.MaxHistoryMessages));
+        return BuildPrompt(input, _chatHistoryService.GetRecent(_settingsService.Current.MaxHistoryMessages));
     }
 
-    private IEnumerable<ChatMessage> BuildPrompt(IEnumerable<ChatMessage> history)
+    private IEnumerable<ChatMessage> BuildPrompt(string input, IEnumerable<ChatMessage> history)
     {
         var systemPrompt = new StringBuilder();
         systemPrompt.AppendLine(_settingsService.Current.SystemPrompt);
+        systemPrompt.AppendLine("Use a confident, professional, friendly Jarvis style. Prefer Roman Hinglish if the user uses Hindi or Hinglish; use English when appropriate.");
 
-        if (_memoryService.Items.Count > 0)
+        if (_settingsService.Current.MemoryRetrievalEnabled)
         {
-            systemPrompt.AppendLine();
-            systemPrompt.AppendLine("Known local memory:");
-            foreach (var item in _memoryService.Items.Take(20))
+            var retrievalOptions = new MemoryRetrievalOptions(
+                _settingsService.Current.MaxRetrievedMemories,
+                _settingsService.Current.UseTemporaryContext,
+                _settingsService.Current.UseSuggestedMemories);
+            var relevantMemories = _memoryRetrievalService.Retrieve(input, retrievalOptions);
+            var memoryContext = _memoryContextBuilder.Build(relevantMemories, retrievalOptions.ClampedMaxResults);
+
+            if (!string.IsNullOrWhiteSpace(memoryContext))
             {
-                systemPrompt.AppendLine($"- {item.Text}");
+                systemPrompt.AppendLine();
+                systemPrompt.AppendLine(memoryContext);
+                systemPrompt.AppendLine("Use these memories only as private context. Do not expose unrelated memories or mention this context block unless it helps answer the user.");
             }
         }
 

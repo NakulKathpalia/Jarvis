@@ -19,23 +19,27 @@ type MemoryPanelProps = {
   onAdd: (values: MemoryFormValues) => Promise<void>;
   onUpdate: (id: string, values: MemoryFormValues) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onApprove: (id: string) => Promise<void>;
+  onReject: (id: string) => Promise<void>;
   onClear: () => Promise<void>;
 };
 
-export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onClear }: MemoryPanelProps) {
+export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onReject, onClear }: MemoryPanelProps) {
   const [draft, setDraft] = useState<MemoryFormValues>(emptyMemoryDraft);
   const [displayItems, setDisplayItems] = useState(items);
   const [editing, setEditing] = useState<MemoryDraft | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCategory, setSearchCategory] = useState("");
   const [searchTag, setSearchTag] = useState("");
+  const [searchMemoryType, setSearchMemoryType] = useState("");
+  const [searchReviewStatus, setSearchReviewStatus] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
   const searchActive = useMemo(
-    () => Boolean(searchQuery.trim() || searchCategory.trim() || searchTag.trim()),
-    [searchCategory, searchQuery, searchTag]
+    () => Boolean(searchQuery.trim() || searchCategory.trim() || searchTag.trim() || searchMemoryType || searchReviewStatus),
+    [searchCategory, searchMemoryType, searchQuery, searchReviewStatus, searchTag]
   );
 
   useEffect(() => {
@@ -58,7 +62,9 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onClear }: Memor
         await jarvisApi.searchMemory({
           query: searchQuery,
           category: searchCategory,
-          tag: searchTag
+          tag: searchTag,
+          memoryType: searchMemoryType as MemoryItem["memoryType"] | "",
+          reviewStatus: searchReviewStatus as MemoryItem["reviewStatus"] | ""
         })
       );
     } finally {
@@ -70,6 +76,8 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onClear }: Memor
     setSearchQuery("");
     setSearchCategory("");
     setSearchTag("");
+    setSearchMemoryType("");
+    setSearchReviewStatus("");
     setDisplayItems(items);
   }
 
@@ -106,6 +114,18 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onClear }: Memor
     });
   }
 
+  async function handleApprove(id: string) {
+    await saveMemoryChange(async () => {
+      await onApprove(id);
+    });
+  }
+
+  async function handleReject(id: string) {
+    await saveMemoryChange(async () => {
+      await onReject(id);
+    });
+  }
+
   async function handleClear() {
     setIsClearing(true);
     try {
@@ -113,6 +133,8 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onClear }: Memor
       setSearchQuery("");
       setSearchCategory("");
       setSearchTag("");
+      setSearchMemoryType("");
+      setSearchReviewStatus("");
       setDisplayItems([]);
     } finally {
       setIsClearing(false);
@@ -147,11 +169,15 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onClear }: Memor
         query={searchQuery}
         category={searchCategory}
         tag={searchTag}
+        memoryType={searchMemoryType}
+        reviewStatus={searchReviewStatus}
         isSearching={isSearching}
         searchActive={searchActive}
         onQueryChange={setSearchQuery}
         onCategoryChange={setSearchCategory}
         onTagChange={setSearchTag}
+        onMemoryTypeChange={setSearchMemoryType}
+        onReviewStatusChange={setSearchReviewStatus}
         onSearch={runSearch}
         onReset={resetSearch}
       />
@@ -178,6 +204,8 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onClear }: Memor
             onEditingChange={setEditing}
             onSaveEdit={handleUpdate}
             onDelete={handleDelete}
+            onApprove={handleApprove}
+            onReject={handleReject}
           />
         ))}
       </div>

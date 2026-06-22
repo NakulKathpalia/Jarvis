@@ -13,6 +13,8 @@ type MemoryCardProps = {
   onEditingChange: (draft: MemoryDraft) => void;
   onSaveEdit: () => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onApprove: (id: string) => Promise<void>;
+  onReject: (id: string) => Promise<void>;
 };
 
 export function MemoryCard({
@@ -23,7 +25,9 @@ export function MemoryCard({
   onCancelEdit,
   onEditingChange,
   onSaveEdit,
-  onDelete
+  onDelete,
+  onApprove,
+  onReject
 }: MemoryCardProps) {
   if (editing?.id === item.id) {
     return (
@@ -48,6 +52,9 @@ export function MemoryCard({
         <strong>{item.text}</strong>
         <div className="memory-badges">
           <span className="memory-badge">P{item.importance}</span>
+          <span className="memory-badge">C{item.confidence ?? 10}</span>
+          <span className="memory-badge">{formatMemoryType(item.memoryType)}</span>
+          <span className="memory-badge">{item.reviewStatus ?? "Approved"}</span>
           <span className="memory-badge">{item.category}</span>
         </div>
       </div>
@@ -63,6 +70,7 @@ export function MemoryCard({
       )}
 
       <span>
+        Source {item.source || "Manual"} -{" "}
         Created {new Date(item.createdAtUtc).toLocaleString()} - Updated{" "}
         {new Date(item.updatedAtUtc).toLocaleString()}
       </span>
@@ -79,7 +87,30 @@ export function MemoryCard({
         >
           Delete
         </button>
+        {item.memoryType === "SuggestedMemory" && item.reviewStatus === "Pending" && (
+          <>
+            <button type="button" className="soft-button" onClick={() => onApprove(item.id)} disabled={isSaving}>
+              Approve
+            </button>
+            <button type="button" className="soft-button" onClick={() => onReject(item.id)} disabled={isSaving}>
+              Reject
+            </button>
+          </>
+        )}
       </div>
     </article>
   );
+}
+
+function formatMemoryType(value?: string) {
+  switch (value) {
+    case "TemporaryContext":
+      return "Temporary";
+    case "SuggestedMemory":
+      return "Suggested";
+    case "PermanentMemory":
+      return "Permanent";
+    default:
+      return "Permanent";
+  }
 }

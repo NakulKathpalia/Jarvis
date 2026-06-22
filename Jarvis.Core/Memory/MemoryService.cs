@@ -10,14 +10,29 @@ public sealed class MemoryService
     private readonly string _memoryPath;
     private readonly IMemoryRepository? _repository;
     private readonly JarvisUserContext _userContext;
+    private readonly MemoryClassificationService _classificationService;
+    private readonly MemoryScoringService _scoringService;
+    private readonly MemorySearchService _searchService;
+    private readonly MemoryReviewService _reviewService;
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
     private readonly List<MemoryItem> _items = [];
 
-    public MemoryService(string memoryPath, IMemoryRepository? repository = null, JarvisUserContext? userContext = null)
+    public MemoryService(
+        string memoryPath,
+        IMemoryRepository? repository = null,
+        JarvisUserContext? userContext = null,
+        MemoryClassificationService? classificationService = null,
+        MemoryScoringService? scoringService = null,
+        MemorySearchService? searchService = null,
+        MemoryReviewService? reviewService = null)
     {
         _memoryPath = memoryPath;
         _repository = repository;
         _userContext = userContext ?? new JarvisUserContext();
+        _classificationService = classificationService ?? new MemoryClassificationService();
+        _scoringService = scoringService ?? new MemoryScoringService();
+        _searchService = searchService ?? new MemorySearchService();
+        _reviewService = reviewService ?? new MemoryReviewService();
     }
 
     public IReadOnlyCollection<MemoryItem> Items => _items;
@@ -51,16 +66,27 @@ public sealed class MemoryService
         string category = "General",
         IEnumerable<string>? tags = null,
         int importance = 3,
+        int confidence = 10,
+        string source = "Manual",
+        MemoryType memoryType = MemoryType.PermanentMemory,
+        MemoryReviewStatus? reviewStatus = null,
+        DateTime? expiresAtUtc = null,
         CancellationToken cancellationToken = default)
     {
+        var normalizedType = _classificationService.NormalizeType(memoryType, source);
         var item = NormalizeItem(new MemoryItem
         {
             Id = Guid.NewGuid().ToString(),
             UserId = _userContext.UserId,
             Text = text,
-            Category = category,
+            Category = _classificationService.NormalizeCategory(category),
             Tags = tags?.ToList() ?? new List<string>(),
             Importance = importance,
+            Confidence = confidence,
+            Source = string.IsNullOrWhiteSpace(source) ? "Manual" : source.Trim(),
+            MemoryType = normalizedType,
+            ReviewStatus = reviewStatus ?? _classificationService.DefaultReviewStatus(normalizedType),
+            ExpiresAtUtc = expiresAtUtc,
             CreatedAtUtc = DateTime.UtcNow,
             UpdatedAtUtc = DateTime.UtcNow
         });
@@ -69,45 +95,34 @@ public sealed class MemoryService
         return SaveAndReturnAsync(item, cancellationToken);
     }
 
-    public IReadOnlyList<MemoryItem> Search(string query, string? category = null, string? tag = null, int? minImportance = null)
+    public IReadOnlyList<MemoryItem> Search(
+        string query,
+        string? category = null,
+        string? tag = null,
+        int? minImportance = null,
+        int? minConfidence = null,
+        MemoryType? memoryType = null,
+        MemoryReviewStatus? reviewStatus = null,
+        bool includeExpired = false)
     {
-        var normalizedQuery = NormalizeQuery(query);
-        var normalizedCategory = NormalizeQuery(category);
-        var normalizedTag = NormalizeQuery(tag);
-
-        return _items
-            .Where(item =>
-            {
-                if (minImportance.HasValue && item.Importance < minImportance.Value)
-                {
-                    return false;
-                }
-
-                if (!string.IsNullOrWhiteSpace(normalizedCategory) &&
-                    !item.Category.Contains(normalizedCategory, StringComparison.OrdinalIgnoreCase))
-                {
-                    return false;
-                }
-
-                if (!string.IsNullOrWhiteSpace(normalizedTag) &&
-                    !item.Tags.Any(itemTag => itemTag.Contains(normalizedTag, StringComparison.OrdinalIgnoreCase)))
-                {
-                    return false;
-                }
-
-                if (string.IsNullOrWhiteSpace(normalizedQuery))
-                {
-                    return true;
-                }
-
-                return item.Text.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase)
-                    || item.Category.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase)
-                    || item.Tags.Any(itemTag => itemTag.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase));
-            })
-            .OrderByDescending(item => item.UpdatedAtUtc)
-            .ThenByDescending(item => item.CreatedAtUtc)
-            .ToList();
+        return Search(new MemorySearchCriteria(
+            query,
+            category,
+            tag,
+            minImportance,
+            minConfidence,
+            memoryType,
+            reviewStatus,
+            includeExpired));
     }
+
+    public IReadOnlyList<MemoryItem> Search(MemorySearchCriteria criteria) =>
+        _searchService.Search(_items, criteria);
+
+    public IReadOnlyList<MemoryItem> GetPendingSuggestions() =>
+        _items.Where(_reviewService.IsPending)
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ToList();
 
     public async Task<MemoryItem?> UpdateAsync(
         string id,
@@ -115,6 +130,11 @@ public sealed class MemoryService
         string category,
         IEnumerable<string>? tags,
         int importance,
+        int? confidence = null,
+        string? source = null,
+        MemoryType? memoryType = null,
+        MemoryReviewStatus? reviewStatus = null,
+        DateTime? expiresAtUtc = null,
         CancellationToken cancellationToken = default)
     {
         var index = _items.FindIndex(item => item.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -125,9 +145,14 @@ public sealed class MemoryService
 
         var existing = _items[index];
         existing.Text = text;
-        existing.Category = string.IsNullOrWhiteSpace(category) ? "General" : category.Trim();
+        existing.Category = _classificationService.NormalizeCategory(category);
         existing.Tags = NormalizeTags(tags);
-        existing.Importance = NormalizeImportance(importance);
+        existing.Importance = _scoringService.NormalizeImportance(importance);
+        existing.Confidence = _scoringService.NormalizeConfidence(confidence ?? existing.Confidence);
+        existing.Source = string.IsNullOrWhiteSpace(source) ? existing.Source : source.Trim();
+        existing.MemoryType = memoryType ?? existing.MemoryType;
+        existing.ReviewStatus = reviewStatus ?? existing.ReviewStatus;
+        existing.ExpiresAtUtc = expiresAtUtc;
         existing.UpdatedAtUtc = DateTime.UtcNow;
 
         _items.RemoveAt(index);
@@ -135,6 +160,32 @@ public sealed class MemoryService
 
         await SaveAsync(cancellationToken);
         return existing;
+    }
+
+    public async Task<MemoryItem?> ApproveAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var item = Find(id);
+        if (item is null)
+        {
+            return null;
+        }
+
+        _reviewService.Approve(item);
+        await SaveAsync(cancellationToken);
+        return item;
+    }
+
+    public async Task<MemoryItem?> RejectAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var item = Find(id);
+        if (item is null)
+        {
+            return null;
+        }
+
+        _reviewService.Reject(item);
+        await SaveAsync(cancellationToken);
+        return item;
     }
 
     public async Task<MemoryItem?> DeleteAsync(string id, CancellationToken cancellationToken = default)
@@ -163,6 +214,9 @@ public sealed class MemoryService
         return item;
     }
 
+    private MemoryItem? Find(string id) =>
+        _items.FirstOrDefault(item => item.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+
     private Task SaveAsync(CancellationToken cancellationToken = default)
     {
         if (_repository is not null)
@@ -178,9 +232,11 @@ public sealed class MemoryService
     {
         item.Text = item.Text?.Trim() ?? string.Empty;
         item.UserId = string.IsNullOrWhiteSpace(item.UserId) ? JarvisUserContext.DefaultOwnerUserId : item.UserId;
-        item.Category = string.IsNullOrWhiteSpace(item.Category) ? "General" : item.Category.Trim();
+        item.Category = MemoryCategories.Normalize(item.Category);
         item.Tags = NormalizeTags(item.Tags);
-        item.Importance = NormalizeImportance(item.Importance);
+        item.Importance = Math.Clamp(item.Importance, 1, 10);
+        item.Confidence = Math.Clamp(item.Confidence <= 0 ? 10 : item.Confidence, 1, 10);
+        item.Source = string.IsNullOrWhiteSpace(item.Source) ? "Manual" : item.Source.Trim();
         item.CreatedAtUtc = item.CreatedAtUtc == default ? DateTime.UtcNow : item.CreatedAtUtc;
         item.UpdatedAtUtc = item.UpdatedAtUtc == default ? item.CreatedAtUtc : item.UpdatedAtUtc;
         return item;
@@ -195,13 +251,4 @@ public sealed class MemoryService
             .ToList();
     }
 
-    private static int NormalizeImportance(int importance)
-    {
-        return Math.Clamp(importance, 1, 5);
-    }
-
-    private static string NormalizeQuery(string? value)
-    {
-        return value?.Trim() ?? string.Empty;
-    }
 }

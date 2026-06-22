@@ -204,15 +204,35 @@ export const jarvisApi = {
     }),
   voiceCommands: () => request<VoiceCommandCatalogItem[]>("/api/voice/commands"),
   memory: () => request<MemoryItem[]>("/api/memory"),
-  searchMemory: (filters: { query?: string; category?: string; tag?: string; minImportance?: number }) => {
+  searchMemory: (filters: {
+    query?: string;
+    category?: string;
+    tag?: string;
+    minImportance?: number;
+    minConfidence?: number;
+    memoryType?: MemoryItem["memoryType"] | "";
+    reviewStatus?: MemoryItem["reviewStatus"] | "";
+  }) => {
     const params = new URLSearchParams();
     if (filters.query?.trim()) params.set("q", filters.query.trim());
     if (filters.category?.trim()) params.set("category", filters.category.trim());
     if (filters.tag?.trim()) params.set("tag", filters.tag.trim());
     if (filters.minImportance) params.set("minImportance", String(filters.minImportance));
+    if (filters.minConfidence) params.set("minConfidence", String(filters.minConfidence));
+    if (filters.memoryType) params.set("memoryType", filters.memoryType);
+    if (filters.reviewStatus) params.set("reviewStatus", filters.reviewStatus);
     const suffix = params.toString() ? `?${params.toString()}` : "";
     return request<MemoryItem[]>(`/api/memory/search${suffix}`);
   },
+  suggestedMemory: () => request<MemoryItem[]>("/api/memory/suggestions"),
+  retrieveMemory: (query: string, maxResults = 5) =>
+    request<{ memories: Array<{ memory: MemoryItem; score: number; matchedTerms: string[]; matchedCategories: string[] }> }>(
+      "/api/memory/retrieve",
+      {
+        method: "POST",
+        body: JSON.stringify({ query, maxResults })
+      }
+    ),
   addMemory: (values: MemoryFormValues) =>
     request<MemoryItem[]>("/api/memory", {
       method: "POST",
@@ -227,6 +247,10 @@ export const jarvisApi = {
     request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}`, {
       method: "DELETE"
     }),
+  approveMemory: (id: string) =>
+    request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}/approve`, { method: "POST" }),
+  rejectMemory: (id: string) =>
+    request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}/reject`, { method: "POST" }),
   clearMemory: () => request<MemoryItem[]>("/api/memory", { method: "DELETE" }),
   settings: () => request<AppSettings>("/api/settings"),
   saveSettings: (settings: AppSettings) =>

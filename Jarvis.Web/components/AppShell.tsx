@@ -301,6 +301,18 @@ export function AppShell() {
     showToast("Memory deleted");
   }
 
+  async function approveMemory(id: string) {
+    setMemory(await jarvisApi.approveMemory(id));
+    await refreshStatus();
+    showToast("Memory approved");
+  }
+
+  async function rejectMemory(id: string) {
+    setMemory(await jarvisApi.rejectMemory(id));
+    await refreshStatus();
+    showToast("Memory rejected");
+  }
+
   async function clearMemory() {
     setMemory(await jarvisApi.clearMemory());
     await refreshStatus();
@@ -404,6 +416,8 @@ export function AppShell() {
           onAdd={addMemory}
           onUpdate={updateMemory}
           onDelete={deleteMemory}
+          onApprove={approveMemory}
+          onReject={rejectMemory}
           onClear={clearMemory}
         />
       )}

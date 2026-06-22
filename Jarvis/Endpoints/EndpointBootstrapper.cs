@@ -1,4 +1,5 @@
 using Jarvis.Auth;
+using Jarvis.Memory;
 using Jarvis.Models;
 using Jarvis.Security;
 using Jarvis.Startup;
@@ -17,6 +18,7 @@ public static class EndpointBootstrapper
         var platformService = runtime.PlatformService;
         var settingsService = runtime.SettingsService;
         var memoryService = runtime.MemoryService;
+        var memoryRetrievalService = runtime.MemoryRetrievalService;
         var chatHistoryService = runtime.ChatHistoryService;
         var chatSessionService = runtime.ChatSessionService;
         var commandLogService = runtime.CommandLogService;
@@ -526,11 +528,24 @@ public static class EndpointBootstrapper
                 request.Category ?? "General",
                 request.Tags,
                 request.Importance,
+                request.Confidence,
+                request.Source ?? "Manual",
+                request.MemoryType,
+                request.ReviewStatus,
+                request.ExpiresAtUtc,
                 cancellationToken);
             return Results.Ok(memoryService.Items);
         });
         
-        app.MapGet("/api/memory/search", (string? q, string? category, string? tag, int? minImportance) =>
+        app.MapGet("/api/memory/search", (
+            string? q,
+            string? category,
+            string? tag,
+            int? minImportance,
+            int? minConfidence,
+            MemoryType? memoryType,
+            MemoryReviewStatus? reviewStatus,
+            bool? includeExpired) =>
         {
             var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
             if (denied is not null)
@@ -538,8 +553,52 @@ public static class EndpointBootstrapper
                 return denied;
             }
 
-            var results = memoryService.Search(q ?? string.Empty, category, tag, minImportance);
+            var results = memoryService.Search(
+                q ?? string.Empty,
+                category,
+                tag,
+                minImportance,
+                minConfidence,
+                memoryType,
+                reviewStatus,
+                includeExpired.GetValueOrDefault());
             return Results.Ok(results);
+        });
+
+        app.MapGet("/api/memory/suggestions", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            return denied ?? Results.Ok(memoryService.GetPendingSuggestions());
+        });
+
+        app.MapPost("/api/memory/retrieve", (MemoryRetrieveRequest request) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Query))
+            {
+                return Results.BadRequest(new { error = "Query is required." });
+            }
+
+            var options = new MemoryRetrievalOptions(
+                request.MaxResults ?? settingsService.Current.MaxRetrievedMemories,
+                settingsService.Current.UseTemporaryContext,
+                settingsService.Current.UseSuggestedMemories);
+            var memories = memoryRetrievalService.Retrieve(request.Query, options)
+                .Select(result => new
+                {
+                    memory = result.Memory,
+                    score = Math.Round(result.Score, 2),
+                    matchedTerms = result.MatchedTerms,
+                    matchedCategories = result.MatchedCategories
+                })
+                .ToList();
+
+            return Results.Ok(new { memories });
         });
         
         app.MapPut("/api/memory/{id}", async (string id, MemoryUpdateRequest request, CancellationToken cancellationToken) =>
@@ -561,8 +620,41 @@ public static class EndpointBootstrapper
                 request.Category ?? "General",
                 request.Tags,
                 request.Importance ?? 3,
+                request.Confidence,
+                request.Source,
+                request.MemoryType,
+                request.ReviewStatus,
+                request.ExpiresAtUtc,
                 cancellationToken);
         
+            return updated is null
+                ? Results.NotFound(new { error = "Memory not found." })
+                : Results.Ok(memoryService.Items);
+        });
+
+        app.MapPost("/api/memory/{id}/approve", async (string id, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var updated = await memoryService.ApproveAsync(id, cancellationToken);
+            return updated is null
+                ? Results.NotFound(new { error = "Memory not found." })
+                : Results.Ok(memoryService.Items);
+        });
+
+        app.MapPost("/api/memory/{id}/reject", async (string id, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var updated = await memoryService.RejectAsync(id, cancellationToken);
             return updated is null
                 ? Results.NotFound(new { error = "Memory not found." })
                 : Results.Ok(memoryService.Items);
@@ -612,6 +704,10 @@ public static class EndpointBootstrapper
             settingsService.Current.Model = request.Model;
             settingsService.Current.SystemPrompt = request.SystemPrompt;
             settingsService.Current.MaxHistoryMessages = Math.Max(1, request.MaxHistoryMessages);
+            settingsService.Current.MemoryRetrievalEnabled = request.MemoryRetrievalEnabled;
+            settingsService.Current.MaxRetrievedMemories = Math.Clamp(request.MaxRetrievedMemories, 1, 10);
+            settingsService.Current.UseTemporaryContext = request.UseTemporaryContext;
+            settingsService.Current.UseSuggestedMemories = request.UseSuggestedMemories;
             settingsService.Current.FileIndexRoot = request.FileIndexRoot;
             settingsService.Current.VoiceMode = request.VoiceMode;
             settingsService.Current.AutoExecuteCommands = request.AutoExecuteCommands;

@@ -146,6 +146,9 @@ public static class JarvisApplication
 
         var memoryService = new MemoryService(pathResolver.MemoryPath, memoryRepository, userContext);
         await memoryService.LoadAsync();
+        var memoryRankingService = new MemoryRankingService();
+        var memoryRetrievalService = new MemoryRetrievalService(memoryService, memoryRankingService);
+        var memoryContextBuilder = new MemoryContextBuilder();
 
         var chatHistoryService = new ChatHistoryService(pathResolver.ChatHistoryPath, chatHistoryRepository, userContext);
         await chatHistoryService.LoadAsync();
@@ -206,7 +209,9 @@ public static class JarvisApplication
             ollamaService,
             settingsService,
             memoryService,
-            chatHistoryService);
+            chatHistoryService,
+            memoryRetrievalService,
+            memoryContextBuilder);
 
         var voicePipelineService = new VoicePipelineService(
             voiceSettingsService,
@@ -225,6 +230,8 @@ public static class JarvisApplication
             PlatformService = platformService,
             SettingsService = settingsService,
             MemoryService = memoryService,
+            MemoryRetrievalService = memoryRetrievalService,
+            MemoryContextBuilder = memoryContextBuilder,
             ChatHistoryService = chatHistoryService,
             ChatSessionService = chatSessionService,
             CommandLogService = commandLogService,

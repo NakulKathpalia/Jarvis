@@ -23,6 +23,9 @@ public sealed class MongoMemoryRepository : IMemoryRepository
         item.UserId = userId;
         item.UpdatedAtUtc = DateTime.UtcNow;
         item.CreatedAtUtc = item.CreatedAtUtc == default ? item.UpdatedAtUtc : item.CreatedAtUtc;
+        item.Source = string.IsNullOrWhiteSpace(item.Source) ? "Manual" : item.Source;
+        item.Confidence = item.Confidence <= 0 ? 10 : Math.Clamp(item.Confidence, 1, 10);
+        item.Importance = Math.Clamp(item.Importance, 1, 10);
         return _memories.ReplaceOneAsync(memory => memory.UserId == userId && memory.Id == item.Id, item, new ReplaceOptions { IsUpsert = true }, cancellationToken);
     }
 

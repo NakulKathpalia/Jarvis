@@ -149,6 +149,46 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
           />
         </label>
 
+        <label className="toggle-field">
+          <input
+            checked={draft.memoryRetrievalEnabled}
+            type="checkbox"
+            onChange={(event) => setDraft({ ...draft, memoryRetrievalEnabled: event.target.checked })}
+          />
+          <span>Use relevant memories in assistant responses</span>
+        </label>
+
+        <label>
+          <span>Retrieved Memories</span>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={draft.maxRetrievedMemories}
+            onChange={(event) =>
+              setDraft({ ...draft, maxRetrievedMemories: Number.parseInt(event.target.value, 10) || 5 })
+            }
+          />
+        </label>
+
+        <label className="toggle-field">
+          <input
+            checked={draft.useTemporaryContext}
+            type="checkbox"
+            onChange={(event) => setDraft({ ...draft, useTemporaryContext: event.target.checked })}
+          />
+          <span>Use unexpired temporary context</span>
+        </label>
+
+        <label className="toggle-field">
+          <input
+            checked={draft.useSuggestedMemories}
+            type="checkbox"
+            onChange={(event) => setDraft({ ...draft, useSuggestedMemories: event.target.checked })}
+          />
+          <span>Use approved suggested memories</span>
+        </label>
+
         <label>
           <span>File Root</span>
           <input

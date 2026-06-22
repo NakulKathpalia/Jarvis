@@ -58,7 +58,7 @@ export function MemoryEditorForm({
         <input
           type="number"
           min={1}
-          max={5}
+          max={10}
           value={draft.importance}
           onChange={(event) =>
             onChange({
@@ -66,6 +66,49 @@ export function MemoryEditorForm({
               importance: Number(event.target.value) || 3
             })
           }
+        />
+      </label>
+
+      <label>
+        <span>Confidence</span>
+        <input
+          type="number"
+          min={1}
+          max={10}
+          value={draft.confidence}
+          onChange={(event) =>
+            onChange({
+              ...draft,
+              confidence: Number(event.target.value) || 10
+            })
+          }
+        />
+      </label>
+
+      <label>
+        <span>Memory Type</span>
+        <select
+          value={draft.memoryType}
+          onChange={(event) =>
+            onChange({
+              ...draft,
+              memoryType: event.target.value as MemoryFormValues["memoryType"],
+              reviewStatus: event.target.value === "SuggestedMemory" ? "Pending" : "Approved"
+            })
+          }
+        >
+          <option value="TemporaryContext">Temporary Context</option>
+          <option value="SuggestedMemory">Suggested Memory</option>
+          <option value="PermanentMemory">Permanent Memory</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Source</span>
+        <input
+          value={draft.source}
+          placeholder="Manual, Chat, Voice"
+          onChange={(event) => onChange({ ...draft, source: event.target.value })}
         />
       </label>
 

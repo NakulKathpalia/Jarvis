@@ -89,6 +89,11 @@ export type MemoryItem = {
   category: string;
   tags: string[];
   importance: number;
+  confidence: number;
+  source: string;
+  memoryType: "TemporaryContext" | "SuggestedMemory" | "PermanentMemory";
+  reviewStatus: "Pending" | "Approved" | "Rejected";
+  expiresAtUtc?: string | null;
   createdAtUtc: string;
   updatedAtUtc: string;
 };
@@ -98,6 +103,11 @@ export type MemoryFormValues = {
   category: string;
   tags: string[];
   importance: number;
+  confidence: number;
+  source: string;
+  memoryType: MemoryItem["memoryType"];
+  reviewStatus?: MemoryItem["reviewStatus"] | null;
+  expiresAtUtc?: string | null;
 };
 
 export type AppSettings = {
@@ -105,6 +115,10 @@ export type AppSettings = {
   model: string;
   systemPrompt: string;
   maxHistoryMessages: number;
+  memoryRetrievalEnabled: boolean;
+  maxRetrievedMemories: number;
+  useTemporaryContext: boolean;
+  useSuggestedMemories: boolean;
   fileIndexRoot: string;
   voiceMode: "PushToTalk" | "WakeWord" | "AlwaysListening" | "Hybrid";
   autoExecuteCommands: boolean;

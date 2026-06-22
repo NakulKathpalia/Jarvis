@@ -59,6 +59,9 @@ public sealed class MongoInitializer
         await _context.Collection<MemoryItem>(MongoCollectionNames.Memories).Indexes.CreateManyAsync(
             [
                 new CreateIndexModel<MemoryItem>(Builders<MemoryItem>.IndexKeys.Ascending("UserId").Descending(item => item.UpdatedAtUtc)),
+                new CreateIndexModel<MemoryItem>(Builders<MemoryItem>.IndexKeys.Ascending("UserId").Ascending(item => item.MemoryType).Ascending(item => item.ReviewStatus).Descending(item => item.UpdatedAtUtc)),
+                new CreateIndexModel<MemoryItem>(Builders<MemoryItem>.IndexKeys.Ascending("UserId").Ascending(item => item.Category).Descending(item => item.Importance)),
+                new CreateIndexModel<MemoryItem>(Builders<MemoryItem>.IndexKeys.Ascending("UserId").Ascending(item => item.ExpiresAtUtc)),
                 new CreateIndexModel<MemoryItem>(Builders<MemoryItem>.IndexKeys.Text(item => item.Text).Text(item => item.Category))
             ],
             cancellationToken);
