@@ -138,6 +138,20 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
         </label>
 
         <label>
+          <span>Ollama Context Length</span>
+          <input
+            type="number"
+            min={512}
+            max={32768}
+            step={512}
+            value={draft.ollamaContextLength || 8192}
+            onChange={(event) =>
+              setDraft({ ...draft, ollamaContextLength: Number.parseInt(event.target.value, 10) || 8192 })
+            }
+          />
+        </label>
+
+        <label>
           <span>History Messages</span>
           <input
             type="number"

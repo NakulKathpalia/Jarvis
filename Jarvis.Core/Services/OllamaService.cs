@@ -33,15 +33,22 @@ public sealed class OllamaService
         IEnumerable<ChatMessage> messages,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        var settings = _settingsService.Current;
+        SettingsService.Normalize(settings);
+
         var request = new
         {
-            model = _settingsService.Current.Model,
+            model = settings.Model,
             messages = messages.Select(message => new { role = message.Role, content = message.Content }),
-            stream = true
+            stream = true,
+            options = new
+            {
+                num_ctx = settings.OllamaContextLength
+            }
         };
 
         using var response = await _httpClient.PostAsJsonAsync(
-            $"{_settingsService.Current.OllamaBaseUrl.TrimEnd('/')}/api/chat",
+            $"{settings.OllamaBaseUrl.TrimEnd('/')}/api/chat",
             request,
             cancellationToken);
 

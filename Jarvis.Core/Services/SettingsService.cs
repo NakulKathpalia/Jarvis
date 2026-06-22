@@ -31,21 +31,26 @@ public sealed class SettingsService
         if (_repository is not null)
         {
             Current = await _repository.GetAsync(_userContext.UserId, "User", cancellationToken) ?? new AppSettings();
+            Normalize(Current);
             return;
         }
 
         if (!File.Exists(_settingsPath))
         {
+            Normalize(Current);
             await SaveAsync(cancellationToken);
             return;
         }
 
         var json = await File.ReadAllTextAsync(_settingsPath, cancellationToken);
         Current = JsonSerializer.Deserialize<AppSettings>(json, _jsonOptions) ?? new AppSettings();
+        Normalize(Current);
     }
 
     public Task SaveAsync(CancellationToken cancellationToken = default)
     {
+        Normalize(Current);
+
         if (_repository is not null)
         {
             return _repository.UpsertAsync(_userContext.UserId, "User", Current, cancellationToken);
@@ -53,5 +58,13 @@ public sealed class SettingsService
 
         var json = JsonSerializer.Serialize(Current, _jsonOptions);
         return File.WriteAllTextAsync(_settingsPath, json, cancellationToken);
+    }
+
+    public static void Normalize(AppSettings settings)
+    {
+        settings.OllamaContextLength = Math.Clamp(
+            settings.OllamaContextLength <= 0 ? AppSettings.DefaultOllamaContextLength : settings.OllamaContextLength,
+            512,
+            32768);
     }
 }

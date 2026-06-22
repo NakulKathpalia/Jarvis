@@ -702,6 +702,10 @@ public static class EndpointBootstrapper
 
             settingsService.Current.OllamaBaseUrl = request.OllamaBaseUrl;
             settingsService.Current.Model = request.Model;
+            settingsService.Current.OllamaContextLength = Math.Clamp(
+                request.OllamaContextLength <= 0 ? AppSettings.DefaultOllamaContextLength : request.OllamaContextLength,
+                512,
+                32768);
             settingsService.Current.SystemPrompt = request.SystemPrompt;
             settingsService.Current.MaxHistoryMessages = Math.Max(1, request.MaxHistoryMessages);
             settingsService.Current.MemoryRetrievalEnabled = request.MemoryRetrievalEnabled;

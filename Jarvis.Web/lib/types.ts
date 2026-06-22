@@ -113,6 +113,7 @@ export type MemoryFormValues = {
 export type AppSettings = {
   ollamaBaseUrl: string;
   model: string;
+  ollamaContextLength: number;
   systemPrompt: string;
   maxHistoryMessages: number;
   memoryRetrievalEnabled: boolean;

@@ -2,8 +2,11 @@ namespace Jarvis.Models;
 
 public sealed class AppSettings
 {
+    public const int DefaultOllamaContextLength = 8192;
+
     public string OllamaBaseUrl { get; set; } = "http://localhost:11434";
     public string Model { get; set; } = "llama3.2:3b";
+    public int OllamaContextLength { get; set; } = DefaultOllamaContextLength;
     public string SystemPrompt { get; set; } = "You are Jarvis, a local-first, privacy-focused personal AI assistant.";
     public int MaxHistoryMessages { get; set; } = 20;
     public bool MemoryRetrievalEnabled { get; set; } = true;

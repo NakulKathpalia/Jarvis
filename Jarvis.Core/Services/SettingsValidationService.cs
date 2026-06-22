@@ -21,6 +21,11 @@ public sealed class SettingsValidationService
             warnings.Add("Ollama URL is not a valid absolute URL.");
         }
 
+        if (settings.OllamaContextLength < 512 || settings.OllamaContextLength > 32768)
+        {
+            warnings.Add("Ollama context length should be between 512 and 32768 tokens.");
+        }
+
         AddFileWarning(warnings, settings.WhisperExecutablePath, "Whisper executable");
         AddFileWarning(warnings, settings.WhisperModelPath, "Whisper model");
         AddFileWarning(warnings, settings.PiperExecutablePath, "Piper executable");
