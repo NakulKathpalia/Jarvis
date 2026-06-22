@@ -3,10 +3,14 @@ namespace Jarvis.Services;
 public sealed class PathResolver : IPathResolver
 {
     private readonly string _basePath;
+    private readonly string _webRootPath;
 
-    public PathResolver(string basePath)
+    public PathResolver(string basePath, string? webRootPath = null)
     {
         _basePath = basePath;
+        _webRootPath = string.IsNullOrWhiteSpace(webRootPath)
+            ? Path.Combine(_basePath, "wwwroot")
+            : webRootPath;
         Directory.CreateDirectory(AppDataDirectory);
         Directory.CreateDirectory(MemoryDirectory);
         Directory.CreateDirectory(LogsDirectory);
@@ -20,7 +24,7 @@ public sealed class PathResolver : IPathResolver
     public string LogsDirectory => Path.Combine(AppDataDirectory, "logs");
     public string SecurityLogsDirectory => Path.Combine(_basePath, "logs");
     public string ScreenshotDirectory => Path.Combine(AppDataDirectory, "screenshots");
-    public string GeneratedAudioDirectory => Path.Combine(_basePath, "wwwroot", "generated-audio");
+    public string GeneratedAudioDirectory => Path.Combine(_webRootPath, "generated-audio");
     public string VoiceHistoryPath => Path.Combine(AppDataDirectory, "voice_history.json");
     public string MemoryPath => Path.Combine(MemoryDirectory, "memory.json");
     public string ChatHistoryPath => Path.Combine(AppDataDirectory, "chat_history.json");

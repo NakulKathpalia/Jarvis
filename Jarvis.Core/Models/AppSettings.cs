@@ -28,9 +28,32 @@ public sealed class AppSettings
     public double SpeechRate { get; set; } = 1.0;
     public double SpeechVolume { get; set; } = 1.0;
     public bool AutoSpeakAssistantReplies { get; set; } = true;
-    public bool AutoSpeakResponses { get; set; }
+    public bool AutoSpeakResponses { get; set; } = true;
+    public JarvisResponseStyle ResponseStyle { get; set; } = JarvisResponseStyle.Jarvis;
+    public JarvisPreferredLanguage PreferredLanguage { get; set; } = JarvisPreferredLanguage.Auto;
+    public JarvisVerbosity Verbosity { get; set; } = JarvisVerbosity.Short;
     public bool WakeWordEnabled { get; set; }
     public string WakeWordPhrase { get; set; } = "jarvis";
     public string WakeWordDetectorPath { get; set; } = string.Empty;
     public string WakeWordModelPath { get; set; } = string.Empty;
+}
+
+public enum JarvisResponseStyle
+{
+    Jarvis,
+    Neutral
+}
+
+public enum JarvisPreferredLanguage
+{
+    Auto,
+    English,
+    RomanHinglish
+}
+
+public enum JarvisVerbosity
+{
+    Short,
+    Balanced,
+    Detailed
 }

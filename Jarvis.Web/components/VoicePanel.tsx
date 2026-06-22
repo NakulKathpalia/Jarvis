@@ -19,6 +19,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
   const [status, setStatus] = useState<VoicePipelineStatus | null>(null);
   const [health, setHealth] = useState<VoiceHealthResult | null>(null);
   const [history, setHistory] = useState<VoiceHistoryItem[]>([]);
+  const [playbackStatus, setPlaybackStatus] = useState("Idle");
   const currentSpeechRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -38,14 +39,30 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
 
   async function playAudioUrl(audioUrl: string) {
     stopSpeaking();
-    const audio = new Audio(audioUrl);
+    const audio = new Audio(resolveAudioUrl(audioUrl));
     currentSpeechRef.current = audio;
+    setPlaybackStatus("Playback starting");
+    audio.addEventListener("play", () => setPlaybackStatus("Playback started"));
     audio.addEventListener("ended", () => {
       if (currentSpeechRef.current === audio) {
         currentSpeechRef.current = null;
       }
+      setPlaybackStatus("Playback completed");
     });
-    await audio.play();
+    audio.addEventListener("error", () => {
+      setPlaybackStatus("Playback failed: browser could not load generated audio.");
+    });
+
+    try {
+      await audio.play();
+    } catch (error) {
+      const message = error instanceof Error
+        ? `Playback failed: ${error.message}`
+        : "Playback failed. Browser audio permission may be blocking playback.";
+      setPlaybackStatus(message);
+      onToast(message);
+      throw error;
+    }
   }
 
   async function speakLastResponse() {
@@ -66,7 +83,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
   }
 
   async function testVoice() {
-    const result = await jarvisApi.speak("Ji sir, Jarvis voice response is ready.");
+    const result = await jarvisApi.speak("Ji sir, Jarvis voice system ready hai.");
     if (!result.audioUrl) {
       onToast(result.message || "No audio returned");
       return;
@@ -83,6 +100,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
       audio.currentTime = 0;
       currentSpeechRef.current = null;
     }
+    setPlaybackStatus("Playback stopped");
     void jarvisApi.stopSpeaking().catch(() => undefined);
   }
 
@@ -145,6 +163,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
             <Diagnostic label="Current Voice" value={health?.tts.voiceName ?? "Unknown"} />
             <Diagnostic label="Provider" value={health?.tts.provider ?? "Unknown"} />
             <Diagnostic label="Playback" value={health?.tts.playbackCapability ?? "Unknown"} />
+            <Diagnostic label="Current Status" value={playbackStatus} />
           </div>
           <div className="voice-loop-actions">
             <button className="soft-button" type="button" onClick={() => void speakLastResponse()}>
@@ -241,4 +260,12 @@ function formatBytes(value?: number) {
 
 function shortId(value: string) {
   return value.slice(0, 8);
+}
+
+function resolveAudioUrl(audioUrl: string) {
+  if (audioUrl.startsWith("http://") || audioUrl.startsWith("https://")) {
+    return audioUrl;
+  }
+
+  return `${jarvisApi.apiBaseUrl}${audioUrl.startsWith("/") ? audioUrl : `/${audioUrl}`}`;
 }

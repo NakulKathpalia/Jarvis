@@ -24,6 +24,7 @@ public static class EndpointBootstrapper
         var commandLogService = runtime.CommandLogService;
         var interactionLogService = runtime.InteractionLogService;
         var voiceHistoryService = runtime.VoiceHistoryService;
+        var jarvisPersonalityService = runtime.JarvisPersonalityService;
         var voiceSettingsService = runtime.VoiceSettingsService;
         var speechToTextService = runtime.SpeechToTextService;
         var permissionService = runtime.PermissionService;
@@ -199,7 +200,9 @@ public static class EndpointBootstrapper
                 return Results.Ok(new { response = commandResponse });
             }
 
-            var response = await assistant.GenerateResponseAsync(message, cancellationToken: cancellationToken);
+            var response = await assistant.GenerateResponseAsync(
+                jarvisPersonalityService.NormalizeUserInput(message),
+                cancellationToken: cancellationToken);
             return Results.Ok(new { response });
         });
         
@@ -325,7 +328,8 @@ public static class EndpointBootstrapper
                     chatSessionService.Get(session.Id)));
             }
         
-            if (TryBuildLocalAssistantResponse(message, out var localResponse))
+            var normalizedMessage = jarvisPersonalityService.NormalizeUserInput(message);
+            if (TryBuildLocalAssistantResponse(normalizedMessage, out var localResponse))
             {
                 await chatSessionService.AddMessageAsync(session.Id, ChatMessage.Assistant(localResponse), cancellationToken);
                 await interactionLogService.AddAsync(
@@ -359,7 +363,7 @@ public static class EndpointBootstrapper
                 message,
                 cancellationToken: cancellationToken);
             var response = await assistant.GenerateSessionResponseAsync(
-                message,
+                normalizedMessage,
                 refreshedSession?.Messages ?? [ChatMessage.User(message)],
                 cancellationToken: cancellationToken);
         
@@ -487,12 +491,37 @@ public static class EndpointBootstrapper
                 return Results.NotFound(new { error = "Chat session not found." });
             }
         
-            var userMessage = ChatMessage.User(request.Message.Trim());
+            var message = request.Message.Trim();
+            var userMessage = ChatMessage.User(message);
             await chatSessionService.AddMessageAsync(id, userMessage, cancellationToken);
+
+            var parsedCommand = pcCommandParser.Parse(message);
+            if (parsedCommand.Action != PcControlAction.Unknown)
+            {
+                var commandDenied = DenyIfMissing(PermissionDefinitions.CommandsExecute, SecurityRiskLevel.Medium);
+                if (commandDenied is not null)
+                {
+                    return commandDenied;
+                }
+
+                var commandResult = await pcCommandService.ExecuteAsync(message, cancellationToken: cancellationToken);
+                var assistantMessage = commandResult.RequiresConfirmation
+                    ? BuildConfirmationMessage(commandResult)
+                    : commandResult.Message;
+
+                await chatSessionService.AddMessageAsync(id, ChatMessage.Assistant(assistantMessage), cancellationToken);
+
+                return Results.Ok(new
+                {
+                    response = assistantMessage,
+                    session = chatSessionService.Get(id)
+                });
+            }
         
             var refreshedSession = chatSessionService.Get(id);
+            var assistantInput = jarvisPersonalityService.NormalizeUserInput(message);
             var response = await assistant.GenerateSessionResponseAsync(
-                request.Message.Trim(),
+                assistantInput,
                 refreshedSession?.Messages ?? [userMessage],
                 cancellationToken: cancellationToken);
         
@@ -746,6 +775,9 @@ public static class EndpointBootstrapper
             settingsService.Current.SpeechVolume = Math.Clamp(request.SpeechVolume <= 0 ? 1.0 : request.SpeechVolume, 0.0, 1.0);
             settingsService.Current.AutoSpeakAssistantReplies = request.AutoSpeakAssistantReplies;
             settingsService.Current.AutoSpeakResponses = request.AutoSpeakResponses;
+            settingsService.Current.ResponseStyle = request.ResponseStyle;
+            settingsService.Current.PreferredLanguage = request.PreferredLanguage;
+            settingsService.Current.Verbosity = request.Verbosity;
             settingsService.Current.WakeWordEnabled = request.WakeWordEnabled;
             settingsService.Current.WakeWordPhrase = request.WakeWordPhrase;
             settingsService.Current.WakeWordDetectorPath = request.WakeWordDetectorPath;
@@ -1335,6 +1367,23 @@ public static class EndpointBootstrapper
             if (normalized is "voice status" or "check voice status")
             {
                 response = $"Voice status: Whisper - {whisperService.StatusMessage}. Piper - {piperService.StatusMessage}. Wake word - {wakeWordService.StatusMessage}.";
+                return true;
+            }
+
+            if (normalized is "show memories" or "show memory" or "list memories" or "list memory")
+            {
+                var now = DateTime.UtcNow;
+                var approvedMemories = memoryService.Items
+                    .Where(memory => memory.ReviewStatus == MemoryReviewStatus.Approved
+                        && (memory.MemoryType != MemoryType.TemporaryContext
+                            || !memory.ExpiresAtUtc.HasValue
+                            || memory.ExpiresAtUtc.Value > now))
+                    .Take(8)
+                    .Select(memory => $"{memory.Category}: {memory.Text}")
+                    .ToList();
+                response = approvedMemories.Count == 0
+                    ? "No approved memories saved yet."
+                    : $"Saved memories: {string.Join("; ", approvedMemories)}";
                 return true;
             }
         

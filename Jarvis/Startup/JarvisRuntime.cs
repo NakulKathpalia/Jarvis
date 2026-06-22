@@ -23,6 +23,7 @@ public sealed class JarvisRuntime
     public required CommandLogService CommandLogService { get; init; }
     public required InteractionLogService InteractionLogService { get; init; }
     public required VoiceHistoryService VoiceHistoryService { get; init; }
+    public required JarvisPersonalityService JarvisPersonalityService { get; init; }
     public required VoiceSettingsService VoiceSettingsService { get; init; }
     public required SpeechToTextService SpeechToTextService { get; init; }
     public required VoiceActivityDetector VoiceActivityDetector { get; init; }

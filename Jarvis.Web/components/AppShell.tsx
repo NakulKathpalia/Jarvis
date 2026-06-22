@@ -346,7 +346,7 @@ export function AppShell() {
         return;
       }
 
-      const audio = new Audio(result.audioUrl);
+      const audio = new Audio(resolveAudioUrl(result.audioUrl));
       currentSpeechRef.current = audio;
       audio.addEventListener("ended", () => {
         if (currentSpeechRef.current === audio) {
@@ -367,6 +367,14 @@ export function AppShell() {
       currentSpeechRef.current = null;
     }
     void jarvisApi.stopSpeaking().catch(() => undefined);
+  }
+
+  function resolveAudioUrl(audioUrl: string) {
+    if (audioUrl.startsWith("http://") || audioUrl.startsWith("https://")) {
+      return audioUrl;
+    }
+
+    return `${jarvisApi.apiBaseUrl}${audioUrl.startsWith("/") ? audioUrl : `/${audioUrl}`}`;
   }
 
   return (

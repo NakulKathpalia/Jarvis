@@ -47,7 +47,7 @@ public static class JarvisApplication
     private static async Task<JarvisRuntime> CreateRuntimeAsync(string[] args)
     {
         var basePath = AppContext.BaseDirectory;
-        var pathResolver = new PathResolver(basePath);
+        var pathResolver = new PathResolver(basePath, ResolveWebRootPath(basePath));
         var platformService = new PlatformService();
         var userContext = new JarvisUserContext();
 
@@ -173,6 +173,7 @@ public static class JarvisApplication
         var whisperService = new WhisperService(settingsService, speechToTextService);
         var piperService = new PiperService(settingsService, pathResolver.GeneratedAudioDirectory);
         var textToSpeechService = new TextToSpeechService(settingsService, piperService, pathResolver.GeneratedAudioDirectory);
+        var jarvisPersonalityService = new JarvisPersonalityService(settingsService);
         var wakeWordService = new Jarvis.Services.WakeWordService(settingsService, whisperService);
         var fileIndexService = new FileIndexService(settingsService);
         var pcCommandParser = new PcCommandParser();
@@ -193,6 +194,7 @@ public static class JarvisApplication
             securityService,
             commandLogService,
             pcControlService,
+            jarvisPersonalityService,
             interactionLogService);
         var voiceCommandProcessor = new VoiceCommandProcessor(pcCommandParser, pcCommandService);
         var voiceCommandService = new VoiceCommandService(voiceCommandProcessor);
@@ -211,6 +213,7 @@ public static class JarvisApplication
             settingsService,
             memoryService,
             chatHistoryService,
+            jarvisPersonalityService,
             memoryRetrievalService,
             memoryContextBuilder);
 
@@ -239,6 +242,7 @@ public static class JarvisApplication
             CommandLogService = commandLogService,
             InteractionLogService = interactionLogService,
             VoiceHistoryService = voiceHistoryService,
+            JarvisPersonalityService = jarvisPersonalityService,
             VoiceSettingsService = voiceSettingsService,
             SpeechToTextService = speechToTextService,
             VoiceActivityDetector = voiceActivityDetector,
@@ -262,5 +266,23 @@ public static class JarvisApplication
             Router = router,
             HttpClient = httpClient
         };
+    }
+
+    private static string ResolveWebRootPath(string basePath)
+    {
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var projectWebRoot = Path.Combine(currentDirectory, "Jarvis", "wwwroot");
+        if (Directory.Exists(projectWebRoot) || File.Exists(Path.Combine(currentDirectory, "Jarvis", "Jarvis.csproj")))
+        {
+            return projectWebRoot;
+        }
+
+        var contentWebRoot = Path.Combine(currentDirectory, "wwwroot");
+        if (Directory.Exists(contentWebRoot) || File.Exists(Path.Combine(currentDirectory, "Jarvis.csproj")))
+        {
+            return contentWebRoot;
+        }
+
+        return Path.Combine(basePath, "wwwroot");
     }
 }

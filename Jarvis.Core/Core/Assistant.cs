@@ -14,12 +14,14 @@ public sealed class Assistant
     private readonly MemoryRetrievalService _memoryRetrievalService;
     private readonly MemoryContextBuilder _memoryContextBuilder;
     private readonly ChatHistoryService _chatHistoryService;
+    private readonly JarvisPersonalityService _personalityService;
 
     public Assistant(
         OllamaService ollamaService,
         SettingsService settingsService,
         MemoryService memoryService,
         ChatHistoryService chatHistoryService,
+        JarvisPersonalityService personalityService,
         MemoryRetrievalService? memoryRetrievalService = null,
         MemoryContextBuilder? memoryContextBuilder = null)
     {
@@ -29,6 +31,7 @@ public sealed class Assistant
         _memoryRetrievalService = memoryRetrievalService ?? new MemoryRetrievalService(memoryService);
         _memoryContextBuilder = memoryContextBuilder ?? new MemoryContextBuilder();
         _chatHistoryService = chatHistoryService;
+        _personalityService = personalityService;
     }
 
     public async Task RespondAsync(string input, CancellationToken cancellationToken = default)
@@ -97,8 +100,9 @@ public sealed class Assistant
     private IEnumerable<ChatMessage> BuildPrompt(string input, IEnumerable<ChatMessage> history)
     {
         var systemPrompt = new StringBuilder();
+        var normalizedInput = _personalityService.NormalizeUserInput(input);
         systemPrompt.AppendLine(_settingsService.Current.SystemPrompt);
-        systemPrompt.AppendLine("Use a confident, professional, friendly Jarvis style. Prefer Roman Hinglish if the user uses Hindi or Hinglish; use English when appropriate.");
+        systemPrompt.AppendLine(_personalityService.BuildSystemInstructions(normalizedInput));
 
         if (_settingsService.Current.MemoryRetrievalEnabled)
         {
@@ -106,7 +110,7 @@ public sealed class Assistant
                 _settingsService.Current.MaxRetrievedMemories,
                 _settingsService.Current.UseTemporaryContext,
                 _settingsService.Current.UseSuggestedMemories);
-            var relevantMemories = _memoryRetrievalService.Retrieve(input, retrievalOptions);
+            var relevantMemories = _memoryRetrievalService.Retrieve(normalizedInput, retrievalOptions);
             var memoryContext = _memoryContextBuilder.Build(relevantMemories, retrievalOptions.ClampedMaxResults);
 
             if (!string.IsNullOrWhiteSpace(memoryContext))
@@ -124,6 +128,11 @@ public sealed class Assistant
             .TakeLast(_settingsService.Current.MaxHistoryMessages))
         {
             yield return message;
+        }
+
+        if (!normalizedInput.Equals(input, StringComparison.Ordinal))
+        {
+            yield return ChatMessage.User(normalizedInput);
         }
     }
 

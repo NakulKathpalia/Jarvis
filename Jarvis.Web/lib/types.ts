@@ -136,6 +136,9 @@ export type AppSettings = {
   speechVolume: number;
   autoSpeakAssistantReplies: boolean;
   autoSpeakResponses: boolean;
+  responseStyle: "Jarvis" | "Neutral";
+  preferredLanguage: "Auto" | "English" | "RomanHinglish";
+  verbosity: "Short" | "Balanced" | "Detailed";
   wakeWordEnabled: boolean;
   wakeWordPhrase: string;
   wakeWordDetectorPath: string;

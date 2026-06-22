@@ -7,7 +7,7 @@ public sealed class PcCommandParser
     public PcCommand Parse(string input)
     {
         var original = input.Trim();
-        var normalized = Normalize(original);
+        var normalized = Normalize(JarvisInputNormalizer.StripAssistantPrefix(original));
 
         if (string.IsNullOrWhiteSpace(normalized))
         {

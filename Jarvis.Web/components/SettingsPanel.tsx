@@ -359,6 +359,43 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
           <span>Auto-speak chat assistant responses</span>
         </label>
 
+        <label>
+          <span>Response Style</span>
+          <select
+            value={draft.responseStyle ?? "Jarvis"}
+            onChange={(event) => setDraft({ ...draft, responseStyle: event.target.value as AppSettings["responseStyle"] })}
+          >
+            <option value="Jarvis">Jarvis</option>
+            <option value="Neutral">Neutral</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Preferred Language</span>
+          <select
+            value={draft.preferredLanguage ?? "Auto"}
+            onChange={(event) =>
+              setDraft({ ...draft, preferredLanguage: event.target.value as AppSettings["preferredLanguage"] })
+            }
+          >
+            <option value="Auto">Auto</option>
+            <option value="English">English</option>
+            <option value="RomanHinglish">Roman Hinglish</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Verbosity</span>
+          <select
+            value={draft.verbosity ?? "Short"}
+            onChange={(event) => setDraft({ ...draft, verbosity: event.target.value as AppSettings["verbosity"] })}
+          >
+            <option value="Short">Short</option>
+            <option value="Balanced">Balanced</option>
+            <option value="Detailed">Detailed</option>
+          </select>
+        </label>
+
         <label className="toggle-field">
           <input
             checked={draft.wakeWordEnabled}

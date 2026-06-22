@@ -12,6 +12,7 @@ public sealed class PcCommandService
     private readonly CommandLogService _logService;
     private readonly InteractionLogService? _interactionLogService;
     private readonly IPcControlService _pcControlService;
+    private readonly JarvisPersonalityService _personalityService;
     private readonly Dictionary<string, PendingPcCommand> _pendingConfirmations = new(StringComparer.OrdinalIgnoreCase);
 
     public PcCommandService(
@@ -21,6 +22,7 @@ public sealed class PcCommandService
         SecurityService securityService,
         CommandLogService logService,
         IPcControlService pcControlService,
+        JarvisPersonalityService personalityService,
         InteractionLogService? interactionLogService = null)
     {
         _parser = parser;
@@ -29,6 +31,7 @@ public sealed class PcCommandService
         _securityService = securityService;
         _logService = logService;
         _pcControlService = pcControlService;
+        _personalityService = personalityService;
         _interactionLogService = interactionLogService;
     }
 
@@ -161,31 +164,32 @@ public sealed class PcCommandService
         SecurityRiskLevel riskLevel,
         CancellationToken cancellationToken)
     {
-        var message = await _pcControlService.ExecuteAsync(command, cancellationToken);
-        var status = IsFailureMessage(message) ? CommandExecutionStatus.Failed : CommandExecutionStatus.Completed;
+        var executionMessage = await _pcControlService.ExecuteAsync(command, cancellationToken);
+        var status = IsFailureMessage(executionMessage) ? CommandExecutionStatus.Failed : CommandExecutionStatus.Completed;
+        var succeeded = status == CommandExecutionStatus.Completed;
+        var responseMessage = _personalityService.FormatCommandResponse(command, succeeded, executionMessage);
         var securityRequest = BuildSecurityRequest(command, riskLevel);
         await _securityService.AuditExecutionAsync(
             securityRequest,
-            status == CommandExecutionStatus.Completed,
-            message,
+            succeeded,
+            executionMessage,
             cancellationToken);
-        await LogAsync(command, safetyLevel, status, message, cancellationToken);
+        await LogAsync(command, safetyLevel, status, executionMessage, cancellationToken);
         await LogInteractionAsync(
             InteractionType.CommandExecution,
             command.Action.ToString(),
-            status == CommandExecutionStatus.Completed ? InteractionStatus.Success : InteractionStatus.Failed,
-            message,
+            succeeded ? InteractionStatus.Success : InteractionStatus.Failed,
+            executionMessage,
             command.OriginalInput,
             command.Target,
             cancellationToken);
 
-        var succeeded = status == CommandExecutionStatus.Completed;
         return new PcCommandExecutionResult(
             succeeded,
             false,
             command.Action.ToString(),
             command.Target,
-            message);
+            responseMessage);
     }
 
     private PendingPcCommand CreatePending(PcCommand command, CommandSafetyLevel safetyLevel)

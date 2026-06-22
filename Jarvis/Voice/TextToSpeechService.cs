@@ -148,7 +148,7 @@ public sealed class TextToSpeechService
         await process.WaitForExitAsync(cancellationToken);
         var stderr = await stderrTask;
 
-        if (process.ExitCode != 0 || !File.Exists(outputPath))
+        if (process.ExitCode != 0 || !HasAudioContent(outputPath))
         {
             TryDelete(outputPath);
             return TextToSpeechResult.Failed($"Microsoft Edge TTS failed. {stderr}".Trim(), "Microsoft Edge TTS", VoiceName, text);
@@ -171,13 +171,16 @@ public sealed class TextToSpeechService
         var rate = MapSystemSpeechRate(_settingsService.Current.SpeechRate);
         var volume = MapSystemSpeechVolume(_settingsService.Current.SpeechVolume);
         var command =
+            "$ErrorActionPreference='Stop';" +
             "Add-Type -AssemblyName System.Speech;" +
+            "try{" +
             "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer;" +
             voiceCommand +
             $"$s.Rate={rate};$s.Volume={volume};" +
             $"$s.SetOutputToWaveFile('{PowerShellQuote(outputPath)}');" +
             $"$s.Speak([System.IO.File]::ReadAllText('{PowerShellQuote(textPath)}'));" +
-            "$s.Dispose();";
+            "$s.Dispose();" +
+            "}catch{Write-Error $_;exit 1}";
 
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
@@ -205,7 +208,7 @@ public sealed class TextToSpeechService
         var stderr = await stderrTask;
         TryDelete(textPath);
 
-        if (process.ExitCode != 0 || !File.Exists(outputPath))
+        if (process.ExitCode != 0 || !HasAudioContent(outputPath))
         {
             TryDelete(outputPath);
             return TextToSpeechResult.Failed($"Windows System Speech failed. {stderr}".Trim(), "Windows System Speech", VoiceName, text);
@@ -343,6 +346,11 @@ public sealed class TextToSpeechService
     }
 
     private static string PowerShellQuote(string value) => value.Replace("'", "''");
+
+    private static bool HasAudioContent(string path)
+    {
+        return File.Exists(path) && new FileInfo(path).Length > 0;
+    }
 
     private static void TryDelete(string path)
     {
