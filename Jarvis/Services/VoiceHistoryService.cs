@@ -64,6 +64,8 @@ public sealed class VoiceHistoryService
                 Transcript = result.Transcript,
                 Response = string.IsNullOrWhiteSpace(result.AiResponse) ? result.Message : result.AiResponse,
                 Command = result.CommandName,
+                AssistantResponse = string.IsNullOrWhiteSpace(result.AiResponse) ? result.Message : result.AiResponse,
+                SpokenResponse = result.SpokenResponse,
                 State = result.State,
                 Success = result.Success,
                 CommandDetected = result.CommandDetected,
@@ -71,6 +73,9 @@ public sealed class VoiceHistoryService
                 ProcessingDurationMs = result.ProcessingDurationMs,
                 SttDurationMs = result.SttDurationMs,
                 CommandDurationMs = result.CommandDurationMs,
+                SpeechDurationMs = result.SpeechDurationMs,
+                TtsProvider = result.TtsProvider,
+                VoiceUsed = result.VoiceUsed,
                 FailureReason = result.FailureReason,
                 TimestampUtc = DateTime.UtcNow
             };

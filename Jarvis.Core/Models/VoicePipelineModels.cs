@@ -46,9 +46,15 @@ public sealed record VoicePipelineResult(
     long ProcessingDurationMs = 0,
     long SttDurationMs = 0,
     long CommandDurationMs = 0,
+    long SpeechDurationMs = 0,
     string FailureReason = "",
     string LastCompletedStage = "",
     string SttDevice = "",
+    string SpokenResponse = "",
+    string TtsProvider = "",
+    string VoiceUsed = "",
+    bool PlaybackReady = false,
+    string PlaybackFailureReason = "",
     bool CommandExecuted = false);
 
 public sealed class VoiceHistoryItem
@@ -62,6 +68,8 @@ public sealed class VoiceHistoryItem
     public string Transcript { get; set; } = string.Empty;
     public string Response { get; set; } = string.Empty;
     public string Command { get; set; } = string.Empty;
+    public string AssistantResponse { get; set; } = string.Empty;
+    public string SpokenResponse { get; set; } = string.Empty;
     public VoicePipelineState State { get; set; } = VoicePipelineState.Idle;
     public bool Success { get; set; }
     public bool CommandDetected { get; set; }
@@ -69,6 +77,9 @@ public sealed class VoiceHistoryItem
     public long ProcessingDurationMs { get; set; }
     public long SttDurationMs { get; set; }
     public long CommandDurationMs { get; set; }
+    public long SpeechDurationMs { get; set; }
+    public string TtsProvider { get; set; } = string.Empty;
+    public string VoiceUsed { get; set; } = string.Empty;
     public string FailureReason { get; set; } = string.Empty;
 }
 
@@ -86,13 +97,19 @@ public sealed record VoicePipelineStatus(
     long ProcessingDurationMs = 0,
     long SttDurationMs = 0,
     long CommandDurationMs = 0,
+    long SpeechDurationMs = 0,
     bool CommandDetected = false,
     bool CommandExecuted = false,
     string CommandName = "",
     string ErrorDetails = "",
     string LastCompletedStage = "",
     string MicrophoneStatus = "Browser controlled",
-    string SttDevice = "");
+    string SttDevice = "",
+    string SpokenResponse = "",
+    string TtsProvider = "",
+    string VoiceUsed = "",
+    bool PlaybackReady = false,
+    string PlaybackFailureReason = "");
 
 public sealed record VoicePipelineRequest(bool RequireWakeWord = false);
 

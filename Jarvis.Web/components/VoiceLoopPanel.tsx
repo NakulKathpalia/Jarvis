@@ -9,6 +9,8 @@ type VoiceLoopPanelProps = {
   disabled: boolean;
   onRefresh: () => Promise<void>;
   onToast: (message: string) => void;
+  onPlayAudio: (audioUrl: string) => Promise<void>;
+  onStopSpeaking: () => void;
 };
 
 const activeStates: VoicePipelineState[] = [
@@ -19,10 +21,11 @@ const activeStates: VoicePipelineState[] = [
   "Understanding",
   "CommandDetected",
   "ExecutingCommand",
-  "GeneratingAIResponse"
+  "GeneratingAIResponse",
+  "Speaking"
 ];
 
-export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelProps) {
+export function VoiceLoopPanel({ disabled, onRefresh, onToast, onPlayAudio, onStopSpeaking }: VoiceLoopPanelProps) {
   const [isActive, setIsActive] = useState(false);
   const [status, setStatus] = useState<VoicePipelineStatus | null>(null);
   const [pending, setPending] = useState<VoicePipelineResult | null>(null);
@@ -40,6 +43,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
     }
 
     try {
+      onStopSpeaking();
       void jarvisApi.logInteraction({
         source: "Voice",
         type: "VoiceRecording",
@@ -99,7 +103,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
     try {
       const wav = await capture.stop();
       setStatus({
-        ...toStatus("Transcribing", "Audio uploaded. Waiting for Faster-Whisper transcript.", status),
+        ...toStatus("Transcribing", "Audio uploaded. Waiting for speech-to-text transcript.", status),
         recordingDurationMs,
         audioSizeBytes: wav.size
       });
@@ -172,18 +176,28 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
       processingDurationMs: result.processingDurationMs,
       sttDurationMs: result.sttDurationMs,
       commandDurationMs: result.commandDurationMs,
+      speechDurationMs: result.speechDurationMs,
       commandDetected: result.commandDetected,
       commandExecuted: result.commandExecuted,
       commandName: result.commandName,
       errorDetails: result.failureReason,
       lastCompletedStage: result.lastCompletedStage,
-      sttDevice: result.sttDevice
+      sttDevice: result.sttDevice,
+      spokenResponse: result.spokenResponse,
+      ttsProvider: result.ttsProvider,
+      voiceUsed: result.voiceUsed,
+      playbackReady: result.playbackReady,
+      playbackFailureReason: result.playbackFailureReason
     });
 
     if (result.requiresConfirmation) {
       setPending(result);
       onToast("Voice command needs confirmation");
       return;
+    }
+
+    if (result.audioUrl) {
+      await onPlayAudio(result.audioUrl);
     }
 
     await onRefresh();
@@ -215,6 +229,8 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast }: VoiceLoopPanelP
         <Diagnostic label="Audio Size" value={formatBytes(details.audioSizeBytes)} />
         <Diagnostic label="Last Stage" value={details.lastCompletedStage || "None"} />
         <Diagnostic label="STT" value={details.sttDurationMs ? `${formatDuration(details.sttDurationMs)} ${details.sttDevice || ""}` : "Not run"} />
+        <Diagnostic label="TTS" value={details.ttsProvider ? `${details.ttsProvider} / ${details.voiceUsed || "default"}` : "Not run"} />
+        <Diagnostic label="Speech" value={details.speechDurationMs ? `${formatDuration(details.speechDurationMs)} ${details.playbackReady ? "ready" : ""}` : "0 ms"} />
         <Diagnostic label="Command" value={details.commandDetected ? `${details.commandName || "Detected"} / ${details.commandExecuted ? "executed" : "not executed"}` : "None"} />
         <Diagnostic label="Error" value={details.errorDetails || "None"} />
       </div>
@@ -284,13 +300,19 @@ function emptyStatus(previous?: VoicePipelineStatus | null): VoicePipelineStatus
     processingDurationMs: previous?.processingDurationMs ?? 0,
     sttDurationMs: previous?.sttDurationMs ?? 0,
     commandDurationMs: previous?.commandDurationMs ?? 0,
+    speechDurationMs: previous?.speechDurationMs ?? 0,
     commandDetected: previous?.commandDetected ?? false,
     commandExecuted: previous?.commandExecuted ?? false,
     commandName: previous?.commandName ?? "",
     errorDetails: previous?.errorDetails ?? "",
     lastCompletedStage: previous?.lastCompletedStage ?? "",
     microphoneStatus: previous?.microphoneStatus ?? "Not checked",
-    sttDevice: previous?.sttDevice ?? ""
+    sttDevice: previous?.sttDevice ?? "",
+    spokenResponse: previous?.spokenResponse ?? "",
+    ttsProvider: previous?.ttsProvider ?? "",
+    voiceUsed: previous?.voiceUsed ?? "",
+    playbackReady: previous?.playbackReady ?? false,
+    playbackFailureReason: previous?.playbackFailureReason ?? ""
   };
 }
 

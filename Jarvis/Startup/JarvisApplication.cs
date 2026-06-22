@@ -172,6 +172,7 @@ public static class JarvisApplication
         var voiceActivityDetector = new VoiceActivityDetector();
         var whisperService = new WhisperService(settingsService, speechToTextService);
         var piperService = new PiperService(settingsService, pathResolver.GeneratedAudioDirectory);
+        var textToSpeechService = new TextToSpeechService(settingsService, piperService, pathResolver.GeneratedAudioDirectory);
         var wakeWordService = new Jarvis.Services.WakeWordService(settingsService, whisperService);
         var fileIndexService = new FileIndexService(settingsService);
         var pcCommandParser = new PcCommandParser();
@@ -220,7 +221,8 @@ public static class JarvisApplication
             voiceCommandProcessor,
             assistant,
             voiceHistoryService,
-            interactionLogService);
+            interactionLogService,
+            textToSpeechService);
 
         var router = new CommandRouter(classifierService, commandManager, assistant);
 
@@ -245,6 +247,7 @@ public static class JarvisApplication
             OllamaService = ollamaService,
             WhisperService = whisperService,
             PiperService = piperService,
+            TextToSpeechService = textToSpeechService,
             WakeWordService = wakeWordService,
             FileIndexService = fileIndexService,
             PcCommandParser = pcCommandParser,

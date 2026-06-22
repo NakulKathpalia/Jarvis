@@ -31,6 +31,7 @@ public sealed class JarvisRuntime
     public required OllamaService OllamaService { get; init; }
     public required WhisperService WhisperService { get; init; }
     public required PiperService PiperService { get; init; }
+    public required TextToSpeechService TextToSpeechService { get; init; }
     public required Jarvis.Services.WakeWordService WakeWordService { get; init; }
     public required FileIndexService FileIndexService { get; init; }
     public required PcCommandParser PcCommandParser { get; init; }

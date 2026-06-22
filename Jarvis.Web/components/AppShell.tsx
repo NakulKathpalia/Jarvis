@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityLogPanel } from "./ActivityLogPanel";
 import { AppLayout } from "./AppLayout";
 import { AuthPanel } from "./AuthPanel";
@@ -63,6 +63,7 @@ export function AppShell() {
   const [isBusy, setIsBusy] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(ThemeMode.System);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const currentSpeechRef = useRef<HTMLAudioElement | null>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -186,7 +187,11 @@ export function AppShell() {
         : null);
       setAssistantActivity(result.type === "command" ? "executing" : "thinking");
       await Promise.all([refreshStatus(), refreshChats()]);
-      if (result.type === "chat" && !options?.skipAutoSpeak && settings?.autoSpeakResponses && assistantResponse !== "(empty response)") {
+      if (result.type === "chat"
+        && !options?.skipAutoSpeak
+        && settings?.enableVoiceResponses
+        && settings?.autoSpeakResponses
+        && assistantResponse !== "(empty response)") {
         setAssistantActivity("speaking");
         await speakText(assistantResponse);
       }
@@ -261,7 +266,7 @@ export function AppShell() {
       const session = await ensureActiveChat();
       setActiveChat({ ...session, messages: [...session.messages, { role: "assistant", content: message }] });
       await Promise.all([refreshStatus(), refreshMemory(), refreshSettings(), refreshChats()]);
-      if (settings?.autoSpeakResponses) {
+      if (settings?.enableVoiceResponses && settings?.autoSpeakResponses) {
         await speakText(message);
       }
       showToast("Voice command confirmed");
@@ -334,6 +339,7 @@ export function AppShell() {
 
   async function speakText(text: string) {
     try {
+      stopCurrentSpeech();
       const result = await jarvisApi.speak(text);
       if (!result.audioUrl) {
         showToast(result.message || "No audio returned");
@@ -341,10 +347,26 @@ export function AppShell() {
       }
 
       const audio = new Audio(result.audioUrl);
+      currentSpeechRef.current = audio;
+      audio.addEventListener("ended", () => {
+        if (currentSpeechRef.current === audio) {
+          currentSpeechRef.current = null;
+        }
+      });
       await audio.play();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Speech playback failed");
     }
+  }
+
+  function stopCurrentSpeech() {
+    const audio = currentSpeechRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      currentSpeechRef.current = null;
+    }
+    void jarvisApi.stopSpeaking().catch(() => undefined);
   }
 
   return (

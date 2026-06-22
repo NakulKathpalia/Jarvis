@@ -23,6 +23,11 @@ public sealed class AppSettings
     public string WhisperLanguage { get; set; } = "auto";
     public string PiperExecutablePath { get; set; } = string.Empty;
     public string PiperModelPath { get; set; } = string.Empty;
+    public bool EnableVoiceResponses { get; set; } = true;
+    public string VoiceName { get; set; } = string.Empty;
+    public double SpeechRate { get; set; } = 1.0;
+    public double SpeechVolume { get; set; } = 1.0;
+    public bool AutoSpeakAssistantReplies { get; set; } = true;
     public bool AutoSpeakResponses { get; set; }
     public bool WakeWordEnabled { get; set; }
     public string WakeWordPhrase { get; set; } = "jarvis";

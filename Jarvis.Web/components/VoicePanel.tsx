@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TopBar } from "./TopBar";
 import { VoiceCommandHelpPanel } from "./VoiceCommandHelpPanel";
 import { VoiceLoopPanel } from "./VoiceLoopPanel";
@@ -19,6 +19,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
   const [status, setStatus] = useState<VoicePipelineStatus | null>(null);
   const [health, setHealth] = useState<VoiceHealthResult | null>(null);
   const [history, setHistory] = useState<VoiceHistoryItem[]>([]);
+  const currentSpeechRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -33,6 +34,56 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
     setStatus(await jarvisApi.voicePipelineStatus());
     setHealth(await jarvisApi.voiceHealth());
     setHistory(await jarvisApi.voiceHistory());
+  }
+
+  async function playAudioUrl(audioUrl: string) {
+    stopSpeaking();
+    const audio = new Audio(audioUrl);
+    currentSpeechRef.current = audio;
+    audio.addEventListener("ended", () => {
+      if (currentSpeechRef.current === audio) {
+        currentSpeechRef.current = null;
+      }
+    });
+    await audio.play();
+  }
+
+  async function speakLastResponse() {
+    const text = status?.spokenResponse || status?.lastAiResponse || history[0]?.spokenResponse || history[0]?.response;
+    if (!text?.trim()) {
+      onToast("No response to speak yet.");
+      return;
+    }
+
+    const result = await jarvisApi.speak(text);
+    if (!result.audioUrl) {
+      onToast(result.message || "No audio returned");
+      return;
+    }
+
+    await playAudioUrl(result.audioUrl);
+    onToast("Speaking last response");
+  }
+
+  async function testVoice() {
+    const result = await jarvisApi.speak("Ji sir, Jarvis voice response is ready.");
+    if (!result.audioUrl) {
+      onToast(result.message || "No audio returned");
+      return;
+    }
+
+    await playAudioUrl(result.audioUrl);
+    onToast("Test voice playing");
+  }
+
+  function stopSpeaking() {
+    const audio = currentSpeechRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      currentSpeechRef.current = null;
+    }
+    void jarvisApi.stopSpeaking().catch(() => undefined);
   }
 
   return (
@@ -69,6 +120,8 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
               <Diagnostic label="Recording" value={formatDuration(status?.recordingDurationMs)} />
               <Diagnostic label="Processing" value={formatDuration(status?.processingDurationMs)} />
               <Diagnostic label="STT" value={status?.sttDurationMs ? `${formatDuration(status.sttDurationMs)} ${status.sttDevice || ""}` : "Not run"} />
+              <Diagnostic label="TTS" value={status?.ttsProvider ? `${status.ttsProvider} / ${status.voiceUsed || "default"}` : "Not run"} />
+              <Diagnostic label="Speech" value={status?.speechDurationMs ? `${formatDuration(status.speechDurationMs)} ${status.playbackReady ? "ready" : ""}` : "0 ms"} />
               <Diagnostic label="Command" value={status?.commandDetected ? `${status.commandName || "Detected"} / ${status.commandExecuted ? "executed" : "not executed"}` : "None"} />
               <Diagnostic label="Last Stage" value={status?.lastCompletedStage || "None"} />
               <Diagnostic label="Error Details" value={status?.errorDetails || "None"} />
@@ -76,8 +129,35 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
           </div>
         </PanelCard>
 
-        <VoiceLoopPanel disabled={disabled} onRefresh={refreshVoice} onToast={onToast} />
+        <VoiceLoopPanel
+          disabled={disabled}
+          onRefresh={refreshVoice}
+          onToast={onToast}
+          onPlayAudio={playAudioUrl}
+          onStopSpeaking={stopSpeaking}
+        />
         <VoiceCommandHelpPanel onToast={onToast} />
+
+        <PanelCard className="grid gap-3">
+          <h3 className="text-lg font-black text-jarvis-text">Voice Responses</h3>
+          <div className="voice-diagnostics-grid">
+            <Diagnostic label="TTS Enabled" value={health?.tts.available ? "Available" : health?.tts.message ?? "Unknown"} tone={health?.tts.available ? "ok" : "warn"} />
+            <Diagnostic label="Current Voice" value={health?.tts.voiceName ?? "Unknown"} />
+            <Diagnostic label="Provider" value={health?.tts.provider ?? "Unknown"} />
+            <Diagnostic label="Playback" value={health?.tts.playbackCapability ?? "Unknown"} />
+          </div>
+          <div className="voice-loop-actions">
+            <button className="soft-button" type="button" onClick={() => void speakLastResponse()}>
+              Speak Last Response
+            </button>
+            <button className="soft-button" type="button" onClick={() => void testVoice()}>
+              Test Voice
+            </button>
+            <button className="danger-button" type="button" onClick={stopSpeaking}>
+              Stop Speaking
+            </button>
+          </div>
+        </PanelCard>
 
         <PanelCard className="grid gap-3">
           <h3 className="text-lg font-black text-jarvis-text">Voice Health</h3>
@@ -86,6 +166,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
             <Diagnostic label="Audio Capture" value={health?.audioCapture.message ?? "Unknown"} />
             <Diagnostic label="Whisper" value={health?.whisper.message ?? "Unknown"} tone={health?.whisper.available ? "ok" : "warn"} />
             <Diagnostic label="GPU / CPU" value={health?.whisper.mode ?? "GPU preferred with CPU fallback"} />
+            <Diagnostic label="TTS" value={health?.tts.message ?? "Unknown"} tone={health?.tts.available ? "ok" : "warn"} />
             <Diagnostic label="Ollama" value={health?.ollama.message ?? "Unknown"} tone={health?.ollama.available ? "ok" : "warn"} />
             <Diagnostic label="Voice Service" value={health?.voiceService.message ?? status?.message ?? "Idle"} />
           </div>
@@ -107,6 +188,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
                   <div className="voice-history-meta">
                     <span>{item.commandDetected ? `Command: ${item.command || "Detected"}` : "Assistant fallback"}</span>
                     <span>{formatDuration(item.processingDurationMs)}</span>
+                    <span>{item.ttsProvider || "No TTS"}</span>
                     <span>{item.failureReason || "No error"}</span>
                   </div>
                 </article>
@@ -126,7 +208,8 @@ function isActive(state?: string) {
     || state === "Transcribing"
     || state === "Understanding"
     || state === "ExecutingCommand"
-    || state === "GeneratingAIResponse";
+    || state === "GeneratingAIResponse"
+    || state === "Speaking";
 }
 
 function Diagnostic({ label, value, tone }: { label: string; value: string; tone?: "ok" | "warn" }) {

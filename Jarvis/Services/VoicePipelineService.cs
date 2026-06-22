@@ -15,6 +15,7 @@ public sealed class VoicePipelineService
     private readonly Assistant _assistant;
     private readonly VoiceHistoryService _voiceHistoryService;
     private readonly InteractionLogService? _interactionLogService;
+    private readonly TextToSpeechService? _textToSpeechService;
 
     private VoicePipelineStatus _status = new(
         VoicePipelineState.Idle,
@@ -30,7 +31,8 @@ public sealed class VoicePipelineService
         VoiceCommandProcessor voiceCommandProcessor,
         Assistant assistant,
         VoiceHistoryService voiceHistoryService,
-        InteractionLogService? interactionLogService = null)
+        InteractionLogService? interactionLogService = null,
+        TextToSpeechService? textToSpeechService = null)
     {
         _voiceSettingsService = voiceSettingsService;
         _voiceActivityDetector = voiceActivityDetector;
@@ -39,6 +41,7 @@ public sealed class VoicePipelineService
         _assistant = assistant;
         _voiceHistoryService = voiceHistoryService;
         _interactionLogService = interactionLogService;
+        _textToSpeechService = textToSpeechService;
     }
 
     public VoicePipelineStatus Status => _status;
@@ -187,7 +190,7 @@ public sealed class VoicePipelineService
             LastCompletedStage: trace.LastCompletedStage,
             CommandExecuted: trace.CommandExecuted);
 
-        return await CompleteAsync(pipelineResult, cancellationToken);
+        return await CompleteAsync(await AddSpeechAsync(pipelineResult, result.Message, cancellationToken), cancellationToken);
     }
 
     private async Task<VoicePipelineResult> ProcessCommandAsync(
@@ -266,7 +269,7 @@ public sealed class VoicePipelineService
             SttDevice: trace.SttDevice,
             CommandExecuted: trace.CommandExecuted);
 
-        return await CompleteAsync(completed, cancellationToken);
+        return await CompleteAsync(await AddSpeechAsync(completed, BuildCommandSpokenResponse(commandResult), cancellationToken), cancellationToken);
     }
 
     private async Task<VoicePipelineResult> ProcessAiFallbackAsync(
@@ -288,7 +291,7 @@ public sealed class VoicePipelineService
             trace.End();
         }
 
-        return await CompleteAsync(new VoicePipelineResult(
+        var result = new VoicePipelineResult(
             transcript,
             false,
             false,
@@ -307,7 +310,73 @@ public sealed class VoicePipelineService
             SttDurationMs: trace.SttDurationMs,
             FailureReason: trace.FailureReason,
             LastCompletedStage: trace.LastCompletedStage,
-            SttDevice: trace.SttDevice), cancellationToken);
+            SttDevice: trace.SttDevice);
+
+        return await CompleteAsync(await AddSpeechAsync(result, response, cancellationToken), cancellationToken);
+    }
+
+    private async Task<VoicePipelineResult> AddSpeechAsync(
+        VoicePipelineResult result,
+        string responseText,
+        CancellationToken cancellationToken)
+    {
+        if (_textToSpeechService is null
+            || !_voiceSettingsService.Current.EnableVoiceResponses
+            || !_voiceSettingsService.Current.AutoSpeakAssistantReplies
+            || string.IsNullOrWhiteSpace(responseText)
+            || result.RequiresConfirmation)
+        {
+            return result;
+        }
+
+        SetState(VoicePipelineState.Speaking, "Generating voice response.", result.Transcript, responseText);
+        await LogAsync(
+            InteractionType.Tts,
+            "tts-start",
+            InteractionStatus.Started,
+            "Generating spoken voice response.",
+            responseText,
+            cancellationToken: cancellationToken);
+
+        var speech = await _textToSpeechService.SpeakAsync(responseText, cancellationToken);
+        await LogAsync(
+            InteractionType.Tts,
+            "tts-result",
+            speech.Succeeded ? InteractionStatus.Success : InteractionStatus.Failed,
+            speech.Message,
+            responseText,
+            speech.AudioUrl,
+            speech.Succeeded ? string.Empty : speech.FailureReason,
+            cancellationToken);
+
+        return result with
+        {
+            AiResponse = string.IsNullOrWhiteSpace(result.AiResponse) ? responseText : result.AiResponse,
+            AudioUrl = speech.AudioUrl,
+            SpeechDurationMs = speech.SpeechDurationMs,
+            SpokenResponse = speech.SpokenText,
+            TtsProvider = speech.Provider,
+            VoiceUsed = speech.VoiceName,
+            PlaybackReady = speech.Succeeded,
+            PlaybackFailureReason = speech.Succeeded ? string.Empty : speech.FailureReason,
+            LastCompletedStage = speech.Succeeded ? "TextToSpeech" : result.LastCompletedStage
+        };
+    }
+
+    private static string BuildCommandSpokenResponse(VoiceCommandResult result)
+    {
+        if (!result.Handled)
+        {
+            return result.Message;
+        }
+
+        if (result.Command.Equals("OpenWebsite", StringComparison.OrdinalIgnoreCase)
+            && result.Message.Contains("youtube", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Ji sir, YouTube open kar raha hoon.";
+        }
+
+        return result.Message;
     }
 
     private async Task<VoicePipelineResult> CompleteAsync(
@@ -354,13 +423,19 @@ public sealed class VoicePipelineService
             result.ProcessingDurationMs,
             result.SttDurationMs,
             result.CommandDurationMs,
+            result.SpeechDurationMs,
             result.CommandDetected,
             result.CommandExecuted,
             result.CommandName,
             result.FailureReason,
             result.LastCompletedStage,
             "Browser capture uploaded",
-            result.SttDevice);
+            result.SttDevice,
+            result.SpokenResponse,
+            result.TtsProvider,
+            result.VoiceUsed,
+            result.PlaybackReady,
+            result.PlaybackFailureReason);
     }
 
     private void SetState(
@@ -385,6 +460,7 @@ public sealed class VoicePipelineService
             trace.ProcessingDurationMs,
             trace.SttDurationMs,
             trace.CommandDurationMs,
+            0,
             trace.CommandDetected,
             trace.CommandExecuted,
             trace.CommandName,

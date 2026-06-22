@@ -16,6 +16,7 @@ import type {
   MemoryFormValues,
   PcCommandCatalogItem,
   PcCommandExecutionResult,
+  TextToSpeechResult,
   PcCommandLogEntry,
   VoiceCommandCatalogItem,
   VoiceCommandResult,
@@ -197,9 +198,13 @@ export const jarvisApi = {
       body: JSON.stringify({ transcript })
     }),
   speak: (text: string) =>
-    request<{ audioUrl: string; ready: boolean; succeeded: boolean; message: string }>("/api/voice/speak", {
+    request<TextToSpeechResult>("/api/voice/speak", {
       method: "POST",
       body: JSON.stringify({ text })
+    }),
+  stopSpeaking: () =>
+    request<{ stopped: boolean; message: string }>("/api/voice/speak/stop", {
+      method: "POST"
     }),
   voiceCommand: (transcript: string, confirmed = false) =>
     request<VoiceCommandResult>("/api/voice/command", {

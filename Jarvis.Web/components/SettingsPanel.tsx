@@ -301,11 +301,62 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
 
         <label className="toggle-field">
           <input
+            checked={draft.enableVoiceResponses}
+            type="checkbox"
+            onChange={(event) => setDraft({ ...draft, enableVoiceResponses: event.target.checked })}
+          />
+          <span>Enable voice responses</span>
+        </label>
+
+        <label>
+          <span>Voice Name</span>
+          <input
+            placeholder="Microsoft Zira Desktop or en-US-AriaNeural"
+            value={draft.voiceName}
+            onChange={(event) => setDraft({ ...draft, voiceName: event.target.value })}
+          />
+        </label>
+
+        <label>
+          <span>Speech Rate</span>
+          <input
+            max={2}
+            min={0.5}
+            step={0.1}
+            type="number"
+            value={draft.speechRate}
+            onChange={(event) => setDraft({ ...draft, speechRate: Number(event.target.value) })}
+          />
+        </label>
+
+        <label>
+          <span>Speech Volume</span>
+          <input
+            max={1}
+            min={0}
+            step={0.1}
+            type="number"
+            value={draft.speechVolume}
+            onChange={(event) => setDraft({ ...draft, speechVolume: Number(event.target.value) })}
+          />
+        </label>
+
+        <label className="toggle-field">
+          <input
+            checked={draft.autoSpeakAssistantReplies}
+            type="checkbox"
+            onChange={(event) => setDraft({ ...draft, autoSpeakAssistantReplies: event.target.checked })}
+          />
+          <span>Auto-speak voice assistant replies</span>
+        </label>
+
+        <label className="toggle-field">
+          <input
             checked={draft.autoSpeakResponses}
             type="checkbox"
             onChange={(event) => setDraft({ ...draft, autoSpeakResponses: event.target.checked })}
           />
-          <span>Auto-speak assistant responses</span>
+          <span>Auto-speak chat assistant responses</span>
         </label>
 
         <label className="toggle-field">

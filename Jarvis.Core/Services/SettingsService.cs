@@ -66,5 +66,7 @@ public sealed class SettingsService
             settings.OllamaContextLength <= 0 ? AppSettings.DefaultOllamaContextLength : settings.OllamaContextLength,
             512,
             32768);
+        settings.SpeechRate = Math.Clamp(settings.SpeechRate <= 0 ? 1.0 : settings.SpeechRate, 0.5, 2.0);
+        settings.SpeechVolume = Math.Clamp(settings.SpeechVolume <= 0 ? 1.0 : settings.SpeechVolume, 0.0, 1.0);
     }
 }

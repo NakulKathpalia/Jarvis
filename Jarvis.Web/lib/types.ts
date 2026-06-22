@@ -130,6 +130,11 @@ export type AppSettings = {
   whisperLanguage: string;
   piperExecutablePath: string;
   piperModelPath: string;
+  enableVoiceResponses: boolean;
+  voiceName: string;
+  speechRate: number;
+  speechVolume: number;
+  autoSpeakAssistantReplies: boolean;
   autoSpeakResponses: boolean;
   wakeWordEnabled: boolean;
   wakeWordPhrase: string;
@@ -168,6 +173,16 @@ export type VoiceStatus = {
     piperExecutablePath: string;
     piperModelPath: string;
     autoSpeakResponses: boolean;
+  };
+  tts: {
+    enabled: boolean;
+    available: boolean;
+    provider: string;
+    voiceName: string;
+    speechRate: number;
+    speechVolume: number;
+    autoSpeakAssistantReplies: boolean;
+    message: string;
   };
   wakeWord: {
     enabled: boolean;
@@ -216,9 +231,15 @@ export type VoicePipelineResult = {
   processingDurationMs: number;
   sttDurationMs: number;
   commandDurationMs: number;
+  speechDurationMs: number;
   failureReason: string;
   lastCompletedStage: string;
   sttDevice: string;
+  spokenResponse: string;
+  ttsProvider: string;
+  voiceUsed: string;
+  playbackReady: boolean;
+  playbackFailureReason: string;
   commandExecuted: boolean;
 };
 
@@ -236,6 +257,7 @@ export type VoicePipelineStatus = {
   processingDurationMs: number;
   sttDurationMs: number;
   commandDurationMs: number;
+  speechDurationMs: number;
   commandDetected: boolean;
   commandExecuted: boolean;
   commandName: string;
@@ -243,6 +265,11 @@ export type VoicePipelineStatus = {
   lastCompletedStage: string;
   microphoneStatus: string;
   sttDevice: string;
+  spokenResponse: string;
+  ttsProvider: string;
+  voiceUsed: string;
+  playbackReady: boolean;
+  playbackFailureReason: string;
 };
 
 export type VoiceHistoryItem = {
@@ -251,6 +278,8 @@ export type VoiceHistoryItem = {
   transcript: string;
   response: string;
   command: string;
+  assistantResponse: string;
+  spokenResponse: string;
   state: VoicePipelineState;
   success: boolean;
   commandDetected: boolean;
@@ -258,6 +287,9 @@ export type VoiceHistoryItem = {
   processingDurationMs: number;
   sttDurationMs: number;
   commandDurationMs: number;
+  speechDurationMs: number;
+  ttsProvider: string;
+  voiceUsed: string;
   failureReason: string;
 };
 
@@ -266,7 +298,28 @@ export type VoiceHealthResult = {
   audioCapture: { status: string; message: string };
   whisper: { available: boolean; message: string; preferredDevice: string; fallbackDevice: string; mode: string };
   ollama: { available: boolean; message: string };
-  voiceService: { status: VoicePipelineState; message: string; lastCompletedStage: string; errorDetails: string };
+  tts: { available: boolean; provider: string; voiceName: string; playbackCapability: string; message: string };
+  voiceService: {
+    status: VoicePipelineState;
+    message: string;
+    lastCompletedStage: string;
+    errorDetails: string;
+    audioDuration: number;
+    playbackSuccess: boolean;
+    playbackFailureReason: string;
+  };
+};
+
+export type TextToSpeechResult = {
+  audioUrl: string;
+  ready: boolean;
+  succeeded: boolean;
+  message: string;
+  provider: string;
+  voiceName: string;
+  spokenText: string;
+  speechDurationMs: number;
+  failureReason: string;
 };
 
 export type VoiceDiagnosticsResult = {

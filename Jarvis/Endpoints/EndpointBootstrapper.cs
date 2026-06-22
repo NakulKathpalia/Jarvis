@@ -30,6 +30,7 @@ public static class EndpointBootstrapper
         var ollamaService = runtime.OllamaService;
         var whisperService = runtime.WhisperService;
         var piperService = runtime.PiperService;
+        var textToSpeechService = runtime.TextToSpeechService;
         var wakeWordService = runtime.WakeWordService;
         var fileIndexService = runtime.FileIndexService;
         var pcCommandParser = runtime.PcCommandParser;
@@ -722,6 +723,11 @@ public static class EndpointBootstrapper
             settingsService.Current.WhisperLanguage = request.WhisperLanguage;
             settingsService.Current.PiperExecutablePath = request.PiperExecutablePath;
             settingsService.Current.PiperModelPath = request.PiperModelPath;
+            settingsService.Current.EnableVoiceResponses = request.EnableVoiceResponses;
+            settingsService.Current.VoiceName = request.VoiceName;
+            settingsService.Current.SpeechRate = Math.Clamp(request.SpeechRate <= 0 ? 1.0 : request.SpeechRate, 0.5, 2.0);
+            settingsService.Current.SpeechVolume = Math.Clamp(request.SpeechVolume <= 0 ? 1.0 : request.SpeechVolume, 0.0, 1.0);
+            settingsService.Current.AutoSpeakAssistantReplies = request.AutoSpeakAssistantReplies;
             settingsService.Current.AutoSpeakResponses = request.AutoSpeakResponses;
             settingsService.Current.WakeWordEnabled = request.WakeWordEnabled;
             settingsService.Current.WakeWordPhrase = request.WakeWordPhrase;
@@ -895,6 +901,17 @@ public static class EndpointBootstrapper
                 settingsService.Current.PiperModelPath,
                 settingsService.Current.AutoSpeakResponses
             },
+            tts = new
+            {
+                enabled = settingsService.Current.EnableVoiceResponses,
+                available = textToSpeechService.IsAvailable,
+                provider = textToSpeechService.Provider,
+                voiceName = textToSpeechService.VoiceName,
+                speechRate = settingsService.Current.SpeechRate,
+                speechVolume = settingsService.Current.SpeechVolume,
+                autoSpeakAssistantReplies = settingsService.Current.AutoSpeakAssistantReplies,
+                message = textToSpeechService.StatusMessage
+            },
             wakeWord = new
             {
                 enabled = settingsService.Current.WakeWordEnabled,
@@ -944,12 +961,23 @@ public static class EndpointBootstrapper
                     available = ollamaRunning,
                     message = ollamaRunning ? "Ollama is reachable." : "Ollama is not reachable."
                 },
+                tts = new
+                {
+                    available = textToSpeechService.IsAvailable,
+                    provider = textToSpeechService.Provider,
+                    voiceName = textToSpeechService.VoiceName,
+                    playbackCapability = textToSpeechService.IsAvailable ? "Generated audio playback through browser" : "Unavailable",
+                    message = textToSpeechService.StatusMessage
+                },
                 voiceService = new
                 {
                     status = voicePipelineService.Status.State,
                     message = voicePipelineService.Status.Message,
                     lastCompletedStage = voicePipelineService.Status.LastCompletedStage,
-                    errorDetails = voicePipelineService.Status.ErrorDetails
+                    errorDetails = voicePipelineService.Status.ErrorDetails,
+                    audioDuration = voicePipelineService.Status.SpeechDurationMs,
+                    playbackSuccess = voicePipelineService.Status.PlaybackReady,
+                    playbackFailureReason = voicePipelineService.Status.PlaybackFailureReason
                 }
             });
         });
@@ -1024,8 +1052,14 @@ public static class EndpointBootstrapper
 
             return Results.Ok(new
         {
-            configured = piperService.IsConfigured,
-            message = piperService.StatusMessage,
+            configured = textToSpeechService.IsAvailable,
+            enabled = settingsService.Current.EnableVoiceResponses,
+            provider = textToSpeechService.Provider,
+            voiceName = textToSpeechService.VoiceName,
+            speechRate = settingsService.Current.SpeechRate,
+            speechVolume = settingsService.Current.SpeechVolume,
+            autoSpeakAssistantReplies = settingsService.Current.AutoSpeakAssistantReplies,
+            message = textToSpeechService.StatusMessage,
             settingsService.Current.PiperExecutablePath,
             settingsService.Current.PiperModelPath,
             settingsService.Current.AutoSpeakResponses
@@ -1186,16 +1220,16 @@ public static class EndpointBootstrapper
             await interactionLogService.AddAsync(
                 InteractionSource.Voice,
                 InteractionType.Tts,
-                "piper-start",
+                "tts-start",
                 InteractionStatus.Started,
-                "Sending text to Piper.",
+                "Generating spoken response.",
                 text,
                 cancellationToken: cancellationToken);
-            var result = await piperService.SpeakAsync(text, cancellationToken);
+            var result = await textToSpeechService.SpeakAsync(text, cancellationToken);
             await interactionLogService.AddAsync(
                 InteractionSource.Voice,
                 InteractionType.Tts,
-                "piper-result",
+                "tts-result",
                 result.Succeeded ? InteractionStatus.Success : InteractionStatus.Failed,
                 result.Message,
                 text,
@@ -1207,8 +1241,32 @@ public static class EndpointBootstrapper
                 audioUrl = result.AudioUrl,
                 ready = result.IsReady,
                 succeeded = result.Succeeded,
-                message = result.Message
+                message = result.Message,
+                provider = result.Provider,
+                voiceName = result.VoiceName,
+                spokenText = result.SpokenText,
+                speechDurationMs = result.SpeechDurationMs,
+                failureReason = result.FailureReason
             });
+        });
+
+        app.MapPost("/api/voice/speak/stop", async (CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            await textToSpeechService.StopAsync(cancellationToken);
+            await interactionLogService.AddAsync(
+                InteractionSource.Voice,
+                InteractionType.Tts,
+                "tts-stop",
+                InteractionStatus.Success,
+                "Speech playback stop requested.",
+                cancellationToken: cancellationToken);
+            return Results.Ok(new { stopped = true, message = "Speech playback stop requested." });
         });
         
         app.MapPost("/api/voice/command", async (VoiceCommandRequest request, CancellationToken cancellationToken) =>
