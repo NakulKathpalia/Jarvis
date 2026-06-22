@@ -128,7 +128,7 @@ export const jarvisApi = {
     }),
   transcribeVoice: async (audio: Blob) => {
     const formData = new FormData();
-    formData.append("audio", audio, `jarvis-voice-${Date.now()}.webm`);
+    formData.append("audio", audio, `jarvis-voice-${Date.now()}${audioExtension(audio)}`);
 
     const response = await fetch(apiUrl("/api/voice/transcribe"), {
       method: "POST",
@@ -163,7 +163,7 @@ export const jarvisApi = {
   voiceHistory: () => request<VoiceHistoryItem[]>("/api/voice/history"),
   runVoicePipeline: async (audio: Blob, requireWakeWord = false) => {
     const formData = new FormData();
-    formData.append("audio", audio, `jarvis-pipeline-${Date.now()}.webm`);
+    formData.append("audio", audio, `jarvis-pipeline-${Date.now()}${audioExtension(audio)}`);
     formData.append("requireWakeWord", String(requireWakeWord));
 
     const response = await fetch(apiUrl("/api/voice/pipeline"), {
@@ -309,5 +309,17 @@ export const jarvisApi = {
     request<{ logged: boolean }>("/api/interactions/logs", {
       method: "POST",
       body: JSON.stringify(entry)
-    })
+  })
 };
+
+function audioExtension(audio: Blob) {
+  if (audio.type.includes("wav")) {
+    return ".wav";
+  }
+
+  if (audio.type.includes("webm")) {
+    return ".webm";
+  }
+
+  return ".wav";
+}

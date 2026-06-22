@@ -883,9 +883,9 @@ public static class EndpointBootstrapper
                 settingsService.Current.WhisperModelPath,
                 settingsService.Current.WhisperLanguage,
                 settingsService.Current.VoiceLanguage,
-                engine = "Faster-Whisper",
-                preferredDevice = "cuda",
-                fallbackDevice = "cpu"
+                engine = speechToTextService.EngineName,
+                preferredDevice = speechToTextService.PreferredDevice,
+                fallbackDevice = speechToTextService.FallbackDevice
             },
             piper = new
             {
@@ -933,9 +933,11 @@ public static class EndpointBootstrapper
                 {
                     available = speechToTextService.IsConfigured,
                     message = speechToTextService.StatusMessage,
-                    preferredDevice = "cuda",
-                    fallbackDevice = "cpu",
-                    mode = speechToTextService.IsConfigured ? "GPU preferred with CPU fallback" : "Not configured"
+                    preferredDevice = speechToTextService.PreferredDevice,
+                    fallbackDevice = speechToTextService.FallbackDevice,
+                    mode = speechToTextService.IsConfigured
+                        ? $"{speechToTextService.EngineName} {speechToTextService.PreferredDevice} preferred with {speechToTextService.FallbackDevice} fallback"
+                        : "Not configured"
                 },
                 ollama = new
                 {

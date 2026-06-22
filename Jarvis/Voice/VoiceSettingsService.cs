@@ -28,6 +28,23 @@ public sealed class VoiceSettingsService
         File.Exists(Current.WhisperExecutablePath)
         && !string.IsNullOrWhiteSpace(Current.WhisperModelPath);
 
+    public string EngineName => IsWhisperCppConfigured ? "whisper.cpp" : "Faster-Whisper";
+
+    public string PreferredDevice => IsWhisperCppConfigured ? "gpu" : "cuda";
+
+    public string FallbackDevice => "cpu";
+
+    public bool IsWhisperCppConfigured
+    {
+        get
+        {
+            var executableName = Path.GetFileNameWithoutExtension(Current.WhisperExecutablePath);
+            return executableName.Contains("whisper-cli", StringComparison.OrdinalIgnoreCase)
+                || executableName.Contains("main", StringComparison.OrdinalIgnoreCase)
+                || Current.WhisperModelPath.EndsWith(".bin", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     public string StatusMessage
     {
         get
@@ -39,20 +56,20 @@ public sealed class VoiceSettingsService
 
             if (string.IsNullOrWhiteSpace(Current.WhisperExecutablePath))
             {
-                return "Faster-Whisper executable path is not configured.";
+                return "Speech-to-text executable path is not configured.";
             }
 
             if (!File.Exists(Current.WhisperExecutablePath))
             {
-                return "Faster-Whisper executable was not found.";
+                return "Speech-to-text executable was not found.";
             }
 
             if (string.IsNullOrWhiteSpace(Current.WhisperModelPath))
             {
-                return "Faster-Whisper model path or model id is not configured.";
+                return "Speech-to-text model path or model id is not configured.";
             }
 
-            return "PushToTalk speech-to-text is configured.";
+            return $"PushToTalk speech-to-text is configured with {EngineName}.";
         }
     }
 

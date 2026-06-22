@@ -93,7 +93,7 @@ public sealed class VoicePipelineService
                 return await CompleteAsync(Fail(trace, VoicePipelineState.Error, activity.Message), cancellationToken);
             }
 
-            SetState(VoicePipelineState.Transcribing, "Transcribing local audio with Faster-Whisper.", trace);
+            SetState(VoicePipelineState.Transcribing, "Transcribing local audio with configured speech-to-text engine.", trace);
             var sttWatch = Stopwatch.StartNew();
             var transcription = await _speechToTextService.TranscribeAsync(audio, cancellationToken);
             sttWatch.Stop();
