@@ -1350,7 +1350,7 @@ public static class EndpointBootstrapper
         string BuildConfirmationMessage(PcCommandExecutionResult result)
         {
             var target = string.IsNullOrWhiteSpace(result.Target) ? result.Command : result.Target;
-            return $"Confirm {result.Command}: {target}";
+            return $"Ji sir, pehle confirmation chahiye: {target}.";
         }
         
         bool TryBuildLocalAssistantResponse(string input, out string response)
@@ -1379,11 +1379,12 @@ public static class EndpointBootstrapper
                             || !memory.ExpiresAtUtc.HasValue
                             || memory.ExpiresAtUtc.Value > now))
                     .Take(8)
-                    .Select(memory => $"{memory.Category}: {memory.Text}")
+                    .Select(memory => memory.Text.Trim())
+                    .Where(text => !string.IsNullOrWhiteSpace(text))
                     .ToList();
                 response = approvedMemories.Count == 0
-                    ? "No approved memories saved yet."
-                    : $"Saved memories: {string.Join("; ", approvedMemories)}";
+                    ? "Abhi koi approved memory saved nahi hai."
+                    : $"Mujhe yaad hai: {string.Join("; ", approvedMemories)}";
                 return true;
             }
         

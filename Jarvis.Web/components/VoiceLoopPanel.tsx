@@ -62,7 +62,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, onPlayAudio, onSt
         lastTranscript: status?.lastTranscript ?? "",
         lastAiResponse: status?.lastAiResponse ?? "",
         microphoneStatus: "Granted",
-        message: "Listening. Stop when you finish speaking."
+        message: "Listening..."
       });
       onToast("Listening");
     } catch (error) {
@@ -89,7 +89,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, onPlayAudio, onSt
     captureRef.current = null;
     const recordingDurationMs = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0;
     setStatus({
-      ...toStatus("Processing", "Encoding and uploading audio to the local voice pipeline.", status),
+      ...toStatus("Processing", "Processing audio...", status),
       recordingDurationMs
     });
     void jarvisApi.logInteraction({
@@ -103,7 +103,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, onPlayAudio, onSt
     try {
       const wav = await capture.stop();
       setStatus({
-        ...toStatus("Transcribing", "Audio uploaded. Waiting for speech-to-text transcript.", status),
+        ...toStatus("Transcribing", "Transcribing...", status),
         recordingDurationMs,
         audioSizeBytes: wav.size
       });
@@ -133,7 +133,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, onPlayAudio, onSt
       return;
     }
 
-    setStatus(toStatus("ExecutingCommand", "Executing confirmed voice command.", status));
+    setStatus(toStatus("ExecutingCommand", "Executing...", status));
     try {
       const result = await jarvisApi.confirmVoicePipeline(confirmationId);
       setPending(null);
@@ -147,7 +147,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, onPlayAudio, onSt
 
   function cancelPending() {
     setPending(null);
-    setStatus(toStatus("Completed", "Voice command cancelled locally.", status));
+    setStatus(toStatus("Completed", "Cancelled.", status));
   }
 
   function stopLoop() {
@@ -156,8 +156,8 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, onPlayAudio, onSt
     setIsActive(false);
     recordingStartedAtRef.current = null;
     setPending(null);
-    setStatus(toStatus("Idle", "Voice loop stopped.", status));
-    onToast("Voice loop stopped");
+    setStatus(toStatus("Idle", "Stopped.", status));
+    onToast("Stopped");
   }
 
   async function handlePipelineResult(result: VoicePipelineResult) {
@@ -213,7 +213,7 @@ export function VoiceLoopPanel({ disabled, onRefresh, onToast, onPlayAudio, onSt
       <div className="voice-loop-main">
         <span className="voice-loop-dot" />
         <div>
-          <strong>Voice Pipeline</strong>
+          <strong>Push-to-talk</strong>
           <p>{status?.message ?? "Start a push-to-talk voice turn."}</p>
           <span>{currentState} - {formatTimestamp(status?.updatedAtUtc)}</span>
         </div>

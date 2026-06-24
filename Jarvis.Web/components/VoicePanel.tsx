@@ -7,15 +7,17 @@ import { VoiceLoopPanel } from "./VoiceLoopPanel";
 import { PanelCard } from "./ui/PanelCard";
 import { StatusBadge } from "./ui/StatusBadge";
 import { jarvisApi } from "@/lib/api";
-import type { VoiceHealthResult, VoiceHistoryItem, VoicePipelineStatus } from "@/lib/types";
+import type { JarvisStatus, VoiceHealthResult, VoiceHistoryItem, VoicePipelineStatus } from "@/lib/types";
 
 type VoicePanelProps = {
   disabled: boolean;
+  appStatus: JarvisStatus | null;
+  memoryCount: number;
   onRefresh: () => Promise<void>;
   onToast: (message: string) => void;
 };
 
-export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
+export function VoicePanel({ disabled, appStatus, memoryCount, onRefresh, onToast }: VoicePanelProps) {
   const [status, setStatus] = useState<VoicePipelineStatus | null>(null);
   const [health, setHealth] = useState<VoiceHealthResult | null>(null);
   const [history, setHistory] = useState<VoiceHistoryItem[]>([]);
@@ -106,7 +108,7 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
 
   return (
     <section className="tool-panel">
-      <TopBar title="Voice" subtitle="Push-to-talk speech detection, Faster-Whisper, and secure command routing" />
+      <TopBar title="Voice" subtitle="Jarvis online. Push-to-talk is ready when you are." />
 
       <div className="grid w-full max-w-5xl gap-5">
         <PanelCard className="voice-summary-card">
@@ -117,10 +119,16 @@ export function VoicePanel({ disabled, onRefresh, onToast }: VoicePanelProps) {
                 {status?.state ?? "Idle"}
               </StatusBadge>
             </div>
-            <h3>Voice Pipeline</h3>
+            <h3>Jarvis online.</h3>
             <p>
-              {status?.message ?? "Start listening, speak a command, then stop to transcribe and route through Jarvis Security."}
+              {status?.message ?? "Start Listening, speak naturally, then Stop Listening."}
             </p>
+            <div className="voice-diagnostics-grid">
+              <Diagnostic label="AI Status" value={health?.ollama.available || appStatus?.online ? "Ready" : "Check"} tone={health?.ollama.available || appStatus?.online ? "ok" : "warn"} />
+              <Diagnostic label="Voice Status" value={friendlyVoiceState(status?.state ?? health?.voiceService.status ?? "Idle")} tone={status?.state === "Error" ? "warn" : "ok"} />
+              <Diagnostic label="Memory Status" value={`${memoryCount} memories`} />
+              <Diagnostic label="Model Status" value={appStatus?.model ?? "Unknown"} tone={appStatus?.online ? "ok" : "warn"} />
+            </div>
             <div className="voice-last-grid">
               <div>
                 <strong>Last transcript</strong>
@@ -229,6 +237,13 @@ function isActive(state?: string) {
     || state === "ExecutingCommand"
     || state === "GeneratingAIResponse"
     || state === "Speaking";
+}
+
+function friendlyVoiceState(state: string) {
+  return state === "GeneratingAIResponse" ? "Thinking"
+    : state === "ExecutingCommand" ? "Executing"
+      : state === "CommandDetected" ? "Command detected"
+        : state;
 }
 
 function Diagnostic({ label, value, tone }: { label: string; value: string; tone?: "ok" | "warn" }) {

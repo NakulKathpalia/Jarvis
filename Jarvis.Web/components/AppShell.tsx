@@ -43,7 +43,7 @@ type PendingAssistantCommand = {
   message: string;
 };
 
-type AssistantActivity = "idle" | "thinking" | "executing" | "speaking" | "error";
+type AssistantActivity = "idle" | "thinking" | "executing" | "speaking" | "completed" | "error";
 
 export function AppShell() {
   const [activeView, setActiveView] = useState<ViewKey>("chat");
@@ -161,13 +161,14 @@ export function AppShell() {
 
   async function sendMessage(message: string, options?: { skipAutoSpeak?: boolean }) {
     setIsBusy(true);
-    setAssistantActivity("thinking");
+    const initialActivity = looksLikeDirectCommand(message) ? "executing" : "thinking";
+    setAssistantActivity(initialActivity);
     setLastAssistantAction(null);
     const session = await ensureActiveChat();
     const optimisticMessages: ChatMessage[] = [
       ...session.messages,
       { role: "user", content: message },
-      { role: "assistant", content: "Thinking..." }
+      { role: "assistant", content: activityMessage(initialActivity) }
     ];
 
     setActiveChat({ ...session, messages: optimisticMessages, updatedAtUtc: new Date().toISOString() });
@@ -195,6 +196,9 @@ export function AppShell() {
         setAssistantActivity("speaking");
         await speakText(assistantResponse);
       }
+      if (!result.requiresConfirmation) {
+        setAssistantActivity("completed");
+      }
       return assistantResponse;
     } catch (error) {
       setAssistantActivity("error");
@@ -202,7 +206,9 @@ export function AppShell() {
       setActiveChat(await jarvisApi.chatSession(session.id));
       return "";
     } finally {
-      setAssistantActivity("idle");
+      window.setTimeout(() => {
+        setAssistantActivity((current) => current === "completed" ? "idle" : current);
+      }, 700);
       setIsBusy(false);
     }
   }
@@ -457,7 +463,13 @@ export function AppShell() {
       {activeView === "control" && <ControlPanel onToast={showToast} />}
 
       {activeView === "voice" && (
-        <VoicePanel disabled={isBusy} onRefresh={refreshAll} onToast={showToast} />
+        <VoicePanel
+          disabled={isBusy}
+          appStatus={status}
+          memoryCount={memory.length}
+          onRefresh={refreshAll}
+          onToast={showToast}
+        />
       )}
 
       {activeView === "activity" && <ActivityLogPanel />}
@@ -492,14 +504,35 @@ export function AppShell() {
   );
 }
 
+function looksLikeDirectCommand(input: string) {
+  return /^(open|launch|start|run|show|search|find|take|set|mute|unmute|volume|shutdown|restart|sleep)\b/i.test(input.trim());
+}
+
+function activityMessage(activity: AssistantActivity) {
+  switch (activity) {
+    case "executing":
+      return "Executing...";
+    case "speaking":
+      return "Speaking...";
+    case "completed":
+      return "Completed.";
+    case "error":
+      return "Something went wrong.";
+    case "thinking":
+    case "idle":
+    default:
+      return "Thinking...";
+  }
+}
+
 function getViewMeta(view: ViewKey) {
   switch (view) {
     case "chat":
-      return { title: "Jarvis", subtitle: "Chat with local tools and secure command routing" };
+      return { title: "Jarvis", subtitle: "Jarvis online." };
     case "tools":
       return { title: "Tools & Settings", subtitle: "Voice, memory, files, security, account, and diagnostics" };
     case "voice":
-      return { title: "Voice", subtitle: "Wake word and local voice pipeline" };
+      return { title: "Voice", subtitle: "Push-to-talk voice is ready." };
     case "memory":
       return { title: "Memory", subtitle: "Local private facts and search" };
     case "control":

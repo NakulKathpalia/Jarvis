@@ -33,18 +33,21 @@ public sealed class JarvisPersonalityService
             JarvisVerbosity.Balanced => "Use a balanced answer with enough context to be useful.",
             _ => "Keep responses short by default."
         };
+        const string dailyUsePolish =
+            "For direct command results, use one short natural sentence. Do not over-explain. " +
+            "When using memories, use them naturally as private context; never mention retrieved memory, stored memory, categories, or internal memory systems.";
 
-        return string.Join(Environment.NewLine, style, language, verbosity);
+        return string.Join(Environment.NewLine, style, language, verbosity, dailyUsePolish);
     }
 
     public string FormatCommandResponse(PcCommand command, bool succeeded, string executionMessage)
     {
+        var target = ToDisplayTarget(command);
         if (!succeeded)
         {
-            return $"Command failed: {executionMessage}";
+            return FormatFailure(command, target, executionMessage);
         }
 
-        var target = ToDisplayTarget(command);
         return command.Action switch
         {
             PcControlAction.OpenApp => FormatOpened(target),
@@ -65,6 +68,52 @@ public sealed class JarvisPersonalityService
 
     private static string FormatOpened(string target) =>
         $"Ji sir, {target} open kar raha hoon.";
+
+    private static string FormatFailure(PcCommand command, string target, string executionMessage)
+    {
+        var action = command.Action switch
+        {
+            PcControlAction.OpenApp or PcControlAction.OpenWebsite or PcControlAction.OpenFolder or PcControlAction.OpenFile => "open",
+            PcControlAction.BrowserSearch => "search",
+            PcControlAction.TakeScreenshot => "screenshot",
+            _ => "command"
+        };
+
+        var reason = GetUsefulReason(executionMessage);
+        var baseMessage = action == "command"
+            ? "Ji sir, command complete nahi ho paya"
+            : $"Ji sir, {target} {action} nahi ho paya";
+
+        return string.IsNullOrWhiteSpace(reason) ? $"{baseMessage}." : $"{baseMessage}: {reason}.";
+    }
+
+    private static string GetUsefulReason(string executionMessage)
+    {
+        if (string.IsNullOrWhiteSpace(executionMessage))
+        {
+            return string.Empty;
+        }
+
+        var message = executionMessage.Trim().TrimEnd('.');
+        if (message.Contains("not found", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("could not find", StringComparison.OrdinalIgnoreCase))
+        {
+            return "target nahi mila";
+        }
+
+        if (message.Contains("access", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("permission", StringComparison.OrdinalIgnoreCase))
+        {
+            return "permission issue aa gaya";
+        }
+
+        if (message.Length > 90)
+        {
+            return string.Empty;
+        }
+
+        return message;
+    }
 
     private static string ToDisplayTarget(PcCommand command)
     {

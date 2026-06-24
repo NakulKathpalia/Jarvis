@@ -11,7 +11,7 @@ export type PendingAssistantCommand = {
   message: string;
 };
 
-type AssistantActivity = "idle" | "thinking" | "executing" | "speaking" | "error";
+type AssistantActivity = "idle" | "thinking" | "executing" | "speaking" | "completed" | "error";
 
 type ChatPanelProps = {
   messages: ChatMessage[];
@@ -50,6 +50,7 @@ export function ChatPanel({
   isBusy,
   pendingAssistantCommand,
   lastAssistantAction,
+  assistantActivity,
   onSend,
   onVoiceCommand,
   onConfirmAssistantCommand,
@@ -111,7 +112,9 @@ export function ChatPanel({
             </div>
           )}
 
-          {isBusy && <div className="thinking-line">Jarvis is thinking...</div>}
+          {(isBusy || assistantActivity === "completed") && (
+            <div className="thinking-line">{activityLabel(assistantActivity)}</div>
+          )}
           <div ref={scrollRef} />
         </div>
       </div>
@@ -119,4 +122,21 @@ export function ChatPanel({
       <Composer disabled={isBusy} onSend={onSend} onVoiceCommand={onVoiceCommand} onToast={onToast} />
     </section>
   );
+}
+
+function activityLabel(activity: AssistantActivity) {
+  switch (activity) {
+    case "executing":
+      return "Executing...";
+    case "speaking":
+      return "Speaking...";
+    case "completed":
+      return "Completed.";
+    case "error":
+      return "Something went wrong.";
+    case "thinking":
+    case "idle":
+    default:
+      return "Thinking...";
+  }
 }
