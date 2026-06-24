@@ -27,6 +27,7 @@ public static class MemoryCategories
         "Astrology",
         "Tarot",
         "Occult",
+        "Vastu",
         "Goals",
         "Health",
         "General"

@@ -455,6 +455,7 @@ export function AppShell() {
           onApprove={approveMemory}
           onReject={rejectMemory}
           onClear={clearMemory}
+          onRefresh={refreshMemory}
         />
       )}
 

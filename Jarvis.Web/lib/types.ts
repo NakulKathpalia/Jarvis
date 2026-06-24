@@ -110,6 +110,73 @@ export type MemoryFormValues = {
   expiresAtUtc?: string | null;
 };
 
+export type IngestionStatus =
+  | "Uploaded"
+  | "Extracted"
+  | "OcrRequired"
+  | "ExtractionFailed"
+  | "CandidatesGenerated"
+  | "Completed";
+
+export type IngestionSourceType = "Pdf" | "Image";
+
+export type IngestionTextBlock = {
+  id: string;
+  pageNumber?: number | null;
+  text: string;
+  confidence: number;
+  status: string;
+};
+
+export type IngestionMemoryCandidate = {
+  id: string;
+  userId: string;
+  content: string;
+  suggestedCategory: string;
+  suggestedMemoryType: MemoryItem["memoryType"];
+  suggestedImportance: number;
+  suggestedConfidence: number;
+  sourceFile: string;
+  sourcePage?: number | null;
+  sourceTextRange: string;
+  reviewStatus: MemoryItem["reviewStatus"];
+  approvedMemoryId?: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+};
+
+export type IngestionJob = {
+  id: string;
+  userId: string;
+  fileName: string;
+  fileType: string;
+  storedPath: string;
+  status: IngestionStatus;
+  extractedText: string;
+  textBlocks: IngestionTextBlock[];
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  errorMessage: string;
+  sourceType: IngestionSourceType;
+  candidates: IngestionMemoryCandidate[];
+  suggestedMemoryIds: string[];
+};
+
+export type IngestionCandidateUpdate = {
+  content?: string;
+  category?: string;
+  memoryType?: MemoryItem["memoryType"];
+  importance?: number;
+  confidence?: number;
+};
+
+export type IngestionCandidateResult = {
+  job: IngestionJob;
+  candidate: IngestionMemoryCandidate;
+  memory?: MemoryItem;
+  memories?: MemoryItem[];
+};
+
 export type AppSettings = {
   ollamaBaseUrl: string;
   model: string;

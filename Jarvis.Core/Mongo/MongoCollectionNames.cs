@@ -17,4 +17,5 @@ public static class MongoCollectionNames
     public const string VoiceHistory = "VoiceHistory";
     public const string CommandHistory = "CommandHistory";
     public const string Migrations = "Migrations";
+    public const string IngestionJobs = "IngestionJobs";
 }

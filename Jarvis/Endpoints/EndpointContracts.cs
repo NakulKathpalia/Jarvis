@@ -26,6 +26,12 @@ public sealed record MemoryUpdateRequest(
     MemoryReviewStatus? ReviewStatus = null,
     DateTime? ExpiresAtUtc = null);
 public sealed record MemoryRetrieveRequest(string Query, int? MaxResults = null);
+public sealed record IngestionCandidateUpdateRequest(
+    string? Content,
+    string? Category,
+    MemoryType? MemoryType,
+    int? Importance,
+    int? Confidence);
 public sealed record SpeakRequest(string Text);
 public sealed record VoiceCommandRequest(string Transcript, bool Confirmed = false);
 public sealed record WakeWordCheckRequest(string Transcript);

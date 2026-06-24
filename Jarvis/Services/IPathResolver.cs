@@ -8,7 +8,9 @@ public interface IPathResolver
     string SecurityLogsDirectory { get; }
     string ScreenshotDirectory { get; }
     string GeneratedAudioDirectory { get; }
+    string IngestionUploadDirectory { get; }
     string VoiceHistoryPath { get; }
+    string IngestionJobsPath { get; }
     string MemoryPath { get; }
     string ChatHistoryPath { get; }
     string ChatSessionsPath { get; }

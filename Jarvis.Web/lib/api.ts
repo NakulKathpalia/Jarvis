@@ -11,6 +11,9 @@ import type {
   InteractionStatus,
   InteractionStatusResult,
   InteractionType,
+  IngestionCandidateResult,
+  IngestionCandidateUpdate,
+  IngestionJob,
   JarvisStatus,
   MemoryItem,
   MemoryFormValues,
@@ -261,6 +264,42 @@ export const jarvisApi = {
   rejectMemory: (id: string) =>
     request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}/reject`, { method: "POST" }),
   clearMemory: () => request<MemoryItem[]>("/api/memory", { method: "DELETE" }),
+  ingestionJobs: () => request<IngestionJob[]>("/api/ingestion/jobs"),
+  uploadIngestionFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(apiUrl("/api/ingestion/upload"), {
+      method: "POST",
+      body: formData
+    });
+    if (!response.ok) {
+      let message = `Upload failed (${response.status})`;
+      try {
+        const body = (await response.json()) as { error?: string };
+        message = body.error ?? message;
+      } catch {
+        // Keep the default error.
+      }
+      throw new Error(message);
+    }
+
+    return response.json() as Promise<IngestionJob>;
+  },
+  extractIngestionJob: (id: string) =>
+    request<IngestionJob>(`/api/ingestion/jobs/${encodeURIComponent(id)}/extract`, { method: "POST" }),
+  generateIngestionCandidates: (id: string) =>
+    request<IngestionJob>(`/api/ingestion/jobs/${encodeURIComponent(id)}/candidates`, { method: "POST" }),
+  deleteIngestionJob: (id: string) =>
+    request<IngestionJob[]>(`/api/ingestion/jobs/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  approveIngestionCandidate: (id: string, update: IngestionCandidateUpdate) =>
+    request<IngestionCandidateResult>(`/api/ingestion/candidates/${encodeURIComponent(id)}/approve`, {
+      method: "POST",
+      body: JSON.stringify(update)
+    }),
+  rejectIngestionCandidate: (id: string) =>
+    request<IngestionCandidateResult>(`/api/ingestion/candidates/${encodeURIComponent(id)}/reject`, {
+      method: "POST"
+    }),
   settings: () => request<AppSettings>("/api/settings"),
   saveSettings: (settings: AppSettings) =>
     request<AppSettings>("/api/settings", {

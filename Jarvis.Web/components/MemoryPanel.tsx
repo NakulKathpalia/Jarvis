@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { TopBar } from "./TopBar";
 import { MemoryCard } from "./memory/MemoryCard";
 import { MemoryEditorForm } from "./memory/MemoryEditorForm";
+import { MemoryIngestionPanel } from "./memory/MemoryIngestionPanel";
 import { MemorySearchBar } from "./memory/MemorySearchBar";
 import {
   cleanMemoryDraft,
@@ -22,9 +23,10 @@ type MemoryPanelProps = {
   onApprove: (id: string) => Promise<void>;
   onReject: (id: string) => Promise<void>;
   onClear: () => Promise<void>;
+  onRefresh: () => Promise<void>;
 };
 
-export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onReject, onClear }: MemoryPanelProps) {
+export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onReject, onClear, onRefresh }: MemoryPanelProps) {
   const [draft, setDraft] = useState<MemoryFormValues>(emptyMemoryDraft);
   const [displayItems, setDisplayItems] = useState(items);
   const [editing, setEditing] = useState<MemoryDraft | null>(null);
@@ -212,6 +214,8 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
         onSearch={runSearch}
         onReset={resetSearch}
       />
+
+      <MemoryIngestionPanel onMemoryChanged={onRefresh} />
 
       <MemoryEditorForm
         draft={draft}

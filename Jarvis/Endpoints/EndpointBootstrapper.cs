@@ -1,4 +1,5 @@
 using Jarvis.Auth;
+using Jarvis.Ingestion;
 using Jarvis.Memory;
 using Jarvis.Models;
 using Jarvis.Security;
@@ -18,6 +19,7 @@ public static class EndpointBootstrapper
         var platformService = runtime.PlatformService;
         var settingsService = runtime.SettingsService;
         var memoryService = runtime.MemoryService;
+        var ingestionService = runtime.IngestionService;
         var memoryRetrievalService = runtime.MemoryRetrievalService;
         var chatHistoryService = runtime.ChatHistoryService;
         var chatSessionService = runtime.ChatSessionService;
@@ -731,6 +733,199 @@ public static class EndpointBootstrapper
 
             await memoryService.ClearAsync(cancellationToken);
             return Results.Ok(memoryService.Items);
+        });
+
+        app.MapPost("/api/ingestion/upload", async (IFormFile file, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "upload");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            if (file.Length <= 0)
+            {
+                return Results.BadRequest(new { error = "File is required." });
+            }
+
+            try
+            {
+                await using var stream = file.OpenReadStream();
+                var job = await ingestionService.UploadAsync(file.FileName, stream, file.Length, cancellationToken);
+                await interactionLogService.AddAsync(
+                    InteractionSource.System,
+                    InteractionType.SystemStatus,
+                    "ingestion-upload",
+                    InteractionStatus.Success,
+                    "Ingestion upload stored locally.",
+                    input: job.FileName,
+                    output: job.Id,
+                    cancellationToken: cancellationToken);
+                return Results.Ok(job);
+            }
+            catch (InvalidOperationException ex)
+            {
+                await interactionLogService.AddAsync(
+                    InteractionSource.System,
+                    InteractionType.Error,
+                    "ingestion-upload",
+                    InteractionStatus.Failed,
+                    "Ingestion upload rejected.",
+                    input: file.FileName,
+                    error: ex.Message,
+                    cancellationToken: cancellationToken);
+                return Results.BadRequest(new { error = ex.Message });
+            }
+        }).DisableAntiforgery();
+
+        app.MapGet("/api/ingestion/jobs", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            return denied ?? Results.Ok(ingestionService.Jobs);
+        });
+
+        app.MapGet("/api/ingestion/jobs/{id}", (string id) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var job = ingestionService.Get(id);
+            return job is null ? Results.NotFound(new { error = "Ingestion job not found." }) : Results.Ok(job);
+        });
+
+        app.MapPost("/api/ingestion/jobs/{id}/extract", async (string id, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "extract");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var job = await ingestionService.ExtractAsync(id, cancellationToken);
+            if (job is null)
+            {
+                return Results.NotFound(new { error = "Ingestion job not found." });
+            }
+
+            await interactionLogService.AddAsync(
+                InteractionSource.System,
+                job.Status == IngestionStatus.ExtractionFailed ? InteractionType.Error : InteractionType.SystemStatus,
+                "ingestion-extract",
+                job.Status == IngestionStatus.Extracted ? InteractionStatus.Success : InteractionStatus.Pending,
+                job.Status == IngestionStatus.OcrRequired ? "OCR required for ingestion job." : "Ingestion extraction completed.",
+                input: job.FileName,
+                output: job.Status.ToString(),
+                error: job.ErrorMessage,
+                cancellationToken: cancellationToken);
+            return Results.Ok(job);
+        });
+
+        app.MapPost("/api/ingestion/jobs/{id}/candidates", async (string id, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "candidates");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var job = await ingestionService.GenerateCandidatesAsync(id, cancellationToken);
+            if (job is null)
+            {
+                return Results.NotFound(new { error = "Ingestion job not found." });
+            }
+
+            return Results.Ok(job);
+        });
+
+        app.MapDelete("/api/ingestion/jobs/{id}", async (string id, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "delete");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var removed = await ingestionService.DeleteAsync(id, cancellationToken);
+            if (removed is null)
+            {
+                return Results.NotFound(new { error = "Ingestion job not found." });
+            }
+
+            await interactionLogService.AddAsync(
+                InteractionSource.System,
+                InteractionType.SystemStatus,
+                "ingestion-delete",
+                InteractionStatus.Success,
+                "Ingestion job deleted.",
+                input: removed.FileName,
+                output: removed.Id,
+                cancellationToken: cancellationToken);
+            return Results.Ok(ingestionService.Jobs);
+        });
+
+        app.MapPost("/api/ingestion/candidates/{id}/approve", async (
+            string id,
+            IngestionCandidateUpdateRequest request,
+            CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "approve");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var (job, candidate, memory) = await ingestionService.ApproveCandidateAsync(
+                id,
+                request.Content,
+                request.Category,
+                request.MemoryType,
+                request.Importance,
+                request.Confidence,
+                cancellationToken);
+            if (job is null || candidate is null || memory is null)
+            {
+                return Results.NotFound(new { error = "Ingestion candidate not found." });
+            }
+
+            await interactionLogService.AddAsync(
+                InteractionSource.System,
+                InteractionType.SystemStatus,
+                "ingestion-candidate-approve",
+                InteractionStatus.Success,
+                "Ingestion memory candidate approved.",
+                input: candidate.SourceFile,
+                output: memory.Id,
+                cancellationToken: cancellationToken);
+            return Results.Ok(new { job, candidate, memory, memories = memoryService.Items });
+        });
+
+        app.MapPost("/api/ingestion/candidates/{id}/reject", async (string id, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "reject");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var (job, candidate) = await ingestionService.RejectCandidateAsync(id, cancellationToken);
+            if (job is null || candidate is null)
+            {
+                return Results.NotFound(new { error = "Ingestion candidate not found." });
+            }
+
+            await interactionLogService.AddAsync(
+                InteractionSource.System,
+                InteractionType.SystemStatus,
+                "ingestion-candidate-reject",
+                InteractionStatus.Success,
+                "Ingestion memory candidate rejected.",
+                input: candidate.SourceFile,
+                output: candidate.Id,
+                cancellationToken: cancellationToken);
+            return Results.Ok(new { job, candidate });
         });
         
         app.MapGet("/api/settings", () =>

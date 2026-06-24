@@ -3,6 +3,7 @@ using Jarvis.Commands;
 using Jarvis.ConnectedApps;
 using Jarvis.Core;
 using Jarvis.Data;
+using Jarvis.Ingestion;
 using Jarvis.Memory;
 using Jarvis.Security;
 using Jarvis.Services;
@@ -16,6 +17,7 @@ public sealed class JarvisRuntime
     public required PlatformService PlatformService { get; init; }
     public required SettingsService SettingsService { get; init; }
     public required MemoryService MemoryService { get; init; }
+    public required IngestionService IngestionService { get; init; }
     public required MemoryRetrievalService MemoryRetrievalService { get; init; }
     public required MemoryContextBuilder MemoryContextBuilder { get; init; }
     public required ChatHistoryService ChatHistoryService { get; init; }

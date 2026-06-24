@@ -4,6 +4,7 @@ using Jarvis.Commands;
 using Jarvis.ConnectedApps;
 using Jarvis.Core;
 using Jarvis.Data;
+using Jarvis.Ingestion;
 using Jarvis.Memory;
 using Jarvis.Migrations;
 using Jarvis.Mongo;
@@ -61,6 +62,7 @@ public static class JarvisApplication
         IVoiceHistoryRepository? voiceHistoryRepository = null;
         IConnectedAppRepository? connectedAppRepository = null;
         IDeviceRepository? deviceRepository = null;
+        IIngestionRepository? ingestionRepository = null;
         IReadOnlyCollection<ConnectedAppInfo>? connectedApps = null;
 
         var mongoOptions = new MongoOptions
@@ -85,6 +87,7 @@ public static class JarvisApplication
                 voiceHistoryRepository = new MongoVoiceHistoryRepository(mongoContext);
                 connectedAppRepository = new MongoConnectedAppRepository(mongoContext);
                 deviceRepository = new MongoDeviceRepository(mongoContext);
+                ingestionRepository = new MongoIngestionRepository(mongoContext);
 
                 var migrationRepository = new MongoMigrationRepository(mongoContext);
                 var migrationService = new FileStorageMigrationService(
@@ -146,6 +149,13 @@ public static class JarvisApplication
 
         var memoryService = new MemoryService(pathResolver.MemoryPath, memoryRepository, userContext);
         await memoryService.LoadAsync();
+        var ingestionService = new IngestionService(
+            pathResolver.IngestionUploadDirectory,
+            pathResolver.IngestionJobsPath,
+            memoryService,
+            ingestionRepository,
+            userContext);
+        await ingestionService.LoadAsync();
         var memoryRankingService = new MemoryRankingService();
         var memoryRetrievalService = new MemoryRetrievalService(memoryService, memoryRankingService);
         var memoryContextBuilder = new MemoryContextBuilder();
@@ -235,6 +245,7 @@ public static class JarvisApplication
             PlatformService = platformService,
             SettingsService = settingsService,
             MemoryService = memoryService,
+            IngestionService = ingestionService,
             MemoryRetrievalService = memoryRetrievalService,
             MemoryContextBuilder = memoryContextBuilder,
             ChatHistoryService = chatHistoryService,

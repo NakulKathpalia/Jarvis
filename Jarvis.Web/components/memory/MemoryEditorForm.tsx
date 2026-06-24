@@ -24,6 +24,7 @@ const memoryCategories = [
   "Astrology",
   "Tarot",
   "Occult",
+  "Vastu",
   "Goals",
   "Health",
   "General"

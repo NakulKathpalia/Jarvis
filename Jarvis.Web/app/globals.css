@@ -236,6 +236,17 @@ input:focus, textarea:focus { border-color: var(--accent); }
 .memory-section-heading p { color: var(--muted); margin-top: 4px; font-size: 13px; line-height: 1.45; }
 .memory-section-heading strong { border: 1px solid var(--border); border-radius: 999px; background: var(--hover); color: var(--text); padding: 6px 10px; }
 .list-empty.compact { max-width: none; margin: 0; }
+.memory-ingestion-panel { max-width: 960px; margin: 0 auto 18px; display: grid; gap: 12px; }
+.ingestion-upload-card { display: grid; gap: 10px; }
+.ingestion-upload, .ingestion-select { display: grid; gap: 7px; }
+.ingestion-upload span, .ingestion-select span, .memory-card label span { color: var(--muted); font-size: 13px; font-weight: 650; }
+.ingestion-upload input, .ingestion-select select { width: 100%; border: 1px solid var(--border); border-radius: 12px; background: var(--hover); color: var(--text); padding: 10px; }
+.ingestion-job-card { display: grid; gap: 12px; }
+.ingestion-preview { display: grid; gap: 8px; }
+.ingestion-preview strong { color: var(--muted); font-size: 13px; }
+.ingestion-preview pre { max-height: 260px; overflow: auto; white-space: pre-wrap; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--hover) 55%, transparent); color: var(--text); padding: 12px; font-family: inherit; font-size: 13px; line-height: 1.55; }
+.memory-form.compact { margin: 0; max-width: none; grid-template-columns: repeat(2, minmax(0, 1fr)); box-shadow: none; }
+.memory-section-heading.compact { padding: 12px; }
 .memory-card { display: grid; gap: 12px; }
 .memory-card.expired { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
 .memory-card-head { display: grid; gap: 10px; }
