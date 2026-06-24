@@ -197,6 +197,8 @@ export type AppSettings = {
   whisperLanguage: string;
   piperExecutablePath: string;
   piperModelPath: string;
+  tesseractExecutablePath: string;
+  tesseractLanguage: string;
   enableVoiceResponses: boolean;
   voiceName: string;
   speechRate: number;
@@ -243,6 +245,18 @@ export type VoiceStatus = {
     piperExecutablePath: string;
     piperModelPath: string;
     autoSpeakResponses: boolean;
+  };
+  ocr: {
+    available: boolean;
+    configured: boolean;
+    status: string;
+    message: string;
+    executablePath: string;
+    language: string;
+    hindiAvailable: boolean;
+    installedLanguages: string[];
+    tesseractExecutablePath: string;
+    tesseractLanguage: string;
   };
   tts: {
     enabled: boolean;
@@ -369,6 +383,15 @@ export type VoiceHealthResult = {
   whisper: { available: boolean; message: string; preferredDevice: string; fallbackDevice: string; mode: string };
   ollama: { available: boolean; message: string };
   tts: { available: boolean; provider: string; voiceName: string; playbackCapability: string; message: string };
+  ocr: {
+    available: boolean;
+    status: string;
+    message: string;
+    executablePath: string;
+    language: string;
+    hindiAvailable: boolean;
+    installedLanguages: string[];
+  };
   voiceService: {
     status: VoicePipelineState;
     message: string;

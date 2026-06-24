@@ -18,6 +18,7 @@ public sealed class JarvisRuntime
     public required SettingsService SettingsService { get; init; }
     public required MemoryService MemoryService { get; init; }
     public required IngestionService IngestionService { get; init; }
+    public required ImageOcrService ImageOcrService { get; init; }
     public required MemoryRetrievalService MemoryRetrievalService { get; init; }
     public required MemoryContextBuilder MemoryContextBuilder { get; init; }
     public required ChatHistoryService ChatHistoryService { get; init; }

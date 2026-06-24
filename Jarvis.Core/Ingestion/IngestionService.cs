@@ -44,7 +44,7 @@ public sealed class IngestionService
         _memoryService = memoryService;
         _repository = repository;
         _userContext = userContext ?? new JarvisUserContext();
-        _extractors = (extractors ?? [new PdfTextExtractionService(), new ImageOcrService()]).ToList();
+        _extractors = (extractors ?? [new PdfTextExtractionService()]).ToList();
         _candidateService = candidateService ?? new MemoryCandidateService();
         _jsonOptions.Converters.Add(new JsonStringEnumConverter());
         Directory.CreateDirectory(_uploadDirectory);

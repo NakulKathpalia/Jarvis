@@ -149,12 +149,14 @@ public static class JarvisApplication
 
         var memoryService = new MemoryService(pathResolver.MemoryPath, memoryRepository, userContext);
         await memoryService.LoadAsync();
+        var imageOcrService = new ImageOcrService(settingsService);
         var ingestionService = new IngestionService(
             pathResolver.IngestionUploadDirectory,
             pathResolver.IngestionJobsPath,
             memoryService,
             ingestionRepository,
-            userContext);
+            userContext,
+            [new PdfTextExtractionService(), imageOcrService]);
         await ingestionService.LoadAsync();
         var memoryRankingService = new MemoryRankingService();
         var memoryRetrievalService = new MemoryRetrievalService(memoryService, memoryRankingService);
@@ -246,6 +248,7 @@ public static class JarvisApplication
             SettingsService = settingsService,
             MemoryService = memoryService,
             IngestionService = ingestionService,
+            ImageOcrService = imageOcrService,
             MemoryRetrievalService = memoryRetrievalService,
             MemoryContextBuilder = memoryContextBuilder,
             ChatHistoryService = chatHistoryService,

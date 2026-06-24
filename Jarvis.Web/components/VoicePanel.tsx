@@ -194,6 +194,7 @@ export function VoicePanel({ disabled, appStatus, memoryCount, onRefresh, onToas
             <Diagnostic label="Whisper" value={health?.whisper.message ?? "Unknown"} tone={health?.whisper.available ? "ok" : "warn"} />
             <Diagnostic label="GPU / CPU" value={health?.whisper.mode ?? "GPU preferred with CPU fallback"} />
             <Diagnostic label="TTS" value={health?.tts.message ?? "Unknown"} tone={health?.tts.available ? "ok" : "warn"} />
+            <Diagnostic label="OCR" value={health?.ocr.message ?? "Unknown"} tone={health?.ocr.available ? "ok" : "warn"} />
             <Diagnostic label="Ollama" value={health?.ollama.message ?? "Unknown"} tone={health?.ollama.available ? "ok" : "warn"} />
             <Diagnostic label="Voice Service" value={health?.voiceService.message ?? status?.message ?? "Idle"} />
           </div>

@@ -78,6 +78,12 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
               {voiceStatus?.wakeWord.message ?? "Checking"}
             </span>
           </div>
+          <div className="voice-setup-row">
+            <strong>OCR</strong>
+            <span className={voiceStatus?.ocr.available ? "online" : "offline"}>
+              {voiceStatus?.ocr.message ?? "Checking"}
+            </span>
+          </div>
         </div>
 
         {diagnostics && (
@@ -296,6 +302,24 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
             placeholder="C:\\models\\en_US-lessac-medium.onnx"
             value={draft.piperModelPath}
             onChange={(event) => setDraft({ ...draft, piperModelPath: event.target.value })}
+          />
+        </label>
+
+        <label>
+          <span>Tesseract Executable</span>
+          <input
+            placeholder="C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+            value={draft.tesseractExecutablePath}
+            onChange={(event) => setDraft({ ...draft, tesseractExecutablePath: event.target.value })}
+          />
+        </label>
+
+        <label>
+          <span>Tesseract Language</span>
+          <input
+            placeholder="eng+hin+san"
+            value={draft.tesseractLanguage || "eng+hin+san"}
+            onChange={(event) => setDraft({ ...draft, tesseractLanguage: event.target.value })}
           />
         </label>
 

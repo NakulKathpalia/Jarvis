@@ -20,6 +20,7 @@ public static class EndpointBootstrapper
         var settingsService = runtime.SettingsService;
         var memoryService = runtime.MemoryService;
         var ingestionService = runtime.IngestionService;
+        var imageOcrService = runtime.ImageOcrService;
         var memoryRetrievalService = runtime.MemoryRetrievalService;
         var chatHistoryService = runtime.ChatHistoryService;
         var chatSessionService = runtime.ChatSessionService;
@@ -102,6 +103,7 @@ public static class EndpointBootstrapper
         {
             var validation = settingsValidationService.Validate();
             var ollamaOnline = await ollamaService.IsRunningAsync();
+            var ocrStatus = await imageOcrService.GetStatusAsync();
             return Results.Ok(new DiagnosticsResult(
                 platformService.Current,
                 pathResolver.AppDataDirectory,
@@ -114,7 +116,7 @@ public static class EndpointBootstrapper
                     : "Ollama is not reachable."),
                 new ServiceDiagnostic(whisperService.IsConfigured, whisperService.StatusMessage),
                 new ServiceDiagnostic(piperService.IsConfigured, piperService.StatusMessage),
-                validation.Warnings));
+                validation.Warnings.Concat(ocrStatus.Available ? [] : [ocrStatus.Message]).ToList()));
         });
         
         app.MapGet("/api/history", () => Results.Ok(chatHistoryService.Messages));
@@ -964,6 +966,10 @@ public static class EndpointBootstrapper
             settingsService.Current.WhisperLanguage = request.WhisperLanguage;
             settingsService.Current.PiperExecutablePath = request.PiperExecutablePath;
             settingsService.Current.PiperModelPath = request.PiperModelPath;
+            settingsService.Current.TesseractExecutablePath = request.TesseractExecutablePath;
+            settingsService.Current.TesseractLanguage = string.IsNullOrWhiteSpace(request.TesseractLanguage)
+                ? "eng+hin+san"
+                : request.TesseractLanguage.Trim();
             settingsService.Current.EnableVoiceResponses = request.EnableVoiceResponses;
             settingsService.Current.VoiceName = request.VoiceName;
             settingsService.Current.SpeechRate = Math.Clamp(request.SpeechRate <= 0 ? 1.0 : request.SpeechRate, 0.5, 2.0);
@@ -1118,6 +1124,7 @@ public static class EndpointBootstrapper
                 return denied;
             }
 
+            var ocrStatus = imageOcrService.GetStatusAsync().GetAwaiter().GetResult();
             return Results.Ok(new
         {
             mode = settingsService.Current.VoiceMode,
@@ -1144,6 +1151,19 @@ public static class EndpointBootstrapper
                 settingsService.Current.PiperExecutablePath,
                 settingsService.Current.PiperModelPath,
                 settingsService.Current.AutoSpeakResponses
+            },
+            ocr = new
+            {
+                available = ocrStatus.Available,
+                configured = ocrStatus.Available,
+                status = ocrStatus.Status,
+                message = ocrStatus.Message,
+                executablePath = ocrStatus.ExecutablePath,
+                language = ocrStatus.Language,
+                hindiAvailable = ocrStatus.HindiAvailable,
+                installedLanguages = ocrStatus.InstalledLanguages,
+                settingsService.Current.TesseractExecutablePath,
+                settingsService.Current.TesseractLanguage
             },
             tts = new
             {
@@ -1178,6 +1198,7 @@ public static class EndpointBootstrapper
             }
 
             var ollamaRunning = await ollamaService.IsRunningAsync(cancellationToken);
+            var ocrStatus = await imageOcrService.GetStatusAsync(cancellationToken);
             return Results.Ok(new
             {
                 microphone = new
@@ -1212,6 +1233,16 @@ public static class EndpointBootstrapper
                     voiceName = textToSpeechService.VoiceName,
                     playbackCapability = textToSpeechService.IsAvailable ? "Generated audio playback through browser" : "Unavailable",
                     message = textToSpeechService.StatusMessage
+                },
+                ocr = new
+                {
+                    available = ocrStatus.Available,
+                    status = ocrStatus.Status,
+                    message = ocrStatus.Message,
+                    executablePath = ocrStatus.ExecutablePath,
+                    language = ocrStatus.Language,
+                    hindiAvailable = ocrStatus.HindiAvailable,
+                    installedLanguages = ocrStatus.InstalledLanguages
                 },
                 voiceService = new
                 {

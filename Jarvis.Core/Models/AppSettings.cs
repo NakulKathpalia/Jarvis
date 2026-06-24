@@ -23,6 +23,8 @@ public sealed class AppSettings
     public string WhisperLanguage { get; set; } = "auto";
     public string PiperExecutablePath { get; set; } = string.Empty;
     public string PiperModelPath { get; set; } = string.Empty;
+    public string TesseractExecutablePath { get; set; } = string.Empty;
+    public string TesseractLanguage { get; set; } = "eng+hin+san";
     public bool EnableVoiceResponses { get; set; } = true;
     public string VoiceName { get; set; } = string.Empty;
     public double SpeechRate { get; set; } = 1.0;
