@@ -39,10 +39,10 @@ type ChatPanelProps = {
 };
 
 const suggestions = [
-  { title: "Open an app", example: "Open Chrome" },
-  { title: "Search my files", example: "Find my resume" },
-  { title: "Remember something", example: "Remember that I prefer local AI" },
-  { title: "Check system", example: "Show voice status" }
+  { title: "Open YouTube", example: "Open YouTube" },
+  { title: "Search files", example: "Find my resume" },
+  { title: "Add memory", example: "Remember that I prefer local AI" },
+  { title: "Ask memory", example: "What do you remember about me?" }
 ];
 
 export function ChatPanel({
@@ -69,7 +69,9 @@ export function ChatPanel({
         <div className="chat-content">
           {messages.length === 0 && (
             <div className="empty-state">
+              <div className="empty-orb">J</div>
               <h3>How can I help?</h3>
+              <p>Chat naturally, run a command, or ask Jarvis what it remembers.</p>
               <div className="suggestion-grid">
                 {suggestions.map((suggestion) => (
                   <button
@@ -127,16 +129,16 @@ export function ChatPanel({
 function activityLabel(activity: AssistantActivity) {
   switch (activity) {
     case "executing":
-      return "Executing...";
+      return "Executing";
     case "speaking":
-      return "Speaking...";
+      return "Speaking";
     case "completed":
-      return "Completed.";
+      return "Completed";
     case "error":
-      return "Something went wrong.";
+      return "Something went wrong";
     case "thinking":
     case "idle":
     default:
-      return "Thinking...";
+      return "Thinking";
   }
 }

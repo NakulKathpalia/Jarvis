@@ -2,21 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityLogPanel } from "./ActivityLogPanel";
-import { AppLayout } from "./AppLayout";
 import { AuthPanel } from "./AuthPanel";
 import { ChatPanel } from "./ChatPanel";
 import { ConnectedAppsPanel } from "./ConnectedAppsPanel";
 import { ControlPanel } from "./ControlPanel";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { FilesPanel } from "./FilesPanel";
+import { JarvisDialog } from "./JarvisDialog";
 import { MemoryPanel } from "./MemoryPanel";
 import { SettingsPanel } from "./SettingsPanel";
 import { Sidebar } from "./Sidebar";
 import { SecurityPanel } from "./SecurityPanel";
-import { JarvisStatusPanel } from "./JarvisStatusPanel";
 import { ToolsPanel } from "./ToolsPanel";
-import { TopNavbar } from "./TopNavbar";
 import { Toast } from "./Toast";
+import { UserMenu } from "./UserMenu";
 import { VoicePanel } from "./VoicePanel";
 import type { PendingVoiceCommand } from "./VoiceConfirmationCard";
 import { authApi } from "@/lib/authApi";
@@ -47,6 +46,7 @@ type AssistantActivity = "idle" | "thinking" | "executing" | "speaking" | "compl
 
 export function AppShell() {
   const [activeView, setActiveView] = useState<ViewKey>("chat");
+  const [activeDialog, setActiveDialog] = useState<ViewKey | "search" | null>(null);
   const [status, setStatus] = useState<JarvisStatus | null>(null);
   const [chatSummaries, setChatSummaries] = useState<ChatSessionSummary[]>([]);
   const [activeChat, setActiveChat] = useState<ChatSession | null>(null);
@@ -130,6 +130,7 @@ export function AppShell() {
     const session = await jarvisApi.createChat();
     setActiveChat(session);
     setActiveView("chat");
+    setActiveDialog(null);
     await refreshChats();
   }
 
@@ -137,6 +138,7 @@ export function AppShell() {
     const session = await jarvisApi.chatSession(id);
     setActiveChat(session);
     setActiveView("chat");
+    setActiveDialog(null);
   }
 
   async function deleteChat(id: string) {
@@ -341,7 +343,40 @@ export function AppShell() {
     ThemeService.apply(nextMode);
   }
 
-  const viewMeta = getViewMeta(activeView);
+  function changeWorkspace(view: ViewKey) {
+    if (view === "chat") {
+      setActiveView("chat");
+      setActiveDialog(null);
+      setMobileSidebarOpen(false);
+      return;
+    }
+
+    setActiveView(view);
+    setActiveDialog(view);
+    setMobileSidebarOpen(false);
+  }
+
+  function openSearch() {
+    setActiveDialog("search");
+    setMobileSidebarOpen(false);
+  }
+
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        openSearch();
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        changeWorkspace("memory");
+      }
+    }
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
 
   async function speakText(text: string) {
     try {
@@ -383,43 +418,127 @@ export function AppShell() {
     return `${jarvisApi.apiBaseUrl}${audioUrl.startsWith("/") ? audioUrl : `/${audioUrl}`}`;
   }
 
+  function renderDialogContent() {
+    switch (activeDialog) {
+      case "search":
+        return (
+          <div className="command-palette">
+            <button type="button" onClick={() => void createNewChat()}>Start a new chat</button>
+            <button type="button" onClick={() => changeWorkspace("memory")}>Open Memory and Knowledge</button>
+            <button type="button" onClick={() => changeWorkspace("voice")}>Open Voice controls</button>
+            <button type="button" onClick={() => changeWorkspace("settings")}>Open Settings</button>
+            <button type="button" onClick={() => changeWorkspace("diagnostics")}>Open Diagnostics</button>
+          </div>
+        );
+      case "memory":
+        return (
+          <MemoryPanel
+            items={memory}
+            onAdd={addMemory}
+            onUpdate={updateMemory}
+            onDelete={deleteMemory}
+            onApprove={approveMemory}
+            onReject={rejectMemory}
+            onClear={clearMemory}
+            onRefresh={refreshMemory}
+          />
+        );
+      case "files":
+        return <FilesPanel onToast={showToast} />;
+      case "control":
+        return <ControlPanel onToast={showToast} />;
+      case "voice":
+        return (
+          <VoicePanel
+            disabled={isBusy}
+            appStatus={status}
+            memoryCount={memory.length}
+            onRefresh={refreshAll}
+            onToast={showToast}
+          />
+        );
+      case "activity":
+        return <ActivityLogPanel />;
+      case "tools":
+        return <ToolsPanel onChangeView={changeWorkspace} />;
+      case "auth":
+        return <AuthPanel onToast={showToast} onAuthChanged={refreshAuth} />;
+      case "connectedApps":
+        return <ConnectedAppsPanel onToast={showToast} />;
+      case "settings":
+        return settings ? (
+          <SettingsPanel
+            settings={settings}
+            themeMode={themeMode}
+            onThemeModeChange={changeThemeMode}
+            onSave={saveSettings}
+          />
+        ) : <div className="dialog-empty">Settings are loading.</div>;
+      case "diagnostics":
+        return <DiagnosticsPanel />;
+      case "security":
+        return (
+          <SecurityPanel
+            interactionStatus={interactionStatus}
+            pendingAssistantCommand={pendingAssistantCommand}
+            lastAssistantAction={lastAssistantAction}
+          />
+        );
+      case "chat":
+      default:
+        return null;
+    }
+  }
+
+  const dialogMeta = activeDialog ? getViewMeta(activeDialog === "search" ? "tools" : activeDialog) : null;
+
   return (
-    <AppLayout
-      mobileSidebarOpen={mobileSidebarOpen}
-      onCloseMobileSidebar={() => setMobileSidebarOpen(false)}
-      sidebar={
+    <div className="app-shell-v2">
+      <button
+        aria-label="Close sidebar"
+        className={mobileSidebarOpen ? "mobile-sidebar-backdrop open" : "mobile-sidebar-backdrop"}
+        type="button"
+        onClick={() => setMobileSidebarOpen(false)}
+      />
+      <div className={mobileSidebarOpen ? "sidebar-shell open" : "sidebar-shell"}>
         <Sidebar
           activeView={activeView}
           activeChatId={activeChat?.id ?? null}
           chats={chatSummaries}
-          onChangeView={setActiveView}
+          onChangeView={changeWorkspace}
+          onSearch={openSearch}
           onNewChat={createNewChat}
           onOpenChat={openChat}
           status={status}
           memoryCount={memory.length}
         />
-      }
-      topbar={
-        <TopNavbar
-          title={viewMeta.title}
-          subtitle={viewMeta.subtitle}
-          authStatus={authStatus}
-          onChangeView={setActiveView}
-          onAuthChanged={refreshAuth}
-          onToast={showToast}
-          onToggleSidebar={() => setMobileSidebarOpen((current) => !current)}
-        />
-      }
-      rightPanel={
-        <JarvisStatusPanel
-          status={status}
-          interactionStatus={interactionStatus}
-          pendingAssistantCommand={pendingAssistantCommand}
-          lastAssistantAction={lastAssistantAction}
-        />
-      }
-    >
-      {activeView === "chat" && (
+      </div>
+
+      <main className="jarvis-main">
+        <header className="jarvis-chat-topbar">
+          <button className="mobile-menu-button" type="button" onClick={() => setMobileSidebarOpen((current) => !current)} aria-label="Open sidebar">
+            Menu
+          </button>
+          <div className="jarvis-chat-title">
+            <span className={status?.online ? "dot online" : "dot"} />
+            <div>
+              <h2>Jarvis</h2>
+              <p>{backendError || (status?.online ? "Jarvis online." : "Backend offline.")}</p>
+            </div>
+          </div>
+          <div className="jarvis-chat-actions">
+            <button type="button" onClick={() => changeWorkspace("memory")}>Library</button>
+            <button type="button" onClick={() => changeWorkspace("voice")}>Voice</button>
+            <button type="button" onClick={() => changeWorkspace("settings")}>Settings</button>
+            <UserMenu
+              authStatus={authStatus}
+              onChangeView={changeWorkspace}
+              onAuthChanged={refreshAuth}
+              onToast={showToast}
+            />
+          </div>
+        </header>
+
         <ChatPanel
           autoSpeak={settings?.autoSpeakResponses ?? false}
           messages={visibleMessages}
@@ -444,64 +563,23 @@ export function AppShell() {
           onSpeak={speakText}
           onToast={showToast}
         />
-      )}
+      </main>
 
-      {activeView === "memory" && (
-        <MemoryPanel
-          items={memory}
-          onAdd={addMemory}
-          onUpdate={updateMemory}
-          onDelete={deleteMemory}
-          onApprove={approveMemory}
-          onReject={rejectMemory}
-          onClear={clearMemory}
-          onRefresh={refreshMemory}
-        />
-      )}
-
-      {activeView === "files" && <FilesPanel onToast={showToast} />}
-
-      {activeView === "control" && <ControlPanel onToast={showToast} />}
-
-      {activeView === "voice" && (
-        <VoicePanel
-          disabled={isBusy}
-          appStatus={status}
-          memoryCount={memory.length}
-          onRefresh={refreshAll}
-          onToast={showToast}
-        />
-      )}
-
-      {activeView === "activity" && <ActivityLogPanel />}
-
-      {activeView === "tools" && <ToolsPanel onChangeView={setActiveView} />}
-
-      {activeView === "auth" && <AuthPanel onToast={showToast} onAuthChanged={refreshAuth} />}
-
-      {activeView === "connectedApps" && <ConnectedAppsPanel onToast={showToast} />}
-
-      {activeView === "settings" && settings && (
-        <SettingsPanel
-          settings={settings}
-          themeMode={themeMode}
-          onThemeModeChange={changeThemeMode}
-          onSave={saveSettings}
-        />
-      )}
-
-      {activeView === "diagnostics" && <DiagnosticsPanel />}
-
-      {activeView === "security" && (
-        <SecurityPanel
-          interactionStatus={interactionStatus}
-          pendingAssistantCommand={pendingAssistantCommand}
-          lastAssistantAction={lastAssistantAction}
-        />
-      )}
+      <JarvisDialog
+        open={activeDialog !== null && activeDialog !== "chat"}
+        title={activeDialog === "search" ? "Search and commands" : dialogMeta?.title ?? "Jarvis"}
+        subtitle={activeDialog === "search" ? "Jump anywhere in Jarvis." : dialogMeta?.subtitle}
+        size={activeDialog === "search" ? "md" : "xl"}
+        onClose={() => {
+          setActiveDialog(null);
+          setActiveView("chat");
+        }}
+      >
+        {renderDialogContent()}
+      </JarvisDialog>
 
       <Toast message={toast} />
-    </AppLayout>
+    </div>
   );
 }
 
@@ -531,26 +609,26 @@ function getViewMeta(view: ViewKey) {
     case "chat":
       return { title: "Jarvis", subtitle: "Jarvis online." };
     case "tools":
-      return { title: "Tools & Settings", subtitle: "Voice, memory, files, security, account, and diagnostics" };
+      return { title: "Tools", subtitle: "Quick access to Jarvis capabilities." };
     case "voice":
-      return { title: "Voice", subtitle: "Push-to-talk voice is ready." };
+      return { title: "Voice", subtitle: "Push-to-talk, diagnostics, and response playback." };
     case "memory":
-      return { title: "Memory", subtitle: "Local private facts and search" };
+      return { title: "Memory and Knowledge", subtitle: "Review facts, uploads, OCR output, and reference material." };
     case "control":
-      return { title: "PC Control", subtitle: "Commands checked by Jarvis Security" };
+      return { title: "Commands", subtitle: "PC control remains protected by security and permissions." };
     case "files":
-      return { title: "Files", subtitle: "Local file indexing and search" };
+      return { title: "Files", subtitle: "Search local indexed files." };
     case "auth":
-      return { title: "Auth", subtitle: "Placeholder local sign in and future OAuth" };
+      return { title: "Account", subtitle: "Local auth foundation and future providers." };
     case "connectedApps":
-      return { title: "Connected Apps", subtitle: "Future external app connections" };
+      return { title: "Connected Apps", subtitle: "Future external app connections." };
     case "security":
-      return { title: "Security", subtitle: "Command risk and audit overview" };
+      return { title: "Security", subtitle: "Command risk and audit overview." };
     case "settings":
-      return { title: "Settings", subtitle: "Runtime configuration and appearance" };
+      return { title: "Settings", subtitle: "Model, voice, memory, OCR, and appearance." };
     case "diagnostics":
-      return { title: "Diagnostics", subtitle: "Runtime health and local paths" };
+      return { title: "Diagnostics", subtitle: "Runtime health, local paths, and service status." };
     case "activity":
-      return { title: "Activity", subtitle: "Interaction and audit timeline" };
+      return { title: "Activity", subtitle: "Interaction and audit timeline." };
   }
 }

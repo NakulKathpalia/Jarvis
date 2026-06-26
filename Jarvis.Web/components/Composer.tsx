@@ -46,12 +46,12 @@ export function Composer({ disabled, onSend, onVoiceCommand, onToast }: Composer
   return (
     <form className="composer-wrap" onSubmit={handleSubmit}>
       <div className="composer-box">
-        <button className="composer-icon" type="button" title="Attach file placeholder" onClick={() => onToast("Attachments coming later")}>+</button>
+        <button className="composer-icon" type="button" title="Attach file placeholder" onClick={() => onToast("Use Memory to upload files for now")}>+</button>
         <textarea
           ref={textAreaRef}
           value={message}
           rows={1}
-          placeholder="Message Jarvis..."
+          placeholder="Ask anything, or say Open YouTube..."
           onChange={(event) => setMessage(event.target.value)}
           onKeyDown={handleKeyDown}
         />
@@ -72,10 +72,10 @@ export function Composer({ disabled, onSend, onVoiceCommand, onToast }: Composer
           onTranscript={handleVoiceAsk}
         />
         <button className="send-button" type="submit" disabled={disabled || !message.trim()} title="Send">
-          ?
+          ↑
         </button>
       </div>
-      <p className="composer-help">Commands pass through Jarvis Security before execution.</p>
+      <p className="composer-help">Jarvis can make mistakes. Commands still pass through security and permissions.</p>
     </form>
   );
 }

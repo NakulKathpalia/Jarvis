@@ -310,3 +310,437 @@ input:focus, textarea:focus { border-color: var(--accent); }
   .composer-box { grid-template-columns: auto minmax(0, 1fr) auto; }
   .composer-box .voice-button:nth-of-type(2) { display: none; }
 }
+
+/* Jarvis UI V2 */
+.app-shell-v2 {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 292px minmax(0, 1fr);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app-shell-v2 .sidebar-shell {
+  min-width: 0;
+  height: 100vh;
+  border-right: 1px solid var(--border);
+  background: var(--sidebar);
+}
+
+.app-shell-v2 .sidebar {
+  width: 100%;
+  height: 100%;
+  border-right: 0;
+  padding: 12px;
+  background: color-mix(in srgb, var(--sidebar) 94%, #000);
+}
+
+.app-shell-v2 .brand-row {
+  min-height: 44px;
+  padding: 4px;
+}
+
+.app-shell-v2 .brand-row h1 {
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.app-shell-v2 .brand-row p {
+  font-size: 12px;
+}
+
+.app-shell-v2 .jarvis-logo,
+.empty-orb {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #fff));
+  color: #06202a;
+}
+
+.sidebar-command-button,
+.app-shell-v2 .new-chat-button,
+.app-shell-v2 .sidebar-nav button,
+.sidebar-utility-grid button {
+  min-height: 38px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 88%, var(--muted));
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.sidebar-command-button {
+  justify-content: space-between;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+}
+
+.sidebar-command-button kbd {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  padding: 2px 5px;
+  font-size: 11px;
+  font-family: inherit;
+}
+
+.app-shell-v2 .new-chat-button {
+  margin-top: 10px;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+}
+
+.app-shell-v2 .new-chat-button:hover,
+.sidebar-command-button:hover,
+.app-shell-v2 .sidebar-nav button:hover,
+.sidebar-utility-grid button:hover,
+.app-shell-v2 .sidebar-nav button.active {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.app-shell-v2 .sidebar-nav {
+  display: grid;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.app-shell-v2 .sidebar-nav button span,
+.sidebar-utility-grid button span {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sidebar-utility-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.sidebar-utility-grid button {
+  min-height: 36px;
+  font-size: 12px;
+  padding: 6px;
+}
+
+.app-shell-v2 .recent-chats {
+  padding-top: 8px;
+}
+
+.app-shell-v2 .chat-link {
+  min-height: 54px;
+  border-radius: 10px;
+  padding: 9px 10px;
+}
+
+.app-shell-v2 .sidebar-bottom {
+  gap: 8px;
+}
+
+.app-shell-v2 .mini-stats {
+  display: none;
+}
+
+.jarvis-main {
+  min-width: 0;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 58px minmax(0, 1fr);
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 34%),
+    var(--bg);
+}
+
+.jarvis-chat-topbar {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.jarvis-chat-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jarvis-chat-title h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.jarvis-chat-title p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.jarvis-chat-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jarvis-chat-actions > button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 8px 11px;
+  font-weight: 650;
+}
+
+.app-shell-v2 .chat-content {
+  width: min(820px, calc(100% - 40px));
+  padding: 36px 0 18px;
+}
+
+.app-shell-v2 .empty-state {
+  min-height: 60vh;
+  place-items: center;
+  place-content: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.empty-orb {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  font-weight: 850;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.app-shell-v2 .empty-state h3 {
+  font-size: clamp(28px, 5vw, 42px);
+  line-height: 1.1;
+}
+
+.app-shell-v2 .empty-state p {
+  max-width: 460px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.app-shell-v2 .suggestion-grid {
+  width: min(680px, 100%);
+  margin-top: 12px;
+}
+
+.app-shell-v2 .suggestion-card {
+  min-height: 86px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+}
+
+.app-shell-v2 .message-row {
+  margin-bottom: 24px;
+}
+
+.app-shell-v2 .message-bubble {
+  max-width: min(720px, 84%);
+  font-size: 15px;
+}
+
+.app-shell-v2 .message-row.user .message-bubble {
+  background: color-mix(in srgb, var(--panel) 92%, var(--hover));
+  border: 1px solid var(--border);
+}
+
+.app-shell-v2 .message-row.assistant .message-bubble {
+  padding: 2px 0;
+}
+
+.app-shell-v2 .thinking-line {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 9px 13px;
+}
+
+.app-shell-v2 .composer-wrap {
+  width: min(820px, calc(100% - 40px));
+  padding-bottom: 20px;
+}
+
+.app-shell-v2 .composer-box {
+  border-radius: 26px;
+  background: color-mix(in srgb, var(--panel) 94%, var(--bg));
+}
+
+.app-shell-v2 .send-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  padding: 0;
+  font-size: 18px;
+}
+
+.jarvis-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(0, 0, 0, 0.54);
+  backdrop-filter: blur(10px);
+}
+
+.jarvis-dialog {
+  width: min(100%, 920px);
+  max-height: min(90vh, 920px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--bg) 94%, var(--panel));
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.42);
+}
+
+.jarvis-dialog-md {
+  width: min(100%, 540px);
+}
+
+.jarvis-dialog-xl {
+  width: min(100%, 1120px);
+}
+
+.jarvis-dialog-header {
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.jarvis-dialog-header h2 {
+  font-size: 18px;
+  font-weight: 750;
+}
+
+.jarvis-dialog-header p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dialog-close-button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+}
+
+.jarvis-dialog-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.jarvis-dialog-body .tool-panel {
+  height: auto;
+  min-height: 0;
+  padding: 20px;
+}
+
+.command-palette {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.command-palette button {
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 650;
+}
+
+.dialog-empty {
+  padding: 24px;
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .app-shell-v2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell-v2 .sidebar-shell {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    width: 292px;
+    transform: translateX(-102%);
+    transition: transform 180ms ease;
+  }
+
+  .app-shell-v2 .sidebar-shell.open {
+    transform: translateX(0);
+  }
+
+  .jarvis-chat-actions > button {
+    display: none;
+  }
+
+  .mobile-menu-button {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 640px) {
+  .jarvis-chat-topbar {
+    padding: 0 10px;
+  }
+
+  .app-shell-v2 .chat-content,
+  .app-shell-v2 .composer-wrap {
+    width: min(100% - 20px, 820px);
+  }
+
+  .app-shell-v2 .suggestion-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jarvis-dialog-backdrop {
+    padding: 0;
+  }
+
+  .jarvis-dialog {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+}

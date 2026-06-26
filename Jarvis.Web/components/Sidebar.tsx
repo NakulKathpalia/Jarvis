@@ -8,14 +8,25 @@ type SidebarProps = {
   activeChatId: string | null;
   chats: ChatSessionSummary[];
   onChangeView: (view: ViewKey) => void;
+  onSearch: () => void;
   onNewChat: () => Promise<void>;
   onOpenChat: (id: string) => Promise<void>;
   status: JarvisStatus | null;
   memoryCount: number;
 };
 
-const navSections: Array<{ title: string; items: Array<{ key: ViewKey; label: string; icon: string }> }> = [
-  { title: "Main", items: [{ key: "chat", label: "Chat", icon: "C" }] }
+const primaryActions: Array<{ key: ViewKey; label: string; icon: string }> = [
+  { key: "memory", label: "Memory", icon: "M" },
+  { key: "voice", label: "Voice", icon: "V" },
+  { key: "files", label: "Files", icon: "F" },
+  { key: "control", label: "Commands", icon: "C" }
+];
+
+const utilityActions: Array<{ key: ViewKey; label: string; icon: string }> = [
+  { key: "settings", label: "Settings", icon: "S" },
+  { key: "security", label: "Security", icon: "P" },
+  { key: "diagnostics", label: "Diagnostics", icon: "D" },
+  { key: "activity", label: "Activity", icon: "A" }
 ];
 
 export function Sidebar({
@@ -23,6 +34,7 @@ export function Sidebar({
   activeChatId,
   chats,
   onChangeView,
+  onSearch,
   onNewChat,
   onOpenChat,
   status,
@@ -48,12 +60,17 @@ export function Sidebar({
           <div className="jarvis-logo">J</div>
           <div>
             <h1>JARVIS</h1>
-            <p>Personal AI Assistant</p>
+            <p>{status?.online ? "Jarvis online" : "Local model offline"}</p>
           </div>
         </div>
 
         <button className="new-chat-button" type="button" onClick={() => void onNewChat()}>
           + New Chat
+        </button>
+
+        <button className="sidebar-command-button" type="button" onClick={onSearch}>
+          <span>Search</span>
+          <kbd>Ctrl K</kbd>
         </button>
 
         <label className="sidebar-search">
@@ -66,20 +83,24 @@ export function Sidebar({
         </label>
 
         <nav className="sidebar-nav" aria-label="Main navigation">
-          {navSections.map((section) => (
-            <div className="sidebar-nav-section" key={section.title}>
-              {section.items.map((item) => (
-                <button
-                  className={activeView === item.key ? "active" : ""}
-                  key={item.key}
-                  type="button"
-                  onClick={() => onChangeView(item.key)}
-                >
-                  <span>{item.icon}</span>
-                  {item.label}
-                </button>
-              ))}
-            </div>
+          <button
+            className={activeView === "chat" ? "active" : ""}
+            type="button"
+            onClick={() => onChangeView("chat")}
+          >
+            <span>C</span>
+            Chat
+          </button>
+          {primaryActions.map((item) => (
+            <button
+              className={activeView === item.key ? "active" : ""}
+              key={item.key}
+              type="button"
+              onClick={() => onChangeView(item.key)}
+            >
+              <span>{item.icon}</span>
+              {item.label}
+            </button>
           ))}
         </nav>
       </div>
@@ -103,10 +124,14 @@ export function Sidebar({
       </section>
 
       <div className="sidebar-bottom">
-        <button className="sidebar-settings-button" type="button" onClick={() => onChangeView("tools")}>
-          <span>S</span>
-          Tools & Settings
-        </button>
+        <div className="sidebar-utility-grid">
+          {utilityActions.map((item) => (
+            <button key={item.key} type="button" onClick={() => onChangeView(item.key)}>
+              <span>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </div>
         <div className="status-pill">
           <span className={status?.online ? "dot online" : "dot"} />
           Local AI
