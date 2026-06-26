@@ -19,6 +19,7 @@ public static class EndpointBootstrapper
         var platformService = runtime.PlatformService;
         var settingsService = runtime.SettingsService;
         var memoryService = runtime.MemoryService;
+        var knowledgeService = runtime.KnowledgeService;
         var ingestionService = runtime.IngestionService;
         var imageOcrService = runtime.ImageOcrService;
         var memoryRetrievalService = runtime.MemoryRetrievalService;
@@ -651,6 +652,88 @@ public static class EndpointBootstrapper
 
             return Results.Ok(new { memories });
         });
+
+        app.MapGet("/api/memory/stats", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var memories = memoryService.Items;
+            return Results.Ok(new
+            {
+                total = memories.Count,
+                approved = memories.Count(item => item.ReviewStatus == MemoryReviewStatus.Approved),
+                pending = memories.Count(item => item.ReviewStatus == MemoryReviewStatus.Pending),
+                rejected = memories.Count(item => item.ReviewStatus == MemoryReviewStatus.Rejected),
+                categories = memories.GroupBy(item => item.Category)
+                    .OrderByDescending(group => group.Count())
+                    .Select(group => new { category = group.Key, count = group.Count() })
+                    .ToList()
+            });
+        });
+
+        app.MapGet("/api/knowledge", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            return denied ?? Results.Ok(knowledgeService.Items);
+        });
+
+        app.MapGet("/api/knowledge/stats", () =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            return denied ?? Results.Ok(knowledgeService.GetStats());
+        });
+
+        app.MapGet("/api/knowledge/search", (
+            string? q,
+            KnowledgeCategory? category,
+            string? sourceType,
+            DateTime? importedAfterUtc,
+            DateTime? importedBeforeUtc,
+            int? limit) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            return denied ?? Results.Ok(knowledgeService.Search(q, category, sourceType, importedAfterUtc, importedBeforeUtc, limit ?? 50));
+        });
+
+        app.MapPost("/api/knowledge", async (KnowledgeCreateRequest request, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "knowledge", "create");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Content))
+            {
+                return Results.BadRequest(new { error = "Knowledge content is required." });
+            }
+
+            var item = await knowledgeService.AddAsync(
+                request.Title,
+                request.Content,
+                request.Category,
+                request.Source ?? "Manual",
+                request.SourceFile ?? string.Empty,
+                request.SourceType ?? string.Empty,
+                cancellationToken);
+            return Results.Ok(item);
+        });
+
+        app.MapDelete("/api/knowledge/{id}", async (string id, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "knowledge", "delete");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var removed = await knowledgeService.DeleteAsync(id, cancellationToken);
+            return removed is null ? Results.NotFound(new { error = "Knowledge item not found." }) : Results.Ok(knowledgeService.Items);
+        });
         
         app.MapPut("/api/memory/{id}", async (string id, MemoryUpdateRequest request, CancellationToken cancellationToken) =>
         {
@@ -681,6 +764,60 @@ public static class EndpointBootstrapper
             return updated is null
                 ? Results.NotFound(new { error = "Memory not found." })
                 : Results.Ok(memoryService.Items);
+        });
+
+        app.MapPost("/api/memory/bulk-approve", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "memory", "bulk-approve");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var updated = await memoryService.BulkApproveAsync(request.MemoryIds, cancellationToken);
+            return Results.Ok(new { updated = updated.Count, memories = memoryService.Items });
+        });
+
+        app.MapPost("/api/memory/bulk-reject", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "memory", "bulk-reject");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var updated = await memoryService.BulkRejectAsync(request.MemoryIds, cancellationToken);
+            return Results.Ok(new { updated = updated.Count, memories = memoryService.Items });
+        });
+
+        app.MapPost("/api/memory/bulk-delete", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "memory", "bulk-delete");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var removed = await memoryService.BulkDeleteAsync(request.MemoryIds, cancellationToken);
+            return Results.Ok(new { removed, memories = memoryService.Items });
+        });
+
+        app.MapPost("/api/memory/bulk-update", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "memory", "bulk-update");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var updated = await memoryService.BulkUpdateAsync(
+                request.MemoryIds,
+                request.Category,
+                request.Importance,
+                request.Confidence,
+                request.ConvertSuggestedToPermanent,
+                cancellationToken);
+            return Results.Ok(new { updated = updated.Count, memories = memoryService.Items });
         });
 
         app.MapPost("/api/memory/{id}/approve", async (string id, CancellationToken cancellationToken) =>
@@ -798,6 +935,28 @@ public static class EndpointBootstrapper
             return job is null ? Results.NotFound(new { error = "Ingestion job not found." }) : Results.Ok(job);
         });
 
+        app.MapGet("/api/ingestion/jobs/{id}/file", (string id) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryRead);
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var job = ingestionService.Get(id);
+            if (job is null || !File.Exists(job.StoredPath))
+            {
+                return Results.NotFound(new { error = "Ingestion file not found." });
+            }
+
+            var contentType = job.SourceType == IngestionSourceType.Pdf
+                ? "application/pdf"
+                : job.FileType.Equals("WEBP", StringComparison.OrdinalIgnoreCase)
+                    ? "image/webp"
+                    : $"image/{job.FileType.ToLowerInvariant()}";
+            return Results.File(job.StoredPath, contentType);
+        });
+
         app.MapPost("/api/ingestion/jobs/{id}/extract", async (string id, CancellationToken cancellationToken) =>
         {
             var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "extract");
@@ -840,6 +999,75 @@ public static class EndpointBootstrapper
             }
 
             return Results.Ok(job);
+        });
+
+        app.MapPost("/api/ingestion/jobs/{id}/knowledge", async (
+            string id,
+            SaveIngestionAsKnowledgeRequest request,
+            CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "save-knowledge");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var job = ingestionService.Get(id);
+            if (job is null)
+            {
+                return Results.NotFound(new { error = "Ingestion job not found." });
+            }
+
+            if (string.IsNullOrWhiteSpace(job.ExtractedText))
+            {
+                return Results.BadRequest(new { error = "Extracted text is required before saving as knowledge." });
+            }
+
+            var item = await knowledgeService.AddAsync(
+                request.Title ?? Path.GetFileNameWithoutExtension(job.FileName),
+                job.ExtractedText,
+                request.Category,
+                $"Ingestion:{job.ExtractionSource}",
+                job.FileName,
+                job.SourceType.ToString(),
+                cancellationToken);
+            return Results.Ok(new { knowledge = item, items = knowledgeService.Items });
+        });
+
+        app.MapPost("/api/ingestion/jobs/{id}/memory", async (
+            string id,
+            SaveIngestionAsMemoryRequest request,
+            CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "save-memory");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var job = ingestionService.Get(id);
+            if (job is null)
+            {
+                return Results.NotFound(new { error = "Ingestion job not found." });
+            }
+
+            var text = string.IsNullOrWhiteSpace(request.Text) ? job.ExtractedText : request.Text;
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return Results.BadRequest(new { error = "Extracted text is required before saving as memory." });
+            }
+
+            var memory = await memoryService.AddAsync(
+                text,
+                request.Category ?? "General",
+                tags: ["ingested"],
+                importance: request.Importance,
+                confidence: request.Confidence,
+                source: $"Ingestion:{job.FileName}",
+                memoryType: request.MemoryType,
+                reviewStatus: MemoryReviewStatus.Approved,
+                cancellationToken: cancellationToken);
+            return Results.Ok(new { memory, memories = memoryService.Items });
         });
 
         app.MapDelete("/api/ingestion/jobs/{id}", async (string id, CancellationToken cancellationToken) =>
@@ -904,6 +1132,30 @@ public static class EndpointBootstrapper
             return Results.Ok(new { job, candidate, memory, memories = memoryService.Items });
         });
 
+        app.MapPost("/api/ingestion/candidates/bulk-approve", async (
+            BulkIngestionCandidateRequest request,
+            CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "bulk-approve");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var results = await ingestionService.ApproveCandidatesAsync(
+                request.CandidateIds,
+                request.Category,
+                request.Importance,
+                request.Confidence,
+                cancellationToken);
+            return Results.Ok(new
+            {
+                approved = results.Count(result => result.Memory is not null),
+                jobs = ingestionService.Jobs,
+                memories = memoryService.Items
+            });
+        });
+
         app.MapPost("/api/ingestion/candidates/{id}/reject", async (string id, CancellationToken cancellationToken) =>
         {
             var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "reject");
@@ -928,6 +1180,24 @@ public static class EndpointBootstrapper
                 output: candidate.Id,
                 cancellationToken: cancellationToken);
             return Results.Ok(new { job, candidate });
+        });
+
+        app.MapPost("/api/ingestion/candidates/bulk-reject", async (
+            BulkIngestionCandidateRequest request,
+            CancellationToken cancellationToken) =>
+        {
+            var denied = DenyIfMissing(PermissionDefinitions.MemoryWrite, SecurityRiskLevel.Medium, "ingestion", "bulk-reject");
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            var results = await ingestionService.RejectCandidatesAsync(request.CandidateIds, cancellationToken);
+            return Results.Ok(new
+            {
+                rejected = results.Count(result => result.Candidate is not null),
+                jobs = ingestionService.Jobs
+            });
         });
         
         app.MapGet("/api/settings", () =>

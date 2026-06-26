@@ -188,6 +188,84 @@ public sealed class MemoryService
         return item;
     }
 
+    public async Task<IReadOnlyList<MemoryItem>> BulkApproveAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+    {
+        var idSet = ids.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var updated = _items.Where(item => idSet.Contains(item.Id)).ToList();
+        foreach (var item in updated)
+        {
+            _reviewService.Approve(item);
+            if (item.MemoryType == MemoryType.SuggestedMemory)
+            {
+                item.MemoryType = MemoryType.PermanentMemory;
+            }
+        }
+
+        await SaveAsync(cancellationToken);
+        return updated;
+    }
+
+    public async Task<IReadOnlyList<MemoryItem>> BulkRejectAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+    {
+        var idSet = ids.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var updated = _items.Where(item => idSet.Contains(item.Id)).ToList();
+        foreach (var item in updated)
+        {
+            _reviewService.Reject(item);
+        }
+
+        await SaveAsync(cancellationToken);
+        return updated;
+    }
+
+    public async Task<int> BulkDeleteAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+    {
+        var idSet = ids.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var removed = _items.RemoveAll(item => idSet.Contains(item.Id));
+        await SaveAsync(cancellationToken);
+        return removed;
+    }
+
+    public async Task<IReadOnlyList<MemoryItem>> BulkUpdateAsync(
+        IEnumerable<string> ids,
+        string? category = null,
+        int? importance = null,
+        int? confidence = null,
+        bool convertSuggestedToPermanent = false,
+        CancellationToken cancellationToken = default)
+    {
+        var idSet = ids.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var updated = _items.Where(item => idSet.Contains(item.Id)).ToList();
+        foreach (var item in updated)
+        {
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                item.Category = _classificationService.NormalizeCategory(category);
+            }
+
+            if (importance is not null)
+            {
+                item.Importance = _scoringService.NormalizeImportance(importance.Value);
+            }
+
+            if (confidence is not null)
+            {
+                item.Confidence = _scoringService.NormalizeConfidence(confidence.Value);
+            }
+
+            if (convertSuggestedToPermanent && item.MemoryType == MemoryType.SuggestedMemory)
+            {
+                item.MemoryType = MemoryType.PermanentMemory;
+                item.ReviewStatus = MemoryReviewStatus.Approved;
+            }
+
+            item.UpdatedAtUtc = DateTime.UtcNow;
+        }
+
+        await SaveAsync(cancellationToken);
+        return updated;
+    }
+
     public async Task<MemoryItem?> DeleteAsync(string id, CancellationToken cancellationToken = default)
     {
         var index = _items.FindIndex(item => item.Id.Equals(id, StringComparison.OrdinalIgnoreCase));

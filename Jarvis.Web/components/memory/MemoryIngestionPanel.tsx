@@ -2,7 +2,7 @@
 
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { jarvisApi } from "@/lib/api";
-import type { IngestionJob, IngestionMemoryCandidate, MemoryItem } from "@/lib/types";
+import type { IngestionJob, IngestionMemoryCandidate, KnowledgeCategory, MemoryItem } from "@/lib/types";
 
 type MemoryIngestionPanelProps = {
   onMemoryChanged: () => Promise<void>;
@@ -35,6 +35,11 @@ export function MemoryIngestionPanel({ onMemoryChanged }: MemoryIngestionPanelPr
   const [jobs, setJobs] = useState<IngestionJob[]>([]);
   const [selectedJobId, setSelectedJobId] = useState("");
   const [drafts, setDrafts] = useState<Record<string, CandidateDraft>>({});
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [bulkCategory, setBulkCategory] = useState("General");
+  const [bulkImportance, setBulkImportance] = useState(3);
+  const [bulkConfidence, setBulkConfidence] = useState(7);
+  const [knowledgeCategory, setKnowledgeCategory] = useState<KnowledgeCategory>("Documents");
   const [statusMessage, setStatusMessage] = useState("");
   const [isBusy, setIsBusy] = useState(false);
 
@@ -119,6 +124,98 @@ export function MemoryIngestionPanel({ onMemoryChanged }: MemoryIngestionPanelPr
     }
   }
 
+  async function bulkApprove() {
+    const ids = selectedCandidates.filter(Boolean);
+    if (ids.length === 0) {
+      setStatusMessage("Select candidates first.");
+      return;
+    }
+
+    setIsBusy(true);
+    setStatusMessage("Bulk approving...");
+    try {
+      const result = await jarvisApi.bulkApproveIngestionCandidates(ids, {
+        category: bulkCategory,
+        importance: bulkImportance,
+        confidence: bulkConfidence
+      });
+      setJobs(result.jobs);
+      setSelectedCandidates([]);
+      await onMemoryChanged();
+      setStatusMessage(`${result.approved} memories approved.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Bulk approve failed.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function bulkReject() {
+    const ids = selectedCandidates.filter(Boolean);
+    if (ids.length === 0) {
+      setStatusMessage("Select candidates first.");
+      return;
+    }
+
+    setIsBusy(true);
+    setStatusMessage("Bulk rejecting...");
+    try {
+      const result = await jarvisApi.bulkRejectIngestionCandidates(ids);
+      setJobs(result.jobs);
+      setSelectedCandidates([]);
+      setStatusMessage(`${result.rejected} candidates rejected.`);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Bulk reject failed.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function saveAsKnowledge() {
+    if (!selectedJob?.extractedText.trim()) {
+      setStatusMessage("Extract text before saving as knowledge.");
+      return;
+    }
+
+    setIsBusy(true);
+    setStatusMessage("Saving knowledge...");
+    try {
+      await jarvisApi.saveIngestionAsKnowledge(selectedJob.id, {
+        title: selectedJob.fileName,
+        category: knowledgeCategory
+      });
+      setStatusMessage("Saved as knowledge.");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Save as knowledge failed.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function saveAsMemory() {
+    if (!selectedJob?.extractedText.trim()) {
+      setStatusMessage("Extract text before saving as memory.");
+      return;
+    }
+
+    setIsBusy(true);
+    setStatusMessage("Saving memory...");
+    try {
+      await jarvisApi.saveIngestionAsMemory(selectedJob.id, {
+        category: bulkCategory,
+        memoryType: "PermanentMemory",
+        importance: bulkImportance,
+        confidence: bulkConfidence
+      });
+      await onMemoryChanged();
+      setStatusMessage("Saved as memory.");
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : "Save as memory failed.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   async function rejectCandidate(candidate: IngestionMemoryCandidate) {
     setIsBusy(true);
     setStatusMessage("Rejecting candidate...");
@@ -162,6 +259,19 @@ export function MemoryIngestionPanel({ onMemoryChanged }: MemoryIngestionPanelPr
 
   function updateDraft(candidate: IngestionMemoryCandidate, next: CandidateDraft) {
     setDrafts((current) => ({ ...current, [candidate.id]: next }));
+  }
+
+  function toggleCandidate(id: string) {
+    setSelectedCandidates((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    );
+  }
+
+  function toggleAllPending() {
+    const pendingIds = selectedJob?.candidates
+      .filter((candidate) => candidate.reviewStatus === "Pending")
+      .map((candidate) => candidate.id) ?? [];
+    setSelectedCandidates((current) => current.length === pendingIds.length ? [] : pendingIds);
   }
 
   return (
@@ -215,6 +325,14 @@ export function MemoryIngestionPanel({ onMemoryChanged }: MemoryIngestionPanelPr
             </div>
           </div>
 
+          <div className="memory-review-summary">
+            <span>OCR Source: <strong>{selectedJob.extractionSource || selectedJob.sourceType}</strong></span>
+            <span>Language: <strong>{selectedJob.extractionLanguage || "embedded"}</strong></span>
+            <span>Confidence: <strong>{selectedJob.extractionConfidence || "n/a"}</strong></span>
+            <span>Characters: <strong>{selectedJob.extractedCharacterCount}</strong></span>
+            <span>Words: <strong>{selectedJob.extractedWordCount}</strong></span>
+          </div>
+
           {selectedJob.errorMessage && <div className="control-message">{selectedJob.errorMessage}</div>}
 
           <div className="memory-actions">
@@ -234,14 +352,82 @@ export function MemoryIngestionPanel({ onMemoryChanged }: MemoryIngestionPanelPr
             >
               Suggest Memories
             </button>
+            <button
+              className="soft-button"
+              type="button"
+              disabled={isBusy || !selectedJob.extractedText.trim()}
+              onClick={saveAsMemory}
+            >
+              Save as Memory
+            </button>
+            <button
+              className="soft-button"
+              type="button"
+              disabled={isBusy || !selectedJob.extractedText.trim()}
+              onClick={saveAsKnowledge}
+            >
+              Save as Knowledge
+            </button>
             <button className="danger-button" type="button" disabled={isBusy} onClick={deleteSelectedJob}>
               Delete Import
             </button>
           </div>
 
-          <div className="ingestion-preview">
-            <strong>Extracted text preview</strong>
-            <pre>{selectedJob.extractedText || "No text extracted yet."}</pre>
+          <div className="ingestion-compare">
+            <div className="ingestion-preview">
+              <strong>Original source</strong>
+              {selectedJob.sourceType === "Image" ? (
+                <img src={jarvisApi.ingestionFileUrl(selectedJob.id)} alt={selectedJob.fileName} />
+              ) : (
+                <a className="soft-button" href={jarvisApi.ingestionFileUrl(selectedJob.id)} target="_blank" rel="noreferrer">
+                  Open PDF preview
+                </a>
+              )}
+            </div>
+            <div className="ingestion-preview">
+              <strong>Extracted text preview</strong>
+              <pre>{selectedJob.extractedText || "No text extracted yet."}</pre>
+            </div>
+          </div>
+
+          <div className="memory-form compact">
+            <label>
+              <span>Bulk Category</span>
+              <select value={bulkCategory} onChange={(event) => setBulkCategory(event.target.value)}>
+                {categories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Knowledge Category</span>
+              <select value={knowledgeCategory} onChange={(event) => setKnowledgeCategory(event.target.value as KnowledgeCategory)}>
+                {["Astrology", "Tarot", "Occult", "Vastu", "Research", "Books", "Documents", "General"].map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Bulk Importance</span>
+              <input type="number" min={1} max={10} value={bulkImportance} onChange={(event) => setBulkImportance(Number(event.target.value) || 3)} />
+            </label>
+            <label>
+              <span>Bulk Confidence</span>
+              <input type="number" min={1} max={10} value={bulkConfidence} onChange={(event) => setBulkConfidence(Number(event.target.value) || 7)} />
+            </label>
+          </div>
+
+          <div className="memory-actions">
+            <button className="soft-button" type="button" disabled={isBusy || selectedJob.candidates.length === 0} onClick={toggleAllPending}>
+              Select Pending
+            </button>
+            <button className="soft-button" type="button" disabled={isBusy || selectedCandidates.length === 0} onClick={bulkApprove}>
+              Approve Selected
+            </button>
+            <button className="danger-button" type="button" disabled={isBusy || selectedCandidates.length === 0} onClick={bulkReject}>
+              Reject Selected
+            </button>
+            <span className="memory-quality">{selectedCandidates.length} selected</span>
           </div>
 
           <div className="memory-section-list">
@@ -264,7 +450,9 @@ export function MemoryIngestionPanel({ onMemoryChanged }: MemoryIngestionPanelPr
                       candidate={candidate}
                       draft={draftFor(candidate)}
                       disabled={isBusy}
+                      selected={selectedCandidates.includes(candidate.id)}
                       onChange={(next) => updateDraft(candidate, next)}
+                      onToggleSelected={() => toggleCandidate(candidate.id)}
                       onApprove={() => approveCandidate(candidate)}
                       onReject={() => rejectCandidate(candidate)}
                     />
@@ -284,6 +472,8 @@ function CandidateCard({
   draft,
   disabled,
   onChange,
+  selected,
+  onToggleSelected,
   onApprove,
   onReject
 }: {
@@ -291,13 +481,18 @@ function CandidateCard({
   draft: CandidateDraft;
   disabled: boolean;
   onChange: (draft: CandidateDraft) => void;
+  selected: boolean;
+  onToggleSelected: () => void;
   onApprove: () => void;
   onReject: () => void;
 }) {
   return (
     <article className="list-card memory-card">
       <div className="memory-card-head">
-        <strong>{candidate.reviewStatus}</strong>
+        <label className="candidate-select">
+          <input type="checkbox" checked={selected} disabled={disabled || candidate.reviewStatus !== "Pending"} onChange={onToggleSelected} />
+          <strong>{candidate.reviewStatus}</strong>
+        </label>
         <div className="memory-badges">
           <span className="memory-badge">{candidate.sourceFile}</span>
           <span className="memory-badge">P{draft.importance}</span>

@@ -5,6 +5,7 @@ using Jarvis.ConnectedApps;
 using Jarvis.Core;
 using Jarvis.Data;
 using Jarvis.Ingestion;
+using Jarvis.Knowledge;
 using Jarvis.Memory;
 using Jarvis.Migrations;
 using Jarvis.Mongo;
@@ -63,6 +64,7 @@ public static class JarvisApplication
         IConnectedAppRepository? connectedAppRepository = null;
         IDeviceRepository? deviceRepository = null;
         IIngestionRepository? ingestionRepository = null;
+        IKnowledgeRepository? knowledgeRepository = null;
         IReadOnlyCollection<ConnectedAppInfo>? connectedApps = null;
 
         var mongoOptions = new MongoOptions
@@ -88,6 +90,7 @@ public static class JarvisApplication
                 connectedAppRepository = new MongoConnectedAppRepository(mongoContext);
                 deviceRepository = new MongoDeviceRepository(mongoContext);
                 ingestionRepository = new MongoIngestionRepository(mongoContext);
+                knowledgeRepository = new MongoKnowledgeRepository(mongoContext);
 
                 var migrationRepository = new MongoMigrationRepository(mongoContext);
                 var migrationService = new FileStorageMigrationService(
@@ -149,6 +152,8 @@ public static class JarvisApplication
 
         var memoryService = new MemoryService(pathResolver.MemoryPath, memoryRepository, userContext);
         await memoryService.LoadAsync();
+        var knowledgeService = new KnowledgeService(pathResolver.KnowledgePath, knowledgeRepository, userContext);
+        await knowledgeService.LoadAsync();
         var imageOcrService = new ImageOcrService(settingsService);
         var ingestionService = new IngestionService(
             pathResolver.IngestionUploadDirectory,
@@ -247,6 +252,7 @@ public static class JarvisApplication
             PlatformService = platformService,
             SettingsService = settingsService,
             MemoryService = memoryService,
+            KnowledgeService = knowledgeService,
             IngestionService = ingestionService,
             ImageOcrService = imageOcrService,
             MemoryRetrievalService = memoryRetrievalService,

@@ -59,6 +59,11 @@ public sealed class IngestionJob
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public string ErrorMessage { get; set; } = string.Empty;
     public IngestionSourceType SourceType { get; set; }
+    public string ExtractionSource { get; set; } = string.Empty;
+    public string ExtractionLanguage { get; set; } = string.Empty;
+    public int ExtractionConfidence { get; set; }
+    public int ExtractedCharacterCount { get; set; }
+    public int ExtractedWordCount { get; set; }
     public List<IngestionMemoryCandidate> Candidates { get; set; } = [];
     public List<string> SuggestedMemoryIds { get; set; } = [];
 }
@@ -69,4 +74,7 @@ public sealed record IngestionExtractionResult(
     string ExtractedText,
     IReadOnlyList<IngestionTextBlock> TextBlocks,
     string Message,
+    string ExtractionSource = "",
+    string ExtractionLanguage = "",
+    int ExtractionConfidence = 0,
     string ErrorMessage = "");

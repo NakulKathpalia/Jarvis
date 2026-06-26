@@ -98,6 +98,49 @@ export type MemoryItem = {
   updatedAtUtc: string;
 };
 
+export type MemoryStats = {
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  categories: Array<{ category: string; count: number }>;
+};
+
+export type KnowledgeCategory =
+  | "Astrology"
+  | "Tarot"
+  | "Occult"
+  | "Vastu"
+  | "Research"
+  | "Books"
+  | "Documents"
+  | "General";
+
+export type KnowledgeItem = {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  category: KnowledgeCategory;
+  source: string;
+  sourceFile: string;
+  sourceType: string;
+  characterCount: number;
+  wordCount: number;
+  accessCount: number;
+  lastAccessedAtUtc?: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+};
+
+export type KnowledgeStats = {
+  total: number;
+  categories: Array<{ category: KnowledgeCategory; count: number }>;
+  sources: Array<{ sourceType: string; count: number }>;
+  recent: KnowledgeItem[];
+  frequentlyAccessed: KnowledgeItem[];
+};
+
 export type MemoryFormValues = {
   text: string;
   category: string;
@@ -158,6 +201,11 @@ export type IngestionJob = {
   updatedAtUtc: string;
   errorMessage: string;
   sourceType: IngestionSourceType;
+  extractionSource: string;
+  extractionLanguage: string;
+  extractionConfidence: number;
+  extractedCharacterCount: number;
+  extractedWordCount: number;
   candidates: IngestionMemoryCandidate[];
   suggestedMemoryIds: string[];
 };

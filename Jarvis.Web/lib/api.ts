@@ -15,8 +15,12 @@ import type {
   IngestionCandidateUpdate,
   IngestionJob,
   JarvisStatus,
+  KnowledgeCategory,
+  KnowledgeItem,
+  KnowledgeStats,
   MemoryItem,
   MemoryFormValues,
+  MemoryStats,
   PcCommandCatalogItem,
   PcCommandExecutionResult,
   TextToSpeechResult,
@@ -216,6 +220,7 @@ export const jarvisApi = {
     }),
   voiceCommands: () => request<VoiceCommandCatalogItem[]>("/api/voice/commands"),
   memory: () => request<MemoryItem[]>("/api/memory"),
+  memoryStats: () => request<MemoryStats>("/api/memory/stats"),
   searchMemory: (filters: {
     query?: string;
     category?: string;
@@ -264,6 +269,63 @@ export const jarvisApi = {
   rejectMemory: (id: string) =>
     request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}/reject`, { method: "POST" }),
   clearMemory: () => request<MemoryItem[]>("/api/memory", { method: "DELETE" }),
+  bulkApproveMemory: (memoryIds: string[]) =>
+    request<{ updated: number; memories: MemoryItem[] }>("/api/memory/bulk-approve", {
+      method: "POST",
+      body: JSON.stringify({ memoryIds })
+    }),
+  bulkRejectMemory: (memoryIds: string[]) =>
+    request<{ updated: number; memories: MemoryItem[] }>("/api/memory/bulk-reject", {
+      method: "POST",
+      body: JSON.stringify({ memoryIds })
+    }),
+  bulkDeleteMemory: (memoryIds: string[]) =>
+    request<{ removed: number; memories: MemoryItem[] }>("/api/memory/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ memoryIds })
+    }),
+  bulkUpdateMemory: (
+    memoryIds: string[],
+    values: { category?: string; importance?: number; confidence?: number; convertSuggestedToPermanent?: boolean }
+  ) =>
+    request<{ updated: number; memories: MemoryItem[] }>("/api/memory/bulk-update", {
+      method: "POST",
+      body: JSON.stringify({ memoryIds, ...values })
+    }),
+  knowledge: () => request<KnowledgeItem[]>("/api/knowledge"),
+  knowledgeStats: () => request<KnowledgeStats>("/api/knowledge/stats"),
+  searchKnowledge: (filters: {
+    query?: string;
+    category?: KnowledgeCategory | "";
+    sourceType?: string;
+    importedAfterUtc?: string;
+    importedBeforeUtc?: string;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters.query?.trim()) params.set("q", filters.query.trim());
+    if (filters.category) params.set("category", filters.category);
+    if (filters.sourceType?.trim()) params.set("sourceType", filters.sourceType.trim());
+    if (filters.importedAfterUtc) params.set("importedAfterUtc", filters.importedAfterUtc);
+    if (filters.importedBeforeUtc) params.set("importedBeforeUtc", filters.importedBeforeUtc);
+    if (filters.limit) params.set("limit", String(filters.limit));
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return request<KnowledgeItem[]>(`/api/knowledge/search${suffix}`);
+  },
+  addKnowledge: (values: {
+    title: string;
+    content: string;
+    category: KnowledgeCategory;
+    source?: string;
+    sourceFile?: string;
+    sourceType?: string;
+  }) =>
+    request<KnowledgeItem>("/api/knowledge", {
+      method: "POST",
+      body: JSON.stringify(values)
+    }),
+  deleteKnowledge: (id: string) =>
+    request<KnowledgeItem[]>(`/api/knowledge/${encodeURIComponent(id)}`, { method: "DELETE" }),
   ingestionJobs: () => request<IngestionJob[]>("/api/ingestion/jobs"),
   uploadIngestionFile: async (file: File) => {
     const formData = new FormData();
@@ -289,6 +351,17 @@ export const jarvisApi = {
     request<IngestionJob>(`/api/ingestion/jobs/${encodeURIComponent(id)}/extract`, { method: "POST" }),
   generateIngestionCandidates: (id: string) =>
     request<IngestionJob>(`/api/ingestion/jobs/${encodeURIComponent(id)}/candidates`, { method: "POST" }),
+  ingestionFileUrl: (id: string) => apiUrl(`/api/ingestion/jobs/${encodeURIComponent(id)}/file`),
+  saveIngestionAsKnowledge: (id: string, values: { title?: string; category: KnowledgeCategory }) =>
+    request<{ knowledge: KnowledgeItem; items: KnowledgeItem[] }>(`/api/ingestion/jobs/${encodeURIComponent(id)}/knowledge`, {
+      method: "POST",
+      body: JSON.stringify(values)
+    }),
+  saveIngestionAsMemory: (id: string, values: { text?: string; category?: string; memoryType?: MemoryItem["memoryType"]; importance?: number; confidence?: number }) =>
+    request<{ memory: MemoryItem; memories: MemoryItem[] }>(`/api/ingestion/jobs/${encodeURIComponent(id)}/memory`, {
+      method: "POST",
+      body: JSON.stringify(values)
+    }),
   deleteIngestionJob: (id: string) =>
     request<IngestionJob[]>(`/api/ingestion/jobs/${encodeURIComponent(id)}`, { method: "DELETE" }),
   approveIngestionCandidate: (id: string, update: IngestionCandidateUpdate) =>
@@ -299,6 +372,16 @@ export const jarvisApi = {
   rejectIngestionCandidate: (id: string) =>
     request<IngestionCandidateResult>(`/api/ingestion/candidates/${encodeURIComponent(id)}/reject`, {
       method: "POST"
+    }),
+  bulkApproveIngestionCandidates: (candidateIds: string[], values: { category?: string; importance?: number; confidence?: number }) =>
+    request<{ approved: number; jobs: IngestionJob[]; memories: MemoryItem[] }>("/api/ingestion/candidates/bulk-approve", {
+      method: "POST",
+      body: JSON.stringify({ candidateIds, ...values })
+    }),
+  bulkRejectIngestionCandidates: (candidateIds: string[]) =>
+    request<{ rejected: number; jobs: IngestionJob[] }>("/api/ingestion/candidates/bulk-reject", {
+      method: "POST",
+      body: JSON.stringify({ candidateIds })
     }),
   settings: () => request<AppSettings>("/api/settings"),
   saveSettings: (settings: AppSettings) =>

@@ -1,6 +1,8 @@
+using Jarvis.Models;
+
 namespace Jarvis.Services;
 
-public sealed class WakeWordService
+public sealed class WakeWordService : IWakeWordService
 {
     private readonly SettingsService _settingsService;
     private readonly WhisperService _whisperService;
@@ -51,6 +53,16 @@ public sealed class WakeWordService
         File.Exists(_settingsService.Current.WakeWordDetectorPath)
         && File.Exists(_settingsService.Current.WakeWordModelPath);
 
+    public WakeWordConfiguration GetConfiguration() => new()
+    {
+        Mode = _settingsService.Current.WakeWordEnabled ? WakeWordMode.WakeWord : WakeWordMode.PushToTalk,
+        Phrase = _settingsService.Current.WakeWordPhrase,
+        DetectorPath = _settingsService.Current.WakeWordDetectorPath,
+        ModelPath = _settingsService.Current.WakeWordModelPath,
+        BackgroundMonitoringEnabled = false,
+        UpdatedAtUtc = DateTime.UtcNow
+    };
+
     public WakeWordDetectionResult CheckTranscript(string transcript)
     {
         if (!_settingsService.Current.WakeWordEnabled)
@@ -84,9 +96,3 @@ public sealed class WakeWordService
         return string.Join(' ', new string(chars).Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 }
-
-public sealed record WakeWordDetectionResult(
-    bool Detected,
-    string Message,
-    string Transcript,
-    string Phrase);

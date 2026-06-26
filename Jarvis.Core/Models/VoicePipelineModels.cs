@@ -8,6 +8,36 @@ public enum VoiceMode
     Hybrid
 }
 
+public enum WakeWordMode
+{
+    Disabled,
+    PushToTalk,
+    WakeWord,
+    AlwaysListening
+}
+
+public sealed class WakeWordConfiguration
+{
+    public WakeWordMode Mode { get; set; } = WakeWordMode.PushToTalk;
+    public string Phrase { get; set; } = "jarvis";
+    public string DetectorPath { get; set; } = string.Empty;
+    public string ModelPath { get; set; } = string.Empty;
+    public bool BackgroundMonitoringEnabled { get; set; }
+    public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public interface IWakeWordService
+{
+    WakeWordConfiguration GetConfiguration();
+    WakeWordDetectionResult CheckTranscript(string transcript);
+}
+
+public sealed record WakeWordDetectionResult(
+    bool Detected,
+    string Message,
+    string Transcript,
+    string Phrase);
+
 public enum VoicePipelineState
 {
     Idle,

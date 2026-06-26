@@ -4,6 +4,7 @@ using Jarvis.ConnectedApps;
 using Jarvis.Core;
 using Jarvis.Data;
 using Jarvis.Ingestion;
+using Jarvis.Knowledge;
 using Jarvis.Memory;
 using Jarvis.Security;
 using Jarvis.Services;
@@ -17,6 +18,7 @@ public sealed class JarvisRuntime
     public required PlatformService PlatformService { get; init; }
     public required SettingsService SettingsService { get; init; }
     public required MemoryService MemoryService { get; init; }
+    public required KnowledgeService KnowledgeService { get; init; }
     public required IngestionService IngestionService { get; init; }
     public required ImageOcrService ImageOcrService { get; init; }
     public required MemoryRetrievalService MemoryRetrievalService { get; init; }

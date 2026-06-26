@@ -29,6 +29,7 @@ public sealed class PathResolver : IPathResolver
     public string IngestionUploadDirectory => Path.Combine(AppDataDirectory, "uploads", "ingestion");
     public string VoiceHistoryPath => Path.Combine(AppDataDirectory, "voice_history.json");
     public string IngestionJobsPath => Path.Combine(AppDataDirectory, "ingestion_jobs.json");
+    public string KnowledgePath => Path.Combine(AppDataDirectory, "knowledge.json");
     public string MemoryPath => Path.Combine(MemoryDirectory, "memory.json");
     public string ChatHistoryPath => Path.Combine(AppDataDirectory, "chat_history.json");
     public string ChatSessionsPath => Path.Combine(AppDataDirectory, "chat_sessions.json");

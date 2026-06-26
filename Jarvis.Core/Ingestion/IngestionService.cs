@@ -140,6 +140,11 @@ public sealed class IngestionService
         job.ExtractedText = result.ExtractedText;
         job.TextBlocks = result.TextBlocks.ToList();
         job.ErrorMessage = result.ErrorMessage;
+        job.ExtractionSource = result.ExtractionSource;
+        job.ExtractionLanguage = result.ExtractionLanguage;
+        job.ExtractionConfidence = result.ExtractionConfidence;
+        job.ExtractedCharacterCount = result.ExtractedText.Length;
+        job.ExtractedWordCount = CountWords(result.ExtractedText);
         job.UpdatedAtUtc = DateTime.UtcNow;
 
         await UpsertInMemoryAsync(job, cancellationToken);
@@ -237,6 +242,35 @@ public sealed class IngestionService
 
         await UpsertInMemoryAsync(job, cancellationToken);
         return (job, candidate);
+    }
+
+    public async Task<IReadOnlyList<(IngestionJob? Job, IngestionMemoryCandidate? Candidate, MemoryItem? Memory)>> ApproveCandidatesAsync(
+        IEnumerable<string> candidateIds,
+        string? category = null,
+        int? importance = null,
+        int? confidence = null,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new List<(IngestionJob? Job, IngestionMemoryCandidate? Candidate, MemoryItem? Memory)>();
+        foreach (var candidateId in candidateIds.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            results.Add(await ApproveCandidateAsync(candidateId, category: category, importance: importance, confidence: confidence, cancellationToken: cancellationToken));
+        }
+
+        return results;
+    }
+
+    public async Task<IReadOnlyList<(IngestionJob? Job, IngestionMemoryCandidate? Candidate)>> RejectCandidatesAsync(
+        IEnumerable<string> candidateIds,
+        CancellationToken cancellationToken = default)
+    {
+        var results = new List<(IngestionJob? Job, IngestionMemoryCandidate? Candidate)>();
+        foreach (var candidateId in candidateIds.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            results.Add(await RejectCandidateAsync(candidateId, cancellationToken));
+        }
+
+        return results;
     }
 
     public IngestionJob? Get(string id) => Find(id);
@@ -367,6 +401,16 @@ public sealed class IngestionService
         job.Candidates ??= [];
         job.TextBlocks ??= [];
         job.SuggestedMemoryIds ??= [];
+        job.ExtractionSource = string.IsNullOrWhiteSpace(job.ExtractionSource)
+            ? job.SourceType == IngestionSourceType.Image ? "OCR" : "PDF"
+            : job.ExtractionSource;
+        job.ExtractionLanguage = job.ExtractionLanguage ?? string.Empty;
+        job.ExtractedCharacterCount = job.ExtractedText?.Length ?? 0;
+        job.ExtractedWordCount = CountWords(job.ExtractedText);
+        if (job.ExtractionConfidence <= 0 && job.TextBlocks.Count > 0)
+        {
+            job.ExtractionConfidence = Math.Clamp((int)Math.Round(job.TextBlocks.Average(block => block.Confidence)), 1, 10);
+        }
         foreach (var candidate in job.Candidates)
         {
             candidate.UserId = string.IsNullOrWhiteSpace(candidate.UserId) ? job.UserId : candidate.UserId;
@@ -379,4 +423,9 @@ public sealed class IngestionService
 
         return job;
     }
+
+    private static int CountWords(string? text) =>
+        string.IsNullOrWhiteSpace(text)
+            ? 0
+            : text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length;
 }

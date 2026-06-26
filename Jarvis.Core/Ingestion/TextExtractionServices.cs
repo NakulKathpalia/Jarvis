@@ -42,6 +42,9 @@ public sealed class PdfTextExtractionService : ITextExtractionService
                 string.Empty,
                 [],
                 "PDF has no readable embedded text. OCR is required.",
+                "",
+                "",
+                0,
                 "PDF has no embedded text.");
         }
 
@@ -58,7 +61,10 @@ public sealed class PdfTextExtractionService : ITextExtractionService
             IngestionStatus.Extracted,
             text,
             [block],
-            "Embedded PDF text extracted.");
+            "Embedded PDF text extracted.",
+            "PDF",
+            "embedded",
+            block.Confidence);
     }
 
     private static IngestionExtractionResult Failed(string message) =>
@@ -203,6 +209,9 @@ public sealed class ImageOcrService : ITextExtractionService
                 string.Empty,
                 [],
                 status.Status,
+                status.Status,
+                status.Language,
+                0,
                 status.Message);
         }
 
@@ -243,6 +252,9 @@ public sealed class ImageOcrService : ITextExtractionService
                 string.Empty,
                 [],
                 "No readable text detected in image.",
+                "OCR",
+                status.Language,
+                0,
                 "OCR completed but returned no text.");
         }
 
@@ -250,8 +262,11 @@ public sealed class ImageOcrService : ITextExtractionService
             true,
             IngestionStatus.Extracted,
             text,
-            [new IngestionTextBlock { Text = text, Confidence = 5, Status = "OcrText" }],
-            "Image OCR completed.");
+            [new IngestionTextBlock { Text = text, Confidence = EstimateOcrConfidence(text), Status = "OcrText" }],
+            "Image OCR completed.",
+            "OCR",
+            status.Language,
+            EstimateOcrConfidence(text));
     }
 
     private string EffectiveLanguage =>
@@ -263,7 +278,19 @@ public sealed class ImageOcrService : ITextExtractionService
         EffectiveLanguage.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static IngestionExtractionResult Failed(string message) =>
-        new(false, IngestionStatus.ExtractionFailed, string.Empty, [], message, message);
+        new(false, IngestionStatus.ExtractionFailed, string.Empty, [], message, "", "", 0, message);
+
+    private static int EstimateOcrConfidence(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 1;
+        }
+
+        var lettersOrDigits = text.Count(char.IsLetterOrDigit);
+        var ratio = lettersOrDigits / Math.Max(1.0, text.Length);
+        return Math.Clamp((int)Math.Round(ratio * 10), 3, 9);
+    }
 
     private string ResolveTesseractExecutable()
     {

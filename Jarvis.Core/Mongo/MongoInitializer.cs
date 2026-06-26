@@ -66,6 +66,14 @@ public sealed class MongoInitializer
             ],
             cancellationToken);
 
+        await _context.Collection<KnowledgeItem>(MongoCollectionNames.Knowledge).Indexes.CreateManyAsync(
+            [
+                new CreateIndexModel<KnowledgeItem>(Builders<KnowledgeItem>.IndexKeys.Ascending("UserId").Descending(item => item.UpdatedAtUtc)),
+                new CreateIndexModel<KnowledgeItem>(Builders<KnowledgeItem>.IndexKeys.Ascending("UserId").Ascending(item => item.Category).Descending(item => item.UpdatedAtUtc)),
+                new CreateIndexModel<KnowledgeItem>(Builders<KnowledgeItem>.IndexKeys.Text(item => item.Title).Text(item => item.Content).Text(item => item.SourceFile))
+            ],
+            cancellationToken);
+
         await _context.Collection<ChatSession>(MongoCollectionNames.ChatSessions).Indexes.CreateOneAsync(
             new CreateIndexModel<ChatSession>(Builders<ChatSession>.IndexKeys.Ascending("UserId").Descending(session => session.UpdatedAtUtc)),
             cancellationToken: cancellationToken);
