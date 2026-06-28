@@ -14,6 +14,7 @@ import {
 } from "./memory/memoryForm";
 import { jarvisApi } from "@/lib/api";
 import type { KnowledgeCategory, KnowledgeItem, KnowledgeStats, MemoryFormValues, MemoryItem, MemoryStats } from "@/lib/types";
+import {LibraryExplorer} from "./library/LibraryExplorer";
 
 type MemoryPanelProps = {
   items: MemoryItem[];
@@ -271,138 +272,14 @@ export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onRej
   }
 
   return (
-    <section className="tool-panel">
-      <TopBar
-        title="Memory"
-        subtitle="Review personal memories and separate reference knowledge"
-        action={
-          <button className="danger-button" type="button" onClick={handleClear} disabled={isClearing}>
-            {isClearing ? "Clearing" : "Clear"}
-          </button>
-        }
-      />
-
-      <div className="memory-tabs">
-        <button className={activeTab === "memory" ? "active" : ""} type="button" onClick={() => setActiveTab("memory")}>
-          Memory
-        </button>
-        <button className={activeTab === "knowledge" ? "active" : ""} type="button" onClick={() => setActiveTab("knowledge")}>
-          Knowledge
-        </button>
-      </div>
-
-      {activeTab === "memory" && (
-        <>
-      <MemorySearchBar
-        query={searchQuery}
-        category={searchCategory}
-        tag={searchTag}
-        memoryType={searchMemoryType}
-        reviewStatus={searchReviewStatus}
-        minImportance={searchMinImportance}
-        minConfidence={searchMinConfidence}
-        isSearching={isSearching}
-        searchActive={searchActive}
-        onQueryChange={setSearchQuery}
-        onCategoryChange={setSearchCategory}
-        onTagChange={setSearchTag}
-        onMemoryTypeChange={setSearchMemoryType}
-        onReviewStatusChange={setSearchReviewStatus}
-        onMinImportanceChange={setSearchMinImportance}
-        onMinConfidenceChange={setSearchMinConfidence}
-        onSearch={runSearch}
-        onReset={resetSearch}
-      />
-
-      <MemoryIngestionPanel onMemoryChanged={onRefresh} />
-
-      <MemoryStatsPanel stats={memoryStats} />
-
-      <BulkMemoryToolbar
-        selectedCount={selectedMemoryIds.length}
-        category={bulkCategory}
-        importance={bulkImportance}
-        confidence={bulkConfidence}
-        disabled={isSaving}
-        onCategoryChange={setBulkCategory}
-        onImportanceChange={setBulkImportance}
-        onConfidenceChange={setBulkConfidence}
-        onApprove={() => void handleBulkAction("approve")}
-        onReject={() => void handleBulkAction("reject")}
-        onDelete={() => void handleBulkAction("delete")}
-        onUpdate={() => void handleBulkAction("update")}
-        onConvert={() => void handleBulkAction("convert")}
-      />
-      {statusMessage && <div className="control-message">{statusMessage}</div>}
-
-      <MemoryEditorForm
-        draft={draft}
-        submitLabel="Add memory"
-        isSaving={isSaving}
-        onChange={setDraft}
-        onSubmit={handleAdd}
-      />
-
-      <div className="memory-review-summary">
-        {sections.map((section) => (
-          <span key={section.title}>
-            {section.title}: <strong>{section.items.length}</strong>
-          </span>
-        ))}
-      </div>
-
-      <div className="memory-section-list">
-        {displayItems.length === 0 && <div className="list-empty">No memories saved yet.</div>}
-
-        {sections.map((section) => (
-          <MemorySection
-            key={section.title}
-            section={section}
-            collapsed={collapsedSections.includes(section.title)}
-            visibleCount={visibleCounts[section.title] ?? 20}
-            selectedIds={selectedMemoryIds}
-            expandedIds={expandedMemoryIds}
-            editing={editing}
-            isSaving={isSaving}
-            onToggleCollapsed={() => setCollapsedSections((current) => toggleValue(current, section.title))}
-            onLoadMore={() => setVisibleCounts((current) => ({ ...current, [section.title]: (current[section.title] ?? 20) + 20 }))}
-            onSelectAll={() => setSelectedMemoryIds((current) => mergeIds(current, section.items.map((item) => item.id)))}
-            onToggleSelected={(id) => setSelectedMemoryIds((current) => toggleValue(current, id))}
-            onToggleExpanded={(id) => setExpandedMemoryIds((current) => toggleValue(current, id))}
-            onEdit={(memory) => setEditing(memoryToDraft(memory))}
-            onCancelEdit={() => setEditing(null)}
-            onEditingChange={setEditing}
-            onSaveEdit={handleUpdate}
-            onDelete={handleDelete}
-            onApprove={handleApprove}
-            onReject={handleReject}
-          />
-        ))}
-      </div>
-        </>
-      )}
-
-      {activeTab === "knowledge" && (
-        <KnowledgePanel
-          items={knowledgeItems}
-          stats={knowledgeStats}
-          query={knowledgeQuery}
-          category={knowledgeCategory}
-          source={knowledgeSource}
-          from={knowledgeFrom}
-          to={knowledgeTo}
-          isSearching={isSearching}
-          onQueryChange={setKnowledgeQuery}
-          onCategoryChange={setKnowledgeCategory}
-          onSourceChange={setKnowledgeSource}
-          onFromChange={setKnowledgeFrom}
-          onToChange={setKnowledgeTo}
-          onSearch={runKnowledgeSearch}
-          onReset={resetKnowledgeSearch}
-        />
-      )}
-    </section>
-  );
+  <section className="tool-panel library-only-panel">
+    <LibraryExplorer
+      memories={items}
+      knowledgeItems={knowledgeItems}
+      ingestionJobs={[]}
+    />
+  </section>
+);
 }
 
 function MemoryStatsPanel({ stats }: { stats: MemoryStats | null }) {

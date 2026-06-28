@@ -1,0 +1,2761 @@
+=== JARVIS FULL REPO MAP ===
+
+=== FILE TREE ===
+.gitignore
+Jarvis.Agent\AgentAction.cs
+Jarvis.Agent\AgentDecision.cs
+Jarvis.Agent\AgentPlanner.cs
+Jarvis.Agent\Jarvis.Agent.csproj
+Jarvis.Core\Auth\AuthProvider.cs
+Jarvis.Core\Auth\AuthProviderInfo.cs
+Jarvis.Core\Auth\AuthProviderType.cs
+Jarvis.Core\Auth\AuthRequest.cs
+Jarvis.Core\Auth\AuthResponse.cs
+Jarvis.Core\Auth\AuthService.cs
+Jarvis.Core\Auth\AuthStatus.cs
+Jarvis.Core\Auth\AuthUser.cs
+Jarvis.Core\Auth\IAuthService.cs
+Jarvis.Core\Auth\LocalAuthService.cs
+Jarvis.Core\Auth\SignInRequest.cs
+Jarvis.Core\Auth\SignUpRequest.cs
+Jarvis.Core\ConnectedApps\ConnectedAppConnectionResult.cs
+Jarvis.Core\ConnectedApps\ConnectedAppInfo.cs
+Jarvis.Core\ConnectedApps\ConnectedAppProvider.cs
+Jarvis.Core\ConnectedApps\ConnectedAppService.cs
+Jarvis.Core\ConnectedApps\ConnectedAppStatus.cs
+Jarvis.Core\ConnectedApps\IConnectedAppConnector.cs
+Jarvis.Core\ConnectedApps\IConnectedAppService.cs
+Jarvis.Core\ConnectedApps\OAuthConnection.cs
+Jarvis.Core\Core\Assistant.cs
+Jarvis.Core\Data\chat_history.json
+Jarvis.Core\Data\ChatHistoryService.cs
+Jarvis.Core\Data\ChatSessionService.cs
+Jarvis.Core\Data\ClassifierService.cs
+Jarvis.Core\Ingestion\IngestionModels.cs
+Jarvis.Core\Ingestion\IngestionService.cs
+Jarvis.Core\Ingestion\MemoryCandidateService.cs
+Jarvis.Core\Ingestion\TextExtractionServices.cs
+Jarvis.Core\Jarvis.Core.csproj
+Jarvis.Core\Knowledge\KnowledgeSearchService.cs
+Jarvis.Core\Knowledge\KnowledgeService.cs
+Jarvis.Core\Memory\memory.json
+Jarvis.Core\Memory\MemoryClassificationService.cs
+Jarvis.Core\Memory\MemoryContextBuilder.cs
+Jarvis.Core\Memory\MemoryRankingService.cs
+Jarvis.Core\Memory\MemoryRetrievalOptions.cs
+Jarvis.Core\Memory\MemoryRetrievalResult.cs
+Jarvis.Core\Memory\MemoryRetrievalService.cs
+Jarvis.Core\Memory\MemoryReviewService.cs
+Jarvis.Core\Memory\MemoryScoringService.cs
+Jarvis.Core\Memory\MemorySearchCriteria.cs
+Jarvis.Core\Memory\MemorySearchService.cs
+Jarvis.Core\Memory\MemoryService.cs
+Jarvis.Core\Migrations\FileStorageMigrationPaths.cs
+Jarvis.Core\Migrations\FileStorageMigrationService.cs
+Jarvis.Core\Migrations\MigrationRecord.cs
+Jarvis.Core\Models\AppSettings.cs
+Jarvis.Core\Models\ChatMessage.cs
+Jarvis.Core\Models\ChatSessionModels.cs
+Jarvis.Core\Models\DiagnosticsModels.cs
+Jarvis.Core\Models\InteractionLogModels.cs
+Jarvis.Core\Models\KnowledgeItem.cs
+Jarvis.Core\Models\MemoryItem.cs
+Jarvis.Core\Models\PcCommandModels.cs
+Jarvis.Core\Models\UserSettingDocument.cs
+Jarvis.Core\Models\VoicePipelineModels.cs
+Jarvis.Core\Mongo\MongoCollectionNames.cs
+Jarvis.Core\Mongo\MongoContext.cs
+Jarvis.Core\Mongo\MongoDocumentConventions.cs
+Jarvis.Core\Mongo\MongoInitializer.cs
+Jarvis.Core\Mongo\MongoOptions.cs
+Jarvis.Core\Repositories\IAuditLogRepository.cs
+Jarvis.Core\Repositories\IChatHistoryRepository.cs
+Jarvis.Core\Repositories\IChatRepository.cs
+Jarvis.Core\Repositories\ICommandHistoryRepository.cs
+Jarvis.Core\Repositories\IConnectedAppRepository.cs
+Jarvis.Core\Repositories\IDeviceRepository.cs
+Jarvis.Core\Repositories\IIngestionRepository.cs
+Jarvis.Core\Repositories\IKnowledgeRepository.cs
+Jarvis.Core\Repositories\IMemoryRepository.cs
+Jarvis.Core\Repositories\IMigrationRepository.cs
+Jarvis.Core\Repositories\ISettingsRepository.cs
+Jarvis.Core\Repositories\IUserRepository.cs
+Jarvis.Core\Repositories\IUserSessionRepository.cs
+Jarvis.Core\Repositories\IVoiceHistoryRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoAuditLogRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoChatHistoryRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoChatRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoCommandHistoryRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoConnectedAppRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoDeviceRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoIngestionRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoKnowledgeRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoMemoryRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoMigrationRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoSettingsRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoUserRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoUserSessionRepository.cs
+Jarvis.Core\Repositories\Mongo\MongoVoiceHistoryRepository.cs
+Jarvis.Core\Security\AuditLogger.cs
+Jarvis.Core\Security\IAuthenticationProvider.cs
+Jarvis.Core\Security\IAuthorizationService.cs
+Jarvis.Core\Security\InputValidationResult.cs
+Jarvis.Core\Security\InputValidator.cs
+Jarvis.Core\Security\IRateLimiter.cs
+Jarvis.Core\Security\PermissionDecision.cs
+Jarvis.Core\Security\PermissionDefinition.cs
+Jarvis.Core\Security\PermissionDefinitions.cs
+Jarvis.Core\Security\PermissionEvaluationRequest.cs
+Jarvis.Core\Security\PermissionEvaluationResult.cs
+Jarvis.Core\Security\PermissionGroups.cs
+Jarvis.Core\Security\PermissionResolver.cs
+Jarvis.Core\Security\PermissionService.cs
+Jarvis.Core\Security\ResolvedPermissions.cs
+Jarvis.Core\Security\RoleDefinition.cs
+Jarvis.Core\Security\RoleDefinitions.cs
+Jarvis.Core\Security\SecurityAuditResult.cs
+Jarvis.Core\Security\SecurityDecision.cs
+Jarvis.Core\Security\SecurityRequest.cs
+Jarvis.Core\Security\SecurityRiskLevel.cs
+Jarvis.Core\Security\SecurityService.cs
+Jarvis.Core\Services\InteractionLogService.cs
+Jarvis.Core\Services\JarvisInputNormalizer.cs
+Jarvis.Core\Services\JarvisPersonalityService.cs
+Jarvis.Core\Services\OllamaService.cs
+Jarvis.Core\Services\SettingsService.cs
+Jarvis.Core\Services\SettingsValidationService.cs
+Jarvis.Core\Users\DeviceRecord.cs
+Jarvis.Core\Users\JarvisUserContext.cs
+Jarvis.Core\Users\SessionType.cs
+Jarvis.Core\Users\UserAccount.cs
+Jarvis.Core\Users\UserRole.cs
+Jarvis.Core\Users\UserSession.cs
+Jarvis.sln
+Jarvis.Tools\Commands\AgentCommand.cs
+Jarvis.Tools\Commands\AppCommandService.cs
+Jarvis.Tools\Commands\BasicCommand.cs
+Jarvis.Tools\Commands\CommandManager.cs
+Jarvis.Tools\Commands\Commands.cs
+Jarvis.Tools\Commands\FileCommand.cs
+Jarvis.Tools\Commands\HelpCommand.cs
+Jarvis.Tools\Commands\ICommand.cs
+Jarvis.Tools\Commands\ICommandWithResult.cs
+Jarvis.Tools\Commands\MemoryCommand.cs
+Jarvis.Tools\Commands\SettingsCommandService.cs
+Jarvis.Tools\Jarvis.Tools.csproj
+Jarvis.Tools\Services\CommandLogService.cs
+Jarvis.Tools\Services\CommandRiskClassifier.cs
+Jarvis.Tools\Services\CommandSafetyService.cs
+Jarvis.Tools\Services\FileIndexService.cs
+Jarvis.Tools\Services\InstalledAppService.cs
+Jarvis.Tools\Services\IPcControlService.cs
+Jarvis.Tools\Services\PcCommandParser.cs
+Jarvis.Tools\Services\PcCommandService.cs
+Jarvis.Tools\Services\WindowsPcControlService.cs
+Jarvis.Web\app\globals.css
+Jarvis.Web\app\layout.tsx
+Jarvis.Web\app\page.tsx
+Jarvis.Web\components\ActivityLogPanel.tsx
+Jarvis.Web\components\AppLayout.tsx
+Jarvis.Web\components\AppShell.tsx
+Jarvis.Web\components\AuthPanel.tsx
+Jarvis.Web\components\ChatPanel.tsx
+Jarvis.Web\components\Composer.tsx
+Jarvis.Web\components\ConnectedAppsPanel.tsx
+Jarvis.Web\components\ControlPanel.tsx
+Jarvis.Web\components\DiagnosticsPanel.tsx
+Jarvis.Web\components\files\fileFormatting.ts
+Jarvis.Web\components\files\FileResultCard.tsx
+Jarvis.Web\components\FilesPanel.tsx
+Jarvis.Web\components\JarvisDialog.tsx
+Jarvis.Web\components\JarvisStatusPanel.tsx
+Jarvis.Web\components\memory\MemoryCard.tsx
+Jarvis.Web\components\memory\MemoryEditorForm.tsx
+Jarvis.Web\components\memory\memoryForm.ts
+Jarvis.Web\components\memory\MemoryIngestionPanel.tsx
+Jarvis.Web\components\memory\MemorySearchBar.tsx
+Jarvis.Web\components\MemoryPanel.tsx
+Jarvis.Web\components\MessageList.tsx
+Jarvis.Web\components\SecurityPanel.tsx
+Jarvis.Web\components\SettingsPanel.tsx
+Jarvis.Web\components\Sidebar.tsx
+Jarvis.Web\components\StatusCard.tsx
+Jarvis.Web\components\Toast.tsx
+Jarvis.Web\components\ToolsPanel.tsx
+Jarvis.Web\components\TopBar.tsx
+Jarvis.Web\components\TopNavbar.tsx
+Jarvis.Web\components\ui\AssistantActionCard.tsx
+Jarvis.Web\components\ui\AssistantOrb.tsx
+Jarvis.Web\components\ui\ChatBubble.tsx
+Jarvis.Web\components\ui\ChatCard.tsx
+Jarvis.Web\components\ui\PanelCard.tsx
+Jarvis.Web\components\ui\PromptChip.tsx
+Jarvis.Web\components\ui\StatusBadge.tsx
+Jarvis.Web\components\UserMenu.tsx
+Jarvis.Web\components\VoiceCommandHelpPanel.tsx
+Jarvis.Web\components\VoiceConfirmationCard.tsx
+Jarvis.Web\components\VoiceLoopPanel.tsx
+Jarvis.Web\components\VoicePanel.tsx
+Jarvis.Web\components\VoiceRecorderButton.tsx
+Jarvis.Web\components\WakeWordPanel.tsx
+Jarvis.Web\lib\api.ts
+Jarvis.Web\lib\authApi.ts
+Jarvis.Web\lib\connectedAppsApi.ts
+Jarvis.Web\lib\theme.ts
+Jarvis.Web\lib\types.ts
+Jarvis.Web\lib\voiceCapture.ts
+Jarvis.Web\next.config.mjs
+Jarvis.Web\next-env.d.ts
+Jarvis.Web\package.json
+Jarvis.Web\package-lock.json
+Jarvis.Web\postcss.config.mjs
+Jarvis.Web\scripts\publish-wwwroot.mjs
+Jarvis.Web\tailwind.config.ts
+Jarvis.Web\tsconfig.json
+Jarvis.Web\tsconfig.tsbuildinfo
+Jarvis\Admin\.gitkeep
+Jarvis\App\CommandRouter.cs
+Jarvis\appsettings.json
+Jarvis\Connectors\Abstractions\.gitkeep
+Jarvis\Connectors\Providers\.gitkeep
+Jarvis\Connectors\Registry\.gitkeep
+Jarvis\Endpoints\EndpointBootstrapper.cs
+Jarvis\Endpoints\EndpointContracts.cs
+Jarvis\Infrastructure\.gitkeep
+Jarvis\Jarvis.csproj
+Jarvis\Program.cs
+Jarvis\Server\.gitkeep
+Jarvis\Services\IPathResolver.cs
+Jarvis\Services\PathResolver.cs
+Jarvis\Services\PiperService.cs
+Jarvis\Services\PlatformService.cs
+Jarvis\Services\VoiceCommandService.cs
+Jarvis\Services\VoiceHistoryService.cs
+Jarvis\Services\VoicePipelineService.cs
+Jarvis\Services\WakeWordService.cs
+Jarvis\Services\WhisperService.cs
+Jarvis\Startup\CliBootstrapper.cs
+Jarvis\Startup\JarvisApplication.cs
+Jarvis\Startup\JarvisApplicationBuilder.cs
+Jarvis\Startup\JarvisRuntime.cs
+Jarvis\Voice\Models\SpeechToTextResult.cs
+Jarvis\Voice\SpeechService.cs
+Jarvis\Voice\SpeechToTextService.cs
+Jarvis\Voice\TextToSpeechService.cs
+Jarvis\Voice\VoiceActivityDetector.cs
+Jarvis\Voice\VoiceCommandProcessor.cs
+Jarvis\Voice\VoiceSettingsService.cs
+Jarvis\Voice\WakeWordService.cs
+jarvis-full-map.txt
+jarvis-web-key-files.txt
+jarvis-web-map.txt
+models\piper\en_US-lessac-medium.onnx
+models\piper\en_US-lessac-medium.onnx.json
+models\whisper\ggml-base.en.bin
+README.md
+screenshots\jarvis-ui-v2-chat.png
+screenshots\jarvis-ui-v2-library-dialog.png
+screenshots\jarvis-ui-v2-mobile.png
+tools\piper\piper\espeak-ng.dll
+tools\piper\piper\espeak-ng-data\af_dict
+tools\piper\piper\espeak-ng-data\am_dict
+tools\piper\piper\espeak-ng-data\an_dict
+tools\piper\piper\espeak-ng-data\ar_dict
+tools\piper\piper\espeak-ng-data\as_dict
+tools\piper\piper\espeak-ng-data\az_dict
+tools\piper\piper\espeak-ng-data\ba_dict
+tools\piper\piper\espeak-ng-data\be_dict
+tools\piper\piper\espeak-ng-data\bg_dict
+tools\piper\piper\espeak-ng-data\bn_dict
+tools\piper\piper\espeak-ng-data\bpy_dict
+tools\piper\piper\espeak-ng-data\bs_dict
+tools\piper\piper\espeak-ng-data\ca_dict
+tools\piper\piper\espeak-ng-data\chr_dict
+tools\piper\piper\espeak-ng-data\cmn_dict
+tools\piper\piper\espeak-ng-data\cs_dict
+tools\piper\piper\espeak-ng-data\cv_dict
+tools\piper\piper\espeak-ng-data\cy_dict
+tools\piper\piper\espeak-ng-data\da_dict
+tools\piper\piper\espeak-ng-data\de_dict
+tools\piper\piper\espeak-ng-data\el_dict
+tools\piper\piper\espeak-ng-data\en_dict
+tools\piper\piper\espeak-ng-data\eo_dict
+tools\piper\piper\espeak-ng-data\es_dict
+tools\piper\piper\espeak-ng-data\et_dict
+tools\piper\piper\espeak-ng-data\eu_dict
+tools\piper\piper\espeak-ng-data\fa_dict
+tools\piper\piper\espeak-ng-data\fi_dict
+tools\piper\piper\espeak-ng-data\fr_dict
+tools\piper\piper\espeak-ng-data\ga_dict
+tools\piper\piper\espeak-ng-data\gd_dict
+tools\piper\piper\espeak-ng-data\gn_dict
+tools\piper\piper\espeak-ng-data\grc_dict
+tools\piper\piper\espeak-ng-data\gu_dict
+tools\piper\piper\espeak-ng-data\hak_dict
+tools\piper\piper\espeak-ng-data\haw_dict
+tools\piper\piper\espeak-ng-data\he_dict
+tools\piper\piper\espeak-ng-data\hi_dict
+tools\piper\piper\espeak-ng-data\hr_dict
+tools\piper\piper\espeak-ng-data\ht_dict
+tools\piper\piper\espeak-ng-data\hu_dict
+tools\piper\piper\espeak-ng-data\hy_dict
+tools\piper\piper\espeak-ng-data\ia_dict
+tools\piper\piper\espeak-ng-data\id_dict
+tools\piper\piper\espeak-ng-data\intonations
+tools\piper\piper\espeak-ng-data\io_dict
+tools\piper\piper\espeak-ng-data\is_dict
+tools\piper\piper\espeak-ng-data\it_dict
+tools\piper\piper\espeak-ng-data\ja_dict
+tools\piper\piper\espeak-ng-data\jbo_dict
+tools\piper\piper\espeak-ng-data\ka_dict
+tools\piper\piper\espeak-ng-data\kk_dict
+tools\piper\piper\espeak-ng-data\kl_dict
+tools\piper\piper\espeak-ng-data\kn_dict
+tools\piper\piper\espeak-ng-data\ko_dict
+tools\piper\piper\espeak-ng-data\kok_dict
+tools\piper\piper\espeak-ng-data\ku_dict
+tools\piper\piper\espeak-ng-data\ky_dict
+tools\piper\piper\espeak-ng-data\la_dict
+tools\piper\piper\espeak-ng-data\lang\aav\vi
+tools\piper\piper\espeak-ng-data\lang\aav\vi-VN-x-central
+tools\piper\piper\espeak-ng-data\lang\aav\vi-VN-x-south
+tools\piper\piper\espeak-ng-data\lang\art\eo
+tools\piper\piper\espeak-ng-data\lang\art\ia
+tools\piper\piper\espeak-ng-data\lang\art\io
+tools\piper\piper\espeak-ng-data\lang\art\jbo
+tools\piper\piper\espeak-ng-data\lang\art\lfn
+tools\piper\piper\espeak-ng-data\lang\art\piqd
+tools\piper\piper\espeak-ng-data\lang\art\py
+tools\piper\piper\espeak-ng-data\lang\art\qdb
+tools\piper\piper\espeak-ng-data\lang\art\qya
+tools\piper\piper\espeak-ng-data\lang\art\sjn
+tools\piper\piper\espeak-ng-data\lang\azc\nci
+tools\piper\piper\espeak-ng-data\lang\bat\lt
+tools\piper\piper\espeak-ng-data\lang\bat\ltg
+tools\piper\piper\espeak-ng-data\lang\bat\lv
+tools\piper\piper\espeak-ng-data\lang\bnt\sw
+tools\piper\piper\espeak-ng-data\lang\bnt\tn
+tools\piper\piper\espeak-ng-data\lang\ccs\ka
+tools\piper\piper\espeak-ng-data\lang\cel\cy
+tools\piper\piper\espeak-ng-data\lang\cel\ga
+tools\piper\piper\espeak-ng-data\lang\cel\gd
+tools\piper\piper\espeak-ng-data\lang\cus\om
+tools\piper\piper\espeak-ng-data\lang\dra\kn
+tools\piper\piper\espeak-ng-data\lang\dra\ml
+tools\piper\piper\espeak-ng-data\lang\dra\ta
+tools\piper\piper\espeak-ng-data\lang\dra\te
+tools\piper\piper\espeak-ng-data\lang\esx\kl
+tools\piper\piper\espeak-ng-data\lang\eu
+tools\piper\piper\espeak-ng-data\lang\gmq\da
+tools\piper\piper\espeak-ng-data\lang\gmq\is
+tools\piper\piper\espeak-ng-data\lang\gmq\nb
+tools\piper\piper\espeak-ng-data\lang\gmq\sv
+tools\piper\piper\espeak-ng-data\lang\gmw\af
+tools\piper\piper\espeak-ng-data\lang\gmw\de
+tools\piper\piper\espeak-ng-data\lang\gmw\en
+tools\piper\piper\espeak-ng-data\lang\gmw\en-029
+tools\piper\piper\espeak-ng-data\lang\gmw\en-GB-scotland
+tools\piper\piper\espeak-ng-data\lang\gmw\en-GB-x-gbclan
+tools\piper\piper\espeak-ng-data\lang\gmw\en-GB-x-gbcwmd
+tools\piper\piper\espeak-ng-data\lang\gmw\en-GB-x-rp
+tools\piper\piper\espeak-ng-data\lang\gmw\en-US
+tools\piper\piper\espeak-ng-data\lang\gmw\en-US-nyc
+tools\piper\piper\espeak-ng-data\lang\gmw\lb
+tools\piper\piper\espeak-ng-data\lang\gmw\nl
+tools\piper\piper\espeak-ng-data\lang\grk\el
+tools\piper\piper\espeak-ng-data\lang\grk\grc
+tools\piper\piper\espeak-ng-data\lang\inc\as
+tools\piper\piper\espeak-ng-data\lang\inc\bn
+tools\piper\piper\espeak-ng-data\lang\inc\bpy
+tools\piper\piper\espeak-ng-data\lang\inc\gu
+tools\piper\piper\espeak-ng-data\lang\inc\hi
+tools\piper\piper\espeak-ng-data\lang\inc\kok
+tools\piper\piper\espeak-ng-data\lang\inc\mr
+tools\piper\piper\espeak-ng-data\lang\inc\ne
+tools\piper\piper\espeak-ng-data\lang\inc\or
+tools\piper\piper\espeak-ng-data\lang\inc\pa
+tools\piper\piper\espeak-ng-data\lang\inc\sd
+tools\piper\piper\espeak-ng-data\lang\inc\si
+tools\piper\piper\espeak-ng-data\lang\inc\ur
+tools\piper\piper\espeak-ng-data\lang\ine\hy
+tools\piper\piper\espeak-ng-data\lang\ine\hyw
+tools\piper\piper\espeak-ng-data\lang\ine\sq
+tools\piper\piper\espeak-ng-data\lang\ira\fa
+tools\piper\piper\espeak-ng-data\lang\ira\fa-Latn
+tools\piper\piper\espeak-ng-data\lang\ira\ku
+tools\piper\piper\espeak-ng-data\lang\iro\chr
+tools\piper\piper\espeak-ng-data\lang\itc\la
+tools\piper\piper\espeak-ng-data\lang\jpx\ja
+tools\piper\piper\espeak-ng-data\lang\ko
+tools\piper\piper\espeak-ng-data\lang\map\haw
+tools\piper\piper\espeak-ng-data\lang\miz\mto
+tools\piper\piper\espeak-ng-data\lang\myn\quc
+tools\piper\piper\espeak-ng-data\lang\poz\id
+tools\piper\piper\espeak-ng-data\lang\poz\mi
+tools\piper\piper\espeak-ng-data\lang\poz\ms
+tools\piper\piper\espeak-ng-data\lang\qu
+tools\piper\piper\espeak-ng-data\lang\roa\an
+tools\piper\piper\espeak-ng-data\lang\roa\ca
+tools\piper\piper\espeak-ng-data\lang\roa\es
+tools\piper\piper\espeak-ng-data\lang\roa\es-419
+tools\piper\piper\espeak-ng-data\lang\roa\fr
+tools\piper\piper\espeak-ng-data\lang\roa\fr-BE
+tools\piper\piper\espeak-ng-data\lang\roa\fr-CH
+tools\piper\piper\espeak-ng-data\lang\roa\ht
+tools\piper\piper\espeak-ng-data\lang\roa\it
+tools\piper\piper\espeak-ng-data\lang\roa\pap
+tools\piper\piper\espeak-ng-data\lang\roa\pt
+tools\piper\piper\espeak-ng-data\lang\roa\pt-BR
+tools\piper\piper\espeak-ng-data\lang\roa\ro
+tools\piper\piper\espeak-ng-data\lang\sai\gn
+tools\piper\piper\espeak-ng-data\lang\sem\am
+tools\piper\piper\espeak-ng-data\lang\sem\ar
+tools\piper\piper\espeak-ng-data\lang\sem\he
+tools\piper\piper\espeak-ng-data\lang\sem\mt
+tools\piper\piper\espeak-ng-data\lang\sit\cmn
+tools\piper\piper\espeak-ng-data\lang\sit\cmn-Latn-pinyin
+tools\piper\piper\espeak-ng-data\lang\sit\hak
+tools\piper\piper\espeak-ng-data\lang\sit\my
+tools\piper\piper\espeak-ng-data\lang\sit\yue
+tools\piper\piper\espeak-ng-data\lang\sit\yue-Latn-jyutping
+tools\piper\piper\espeak-ng-data\lang\tai\shn
+tools\piper\piper\espeak-ng-data\lang\tai\th
+tools\piper\piper\espeak-ng-data\lang\trk\az
+tools\piper\piper\espeak-ng-data\lang\trk\ba
+tools\piper\piper\espeak-ng-data\lang\trk\cv
+tools\piper\piper\espeak-ng-data\lang\trk\kk
+tools\piper\piper\espeak-ng-data\lang\trk\ky
+tools\piper\piper\espeak-ng-data\lang\trk\nog
+tools\piper\piper\espeak-ng-data\lang\trk\tk
+tools\piper\piper\espeak-ng-data\lang\trk\tr
+tools\piper\piper\espeak-ng-data\lang\trk\tt
+tools\piper\piper\espeak-ng-data\lang\trk\ug
+tools\piper\piper\espeak-ng-data\lang\trk\uz
+tools\piper\piper\espeak-ng-data\lang\urj\et
+tools\piper\piper\espeak-ng-data\lang\urj\fi
+tools\piper\piper\espeak-ng-data\lang\urj\hu
+tools\piper\piper\espeak-ng-data\lang\urj\smj
+tools\piper\piper\espeak-ng-data\lang\zle\be
+tools\piper\piper\espeak-ng-data\lang\zle\ru
+tools\piper\piper\espeak-ng-data\lang\zle\ru-cl
+tools\piper\piper\espeak-ng-data\lang\zle\ru-LV
+tools\piper\piper\espeak-ng-data\lang\zle\uk
+tools\piper\piper\espeak-ng-data\lang\zls\bg
+tools\piper\piper\espeak-ng-data\lang\zls\bs
+tools\piper\piper\espeak-ng-data\lang\zls\hr
+tools\piper\piper\espeak-ng-data\lang\zls\mk
+tools\piper\piper\espeak-ng-data\lang\zls\sl
+tools\piper\piper\espeak-ng-data\lang\zls\sr
+tools\piper\piper\espeak-ng-data\lang\zlw\cs
+tools\piper\piper\espeak-ng-data\lang\zlw\pl
+tools\piper\piper\espeak-ng-data\lang\zlw\sk
+tools\piper\piper\espeak-ng-data\lb_dict
+tools\piper\piper\espeak-ng-data\lfn_dict
+tools\piper\piper\espeak-ng-data\lt_dict
+tools\piper\piper\espeak-ng-data\lv_dict
+tools\piper\piper\espeak-ng-data\mi_dict
+tools\piper\piper\espeak-ng-data\mk_dict
+tools\piper\piper\espeak-ng-data\ml_dict
+tools\piper\piper\espeak-ng-data\mr_dict
+tools\piper\piper\espeak-ng-data\ms_dict
+tools\piper\piper\espeak-ng-data\mt_dict
+tools\piper\piper\espeak-ng-data\mto_dict
+tools\piper\piper\espeak-ng-data\my_dict
+tools\piper\piper\espeak-ng-data\nci_dict
+tools\piper\piper\espeak-ng-data\ne_dict
+tools\piper\piper\espeak-ng-data\nl_dict
+tools\piper\piper\espeak-ng-data\no_dict
+tools\piper\piper\espeak-ng-data\nog_dict
+tools\piper\piper\espeak-ng-data\om_dict
+tools\piper\piper\espeak-ng-data\or_dict
+tools\piper\piper\espeak-ng-data\pa_dict
+tools\piper\piper\espeak-ng-data\pap_dict
+tools\piper\piper\espeak-ng-data\phondata
+tools\piper\piper\espeak-ng-data\phondata-manifest
+tools\piper\piper\espeak-ng-data\phonindex
+tools\piper\piper\espeak-ng-data\phontab
+tools\piper\piper\espeak-ng-data\piqd_dict
+tools\piper\piper\espeak-ng-data\pl_dict
+tools\piper\piper\espeak-ng-data\pt_dict
+tools\piper\piper\espeak-ng-data\py_dict
+tools\piper\piper\espeak-ng-data\qdb_dict
+tools\piper\piper\espeak-ng-data\qu_dict
+tools\piper\piper\espeak-ng-data\quc_dict
+tools\piper\piper\espeak-ng-data\qya_dict
+tools\piper\piper\espeak-ng-data\ro_dict
+tools\piper\piper\espeak-ng-data\ru_dict
+tools\piper\piper\espeak-ng-data\sd_dict
+tools\piper\piper\espeak-ng-data\shn_dict
+tools\piper\piper\espeak-ng-data\si_dict
+tools\piper\piper\espeak-ng-data\sjn_dict
+tools\piper\piper\espeak-ng-data\sk_dict
+tools\piper\piper\espeak-ng-data\sl_dict
+tools\piper\piper\espeak-ng-data\smj_dict
+tools\piper\piper\espeak-ng-data\sq_dict
+tools\piper\piper\espeak-ng-data\sr_dict
+tools\piper\piper\espeak-ng-data\sv_dict
+tools\piper\piper\espeak-ng-data\sw_dict
+tools\piper\piper\espeak-ng-data\ta_dict
+tools\piper\piper\espeak-ng-data\te_dict
+tools\piper\piper\espeak-ng-data\th_dict
+tools\piper\piper\espeak-ng-data\tk_dict
+tools\piper\piper\espeak-ng-data\tn_dict
+tools\piper\piper\espeak-ng-data\tr_dict
+tools\piper\piper\espeak-ng-data\tt_dict
+tools\piper\piper\espeak-ng-data\ug_dict
+tools\piper\piper\espeak-ng-data\uk_dict
+tools\piper\piper\espeak-ng-data\ur_dict
+tools\piper\piper\espeak-ng-data\uz_dict
+tools\piper\piper\espeak-ng-data\vi_dict
+tools\piper\piper\espeak-ng-data\voices\!v\adam
+tools\piper\piper\espeak-ng-data\voices\!v\Alex
+tools\piper\piper\espeak-ng-data\voices\!v\Alicia
+tools\piper\piper\espeak-ng-data\voices\!v\Andrea
+tools\piper\piper\espeak-ng-data\voices\!v\Andy
+tools\piper\piper\espeak-ng-data\voices\!v\anika
+tools\piper\piper\espeak-ng-data\voices\!v\anikaRobot
+tools\piper\piper\espeak-ng-data\voices\!v\Annie
+tools\piper\piper\espeak-ng-data\voices\!v\announcer
+tools\piper\piper\espeak-ng-data\voices\!v\antonio
+tools\piper\piper\espeak-ng-data\voices\!v\AnxiousAndy
+tools\piper\piper\espeak-ng-data\voices\!v\aunty
+tools\piper\piper\espeak-ng-data\voices\!v\belinda
+tools\piper\piper\espeak-ng-data\voices\!v\benjamin
+tools\piper\piper\espeak-ng-data\voices\!v\boris
+tools\piper\piper\espeak-ng-data\voices\!v\caleb
+tools\piper\piper\espeak-ng-data\voices\!v\croak
+tools\piper\piper\espeak-ng-data\voices\!v\david
+tools\piper\piper\espeak-ng-data\voices\!v\Demonic
+tools\piper\piper\espeak-ng-data\voices\!v\Denis
+tools\piper\piper\espeak-ng-data\voices\!v\Diogo
+tools\piper\piper\espeak-ng-data\voices\!v\ed
+tools\piper\piper\espeak-ng-data\voices\!v\edward
+tools\piper\piper\espeak-ng-data\voices\!v\edward2
+tools\piper\piper\espeak-ng-data\voices\!v\f1
+tools\piper\piper\espeak-ng-data\voices\!v\f2
+tools\piper\piper\espeak-ng-data\voices\!v\f3
+tools\piper\piper\espeak-ng-data\voices\!v\f4
+tools\piper\piper\espeak-ng-data\voices\!v\f5
+tools\piper\piper\espeak-ng-data\voices\!v\fast
+tools\piper\piper\espeak-ng-data\voices\!v\Gene
+tools\piper\piper\espeak-ng-data\voices\!v\Gene2
+tools\piper\piper\espeak-ng-data\voices\!v\grandma
+tools\piper\piper\espeak-ng-data\voices\!v\grandpa
+tools\piper\piper\espeak-ng-data\voices\!v\gustave
+tools\piper\piper\espeak-ng-data\voices\!v\Henrique
+tools\piper\piper\espeak-ng-data\voices\!v\Hugo
+tools\piper\piper\espeak-ng-data\voices\!v\ian
+tools\piper\piper\espeak-ng-data\voices\!v\iven
+tools\piper\piper\espeak-ng-data\voices\!v\iven2
+tools\piper\piper\espeak-ng-data\voices\!v\iven3
+tools\piper\piper\espeak-ng-data\voices\!v\iven4
+tools\piper\piper\espeak-ng-data\voices\!v\Jacky
+tools\piper\piper\espeak-ng-data\voices\!v\john
+tools\piper\piper\espeak-ng-data\voices\!v\kaukovalta
+tools\piper\piper\espeak-ng-data\voices\!v\klatt
+tools\piper\piper\espeak-ng-data\voices\!v\klatt2
+tools\piper\piper\espeak-ng-data\voices\!v\klatt3
+tools\piper\piper\espeak-ng-data\voices\!v\klatt4
+tools\piper\piper\espeak-ng-data\voices\!v\klatt5
+tools\piper\piper\espeak-ng-data\voices\!v\klatt6
+tools\piper\piper\espeak-ng-data\voices\!v\Lee
+tools\piper\piper\espeak-ng-data\voices\!v\linda
+tools\piper\piper\espeak-ng-data\voices\!v\m1
+tools\piper\piper\espeak-ng-data\voices\!v\m2
+tools\piper\piper\espeak-ng-data\voices\!v\m3
+tools\piper\piper\espeak-ng-data\voices\!v\m4
+tools\piper\piper\espeak-ng-data\voices\!v\m5
+tools\piper\piper\espeak-ng-data\voices\!v\m6
+tools\piper\piper\espeak-ng-data\voices\!v\m7
+tools\piper\piper\espeak-ng-data\voices\!v\m8
+tools\piper\piper\espeak-ng-data\voices\!v\marcelo
+tools\piper\piper\espeak-ng-data\voices\!v\Marco
+tools\piper\piper\espeak-ng-data\voices\!v\Mario
+tools\piper\piper\espeak-ng-data\voices\!v\max
+tools\piper\piper\espeak-ng-data\voices\!v\Michael
+tools\piper\piper\espeak-ng-data\voices\!v\michel
+tools\piper\piper\espeak-ng-data\voices\!v\miguel
+tools\piper\piper\espeak-ng-data\voices\!v\Mike
+tools\piper\piper\espeak-ng-data\voices\!v\mike2
+tools\piper\piper\espeak-ng-data\voices\!v\Mr serious
+tools\piper\piper\espeak-ng-data\voices\!v\Nguyen
+tools\piper\piper\espeak-ng-data\voices\!v\norbert
+tools\piper\piper\espeak-ng-data\voices\!v\pablo
+tools\piper\piper\espeak-ng-data\voices\!v\paul
+tools\piper\piper\espeak-ng-data\voices\!v\pedro
+tools\piper\piper\espeak-ng-data\voices\!v\quincy
+tools\piper\piper\espeak-ng-data\voices\!v\Reed
+tools\piper\piper\espeak-ng-data\voices\!v\RicishayMax
+tools\piper\piper\espeak-ng-data\voices\!v\RicishayMax2
+tools\piper\piper\espeak-ng-data\voices\!v\RicishayMax3
+tools\piper\piper\espeak-ng-data\voices\!v\rob
+tools\piper\piper\espeak-ng-data\voices\!v\robert
+tools\piper\piper\espeak-ng-data\voices\!v\robosoft
+tools\piper\piper\espeak-ng-data\voices\!v\robosoft2
+tools\piper\piper\espeak-ng-data\voices\!v\robosoft3
+tools\piper\piper\espeak-ng-data\voices\!v\robosoft4
+tools\piper\piper\espeak-ng-data\voices\!v\robosoft5
+tools\piper\piper\espeak-ng-data\voices\!v\robosoft6
+tools\piper\piper\espeak-ng-data\voices\!v\robosoft7
+tools\piper\piper\espeak-ng-data\voices\!v\robosoft8
+tools\piper\piper\espeak-ng-data\voices\!v\sandro
+tools\piper\piper\espeak-ng-data\voices\!v\shelby
+tools\piper\piper\espeak-ng-data\voices\!v\steph
+tools\piper\piper\espeak-ng-data\voices\!v\steph2
+tools\piper\piper\espeak-ng-data\voices\!v\steph3
+tools\piper\piper\espeak-ng-data\voices\!v\Storm
+tools\piper\piper\espeak-ng-data\voices\!v\travis
+tools\piper\piper\espeak-ng-data\voices\!v\Tweaky
+tools\piper\piper\espeak-ng-data\voices\!v\UniRobot
+tools\piper\piper\espeak-ng-data\voices\!v\victor
+tools\piper\piper\espeak-ng-data\voices\!v\whisper
+tools\piper\piper\espeak-ng-data\voices\!v\whisperf
+tools\piper\piper\espeak-ng-data\voices\!v\zac
+tools\piper\piper\espeak-ng-data\yue_dict
+tools\piper\piper\libtashkeel_model.ort
+tools\piper\piper\onnxruntime.dll
+tools\piper\piper\onnxruntime_providers_shared.dll
+tools\piper\piper\piper.exe
+tools\piper\piper\piper_phonemize.dll
+tools\whisper.cpp\Release\bench.exe
+tools\whisper.cpp\Release\command.exe
+tools\whisper.cpp\Release\ggml.dll
+tools\whisper.cpp\Release\ggml-base.dll
+tools\whisper.cpp\Release\ggml-cpu.dll
+tools\whisper.cpp\Release\main.exe
+tools\whisper.cpp\Release\SDL2.dll
+tools\whisper.cpp\Release\stream.exe
+tools\whisper.cpp\Release\test-common-utf8.exe
+tools\whisper.cpp\Release\test-vad.exe
+tools\whisper.cpp\Release\test-vad-full.exe
+tools\whisper.cpp\Release\wchess.exe
+tools\whisper.cpp\Release\whisper.dll
+tools\whisper.cpp\Release\whisper-bench.exe
+tools\whisper.cpp\Release\whisper-cli.exe
+tools\whisper.cpp\Release\whisper-command.exe
+tools\whisper.cpp\Release\whisper-lsp.exe
+tools\whisper.cpp\Release\whisper-quantize.exe
+tools\whisper.cpp\Release\whisper-server.exe
+tools\whisper.cpp\Release\whisper-stream.exe
+tools\whisper.cpp\Release\whisper-talk-llama.exe
+tools\whisper.cpp\Release\whisper-vad-speech-segments.exe
+
+=== IMPORTANT FILE LINE COUNTS ===
+Jarvis.Agent\AgentAction.cs : 11 lines
+Jarvis.Agent\AgentDecision.cs : 21 lines
+Jarvis.Agent\AgentPlanner.cs : 82 lines
+Jarvis.Agent\Jarvis.Agent.csproj : 10 lines
+Jarvis.Core\Auth\AuthProvider.cs : 7 lines
+Jarvis.Core\Auth\AuthProviderInfo.cs : 7 lines
+Jarvis.Core\Auth\AuthProviderType.cs : 9 lines
+Jarvis.Core\Auth\AuthRequest.cs : 2 lines
+Jarvis.Core\Auth\AuthResponse.cs : 2 lines
+Jarvis.Core\Auth\AuthService.cs : 84 lines
+Jarvis.Core\Auth\AuthStatus.cs : 2 lines
+Jarvis.Core\Auth\AuthUser.cs : 6 lines
+Jarvis.Core\Auth\IAuthService.cs : 9 lines
+Jarvis.Core\Auth\LocalAuthService.cs : 10 lines
+Jarvis.Core\Auth\SignInRequest.cs : 2 lines
+Jarvis.Core\Auth\SignUpRequest.cs : 2 lines
+Jarvis.Core\ConnectedApps\ConnectedAppConnectionResult.cs : 5 lines
+Jarvis.Core\ConnectedApps\ConnectedAppInfo.cs : 34 lines
+Jarvis.Core\ConnectedApps\ConnectedAppProvider.cs : 8 lines
+Jarvis.Core\ConnectedApps\ConnectedAppService.cs : 34 lines
+Jarvis.Core\ConnectedApps\ConnectedAppStatus.cs : 7 lines
+Jarvis.Core\ConnectedApps\IConnectedAppConnector.cs : 7 lines
+Jarvis.Core\ConnectedApps\IConnectedAppService.cs : 8 lines
+Jarvis.Core\ConnectedApps\OAuthConnection.cs : 15 lines
+Jarvis.Core\Core\Assistant.cs : 134 lines
+Jarvis.Core\Data\chat_history.json : 1 lines
+Jarvis.Core\Data\ChatHistoryService.cs : 64 lines
+Jarvis.Core\Data\ChatSessionService.cs : 156 lines
+Jarvis.Core\Data\ClassifierService.cs : 8 lines
+Jarvis.Core\Ingestion\IngestionModels.cs : 73 lines
+Jarvis.Core\Ingestion\IngestionService.cs : 379 lines
+Jarvis.Core\Ingestion\MemoryCandidateService.cs : 100 lines
+Jarvis.Core\Ingestion\TextExtractionServices.cs : 338 lines
+Jarvis.Core\Jarvis.Core.csproj : 10 lines
+Jarvis.Core\Knowledge\KnowledgeSearchService.cs : 42 lines
+Jarvis.Core\Knowledge\KnowledgeService.cs : 152 lines
+Jarvis.Core\Memory\memory.json : 1 lines
+Jarvis.Core\Memory\MemoryClassificationService.cs : 16 lines
+Jarvis.Core\Memory\MemoryContextBuilder.cs : 44 lines
+Jarvis.Core\Memory\MemoryRankingService.cs : 100 lines
+Jarvis.Core\Memory\MemoryRetrievalOptions.cs : 8 lines
+Jarvis.Core\Memory\MemoryRetrievalResult.cs : 7 lines
+Jarvis.Core\Memory\MemoryRetrievalService.cs : 56 lines
+Jarvis.Core\Memory\MemoryReviewService.cs : 21 lines
+Jarvis.Core\Memory\MemoryScoringService.cs : 6 lines
+Jarvis.Core\Memory\MemorySearchCriteria.cs : 11 lines
+Jarvis.Core\Memory\MemorySearchService.cs : 59 lines
+Jarvis.Core\Memory\MemoryService.cs : 290 lines
+Jarvis.Core\Migrations\FileStorageMigrationPaths.cs : 9 lines
+Jarvis.Core\Migrations\FileStorageMigrationService.cs : 167 lines
+Jarvis.Core\Migrations\MigrationRecord.cs : 11 lines
+Jarvis.Core\Models\AppSettings.cs : 56 lines
+Jarvis.Core\Models\ChatMessage.cs : 17 lines
+Jarvis.Core\Models\ChatSessionModels.cs : 24 lines
+Jarvis.Core\Models\DiagnosticsModels.cs : 16 lines
+Jarvis.Core\Models\InteractionLogModels.cs : 67 lines
+Jarvis.Core\Models\KnowledgeItem.cs : 29 lines
+Jarvis.Core\Models\MemoryItem.cs : 52 lines
+Jarvis.Core\Models\PcCommandModels.cs : 86 lines
+Jarvis.Core\Models\UserSettingDocument.cs : 10 lines
+Jarvis.Core\Models\VoicePipelineModels.cs : 135 lines
+Jarvis.Core\Mongo\MongoCollectionNames.cs : 21 lines
+Jarvis.Core\Mongo\MongoContext.cs : 28 lines
+Jarvis.Core\Mongo\MongoDocumentConventions.cs : 20 lines
+Jarvis.Core\Mongo\MongoInitializer.cs : 122 lines
+Jarvis.Core\Mongo\MongoOptions.cs : 7 lines
+Jarvis.Core\Repositories\IAuditLogRepository.cs : 8 lines
+Jarvis.Core\Repositories\IChatHistoryRepository.cs : 7 lines
+Jarvis.Core\Repositories\IChatRepository.cs : 10 lines
+Jarvis.Core\Repositories\ICommandHistoryRepository.cs : 7 lines
+Jarvis.Core\Repositories\IConnectedAppRepository.cs : 7 lines
+Jarvis.Core\Repositories\IDeviceRepository.cs : 9 lines
+Jarvis.Core\Repositories\IIngestionRepository.cs : 9 lines
+Jarvis.Core\Repositories\IKnowledgeRepository.cs : 8 lines
+Jarvis.Core\Repositories\IMemoryRepository.cs : 9 lines
+Jarvis.Core\Repositories\IMigrationRepository.cs : 7 lines
+Jarvis.Core\Repositories\ISettingsRepository.cs : 7 lines
+Jarvis.Core\Repositories\IUserRepository.cs : 7 lines
+Jarvis.Core\Repositories\IUserSessionRepository.cs : 8 lines
+Jarvis.Core\Repositories\IVoiceHistoryRepository.cs : 7 lines
+Jarvis.Core\Repositories\Mongo\MongoAuditLogRepository.cs : 31 lines
+Jarvis.Core\Repositories\Mongo\MongoChatHistoryRepository.cs : 26 lines
+Jarvis.Core\Repositories\Mongo\MongoChatRepository.cs : 68 lines
+Jarvis.Core\Repositories\Mongo\MongoCommandHistoryRepository.cs : 25 lines
+Jarvis.Core\Repositories\Mongo\MongoConnectedAppRepository.cs : 23 lines
+Jarvis.Core\Repositories\Mongo\MongoDeviceRepository.cs : 35 lines
+Jarvis.Core\Repositories\Mongo\MongoIngestionRepository.cs : 38 lines
+Jarvis.Core\Repositories\Mongo\MongoKnowledgeRepository.cs : 25 lines
+Jarvis.Core\Repositories\Mongo\MongoMemoryRepository.cs : 30 lines
+Jarvis.Core\Repositories\Mongo\MongoMigrationRepository.cs : 39 lines
+Jarvis.Core\Repositories\Mongo\MongoSettingsRepository.cs : 34 lines
+Jarvis.Core\Repositories\Mongo\MongoUserRepository.cs : 19 lines
+Jarvis.Core\Repositories\Mongo\MongoUserSessionRepository.cs : 25 lines
+Jarvis.Core\Repositories\Mongo\MongoVoiceHistoryRepository.cs : 25 lines
+Jarvis.Core\Security\AuditLogger.cs : 50 lines
+Jarvis.Core\Security\IAuthenticationProvider.cs : 6 lines
+Jarvis.Core\Security\IAuthorizationService.cs : 5 lines
+Jarvis.Core\Security\InputValidationResult.cs : 12 lines
+Jarvis.Core\Security\InputValidator.cs : 128 lines
+Jarvis.Core\Security\IRateLimiter.cs : 5 lines
+Jarvis.Core\Security\PermissionDecision.cs : 7 lines
+Jarvis.Core\Security\PermissionDefinition.cs : 6 lines
+Jarvis.Core\Security\PermissionDefinitions.cs : 49 lines
+Jarvis.Core\Security\PermissionEvaluationRequest.cs : 9 lines
+Jarvis.Core\Security\PermissionEvaluationResult.cs : 8 lines
+Jarvis.Core\Security\PermissionGroups.cs : 29 lines
+Jarvis.Core\Security\PermissionResolver.cs : 18 lines
+Jarvis.Core\Security\PermissionService.cs : 86 lines
+Jarvis.Core\Security\ResolvedPermissions.cs : 4 lines
+Jarvis.Core\Security\RoleDefinition.cs : 9 lines
+Jarvis.Core\Security\RoleDefinitions.cs : 47 lines
+Jarvis.Core\Security\SecurityAuditResult.cs : 8 lines
+Jarvis.Core\Security\SecurityDecision.cs : 16 lines
+Jarvis.Core\Security\SecurityRequest.cs : 7 lines
+Jarvis.Core\Security\SecurityRiskLevel.cs : 8 lines
+Jarvis.Core\Security\SecurityService.cs : 53 lines
+Jarvis.Core\Services\InteractionLogService.cs : 127 lines
+Jarvis.Core\Services\JarvisInputNormalizer.cs : 19 lines
+Jarvis.Core\Services\JarvisPersonalityService.cs : 136 lines
+Jarvis.Core\Services\OllamaService.cs : 69 lines
+Jarvis.Core\Services\SettingsService.cs : 61 lines
+Jarvis.Core\Services\SettingsValidationService.cs : 40 lines
+Jarvis.Core\Users\DeviceRecord.cs : 14 lines
+Jarvis.Core\Users\JarvisUserContext.cs : 10 lines
+Jarvis.Core\Users\SessionType.cs : 9 lines
+Jarvis.Core\Users\UserAccount.cs : 12 lines
+Jarvis.Core\Users\UserRole.cs : 9 lines
+Jarvis.Core\Users\UserSession.cs : 19 lines
+Jarvis.sln : 75 lines
+Jarvis.Tools\Commands\AgentCommand.cs : 51 lines
+Jarvis.Tools\Commands\AppCommandService.cs : 30 lines
+Jarvis.Tools\Commands\BasicCommand.cs : 27 lines
+Jarvis.Tools\Commands\CommandManager.cs : 41 lines
+Jarvis.Tools\Commands\Commands.cs : 23 lines
+Jarvis.Tools\Commands\FileCommand.cs : 34 lines
+Jarvis.Tools\Commands\HelpCommand.cs : 23 lines
+Jarvis.Tools\Commands\ICommand.cs : 8 lines
+Jarvis.Tools\Commands\ICommandWithResult.cs : 5 lines
+Jarvis.Tools\Commands\MemoryCommand.cs : 51 lines
+Jarvis.Tools\Commands\SettingsCommandService.cs : 45 lines
+Jarvis.Tools\Jarvis.Tools.csproj : 11 lines
+Jarvis.Tools\Services\CommandLogService.cs : 82 lines
+Jarvis.Tools\Services\CommandRiskClassifier.cs : 25 lines
+Jarvis.Tools\Services\CommandSafetyService.cs : 24 lines
+Jarvis.Tools\Services\FileIndexService.cs : 378 lines
+Jarvis.Tools\Services\InstalledAppService.cs : 21 lines
+Jarvis.Tools\Services\IPcControlService.cs : 6 lines
+Jarvis.Tools\Services\PcCommandParser.cs : 110 lines
+Jarvis.Tools\Services\PcCommandService.cs : 269 lines
+Jarvis.Tools\Services\WindowsPcControlService.cs : 305 lines
+Jarvis.Web\app\globals.css : 669 lines
+Jarvis.Web\app\layout.tsx : 17 lines
+Jarvis.Web\app\page.tsx : 4 lines
+Jarvis.Web\components\ActivityLogPanel.tsx : 126 lines
+Jarvis.Web\components\AppLayout.tsx : 38 lines
+Jarvis.Web\components\AppShell.tsx : 572 lines
+Jarvis.Web\components\AuthPanel.tsx : 129 lines
+Jarvis.Web\components\ChatPanel.tsx : 130 lines
+Jarvis.Web\components\Composer.tsx : 72 lines
+Jarvis.Web\components\ConnectedAppsPanel.tsx : 87 lines
+Jarvis.Web\components\ControlPanel.tsx : 110 lines
+Jarvis.Web\components\DiagnosticsPanel.tsx : 72 lines
+Jarvis.Web\components\files\fileFormatting.ts : 13 lines
+Jarvis.Web\components\files\FileResultCard.tsx : 32 lines
+Jarvis.Web\components\FilesPanel.tsx : 91 lines
+Jarvis.Web\components\JarvisDialog.tsx : 36 lines
+Jarvis.Web\components\JarvisStatusPanel.tsx : 63 lines
+Jarvis.Web\components\memory\MemoryCard.tsx : 186 lines
+Jarvis.Web\components\memory\MemoryEditorForm.tsx : 180 lines
+Jarvis.Web\components\memory\memoryForm.ts : 46 lines
+Jarvis.Web\components\memory\MemoryIngestionPanel.tsx : 520 lines
+Jarvis.Web\components\memory\MemorySearchBar.tsx : 113 lines
+Jarvis.Web\components\MemoryPanel.tsx : 778 lines
+Jarvis.Web\components\MessageList.tsx : 35 lines
+Jarvis.Web\components\SecurityPanel.tsx : 66 lines
+Jarvis.Web\components\SettingsPanel.tsx : 430 lines
+Jarvis.Web\components\Sidebar.tsx : 144 lines
+Jarvis.Web\components\StatusCard.tsx : 25 lines
+Jarvis.Web\components\Toast.tsx : 6 lines
+Jarvis.Web\components\ToolsPanel.tsx : 74 lines
+Jarvis.Web\components\TopBar.tsx : 16 lines
+Jarvis.Web\components\TopNavbar.tsx : 46 lines
+Jarvis.Web\components\ui\AssistantActionCard.tsx : 68 lines
+Jarvis.Web\components\ui\AssistantOrb.tsx : 30 lines
+Jarvis.Web\components\ui\ChatBubble.tsx : 31 lines
+Jarvis.Web\components\ui\ChatCard.tsx : 42 lines
+Jarvis.Web\components\ui\PanelCard.tsx : 12 lines
+Jarvis.Web\components\ui\PromptChip.tsx : 15 lines
+Jarvis.Web\components\ui\StatusBadge.tsx : 18 lines
+Jarvis.Web\components\UserMenu.tsx : 66 lines
+Jarvis.Web\components\VoiceCommandHelpPanel.tsx : 50 lines
+Jarvis.Web\components\VoiceConfirmationCard.tsx : 40 lines
+Jarvis.Web\components\VoiceLoopPanel.tsx : 319 lines
+Jarvis.Web\components\VoicePanel.tsx : 258 lines
+Jarvis.Web\components\VoiceRecorderButton.tsx : 117 lines
+Jarvis.Web\components\WakeWordPanel.tsx : 131 lines
+Jarvis.Web\lib\api.ts : 435 lines
+Jarvis.Web\lib\authApi.ts : 36 lines
+Jarvis.Web\lib\connectedAppsApi.ts : 29 lines
+Jarvis.Web\lib\theme.ts : 35 lines
+Jarvis.Web\lib\types.ts : 554 lines
+Jarvis.Web\lib\voiceCapture.ts : 115 lines
+Jarvis.Web\next-env.d.ts : 5 lines
+Jarvis.Web\package.json : 26 lines
+Jarvis.Web\package-lock.json : 2114 lines
+Jarvis.Web\tailwind.config.ts : 54 lines
+Jarvis.Web\tsconfig.json : 42 lines
+Jarvis\App\CommandRouter.cs : 24 lines
+Jarvis\appsettings.json : 26 lines
+Jarvis\Endpoints\EndpointBootstrapper.cs : 1802 lines
+Jarvis\Endpoints\EndpointContracts.cs : 63 lines
+Jarvis\Jarvis.csproj : 24 lines
+Jarvis\Program.cs : 10 lines
+Jarvis\Services\IPathResolver.cs : 20 lines
+Jarvis\Services\PathResolver.cs : 37 lines
+Jarvis\Services\PiperService.cs : 123 lines
+Jarvis\Services\PlatformService.cs : 26 lines
+Jarvis\Services\VoiceCommandService.cs : 46 lines
+Jarvis\Services\VoiceHistoryService.cs : 98 lines
+Jarvis\Services\VoicePipelineService.cs : 529 lines
+Jarvis\Services\WakeWordService.cs : 80 lines
+Jarvis\Services\WhisperService.cs : 65 lines
+Jarvis\Startup\CliBootstrapper.cs : 62 lines
+Jarvis\Startup\JarvisApplication.cs : 278 lines
+Jarvis\Startup\JarvisApplicationBuilder.cs : 30 lines
+Jarvis\Startup\JarvisRuntime.cs : 52 lines
+Jarvis\Voice\Models\SpeechToTextResult.cs : 15 lines
+Jarvis\Voice\SpeechService.cs : 9 lines
+Jarvis\Voice\SpeechToTextService.cs : 174 lines
+Jarvis\Voice\TextToSpeechService.cs : 338 lines
+Jarvis\Voice\VoiceActivityDetector.cs : 23 lines
+Jarvis\Voice\VoiceCommandProcessor.cs : 66 lines
+Jarvis\Voice\VoiceSettingsService.cs : 73 lines
+Jarvis\Voice\WakeWordService.cs : 8 lines
+models\piper\en_US-lessac-medium.onnx.json : 493 lines
+
+=== C# CLASSES / INTERFACES / ENUMS / RECORDS ===
+
+--- Jarvis.Agent\AgentAction.cs ---
+Line 3: public enum AgentAction
+
+--- Jarvis.Agent\AgentDecision.cs ---
+Line 3: public sealed class AgentDecision
+
+--- Jarvis.Agent\AgentPlanner.cs ---
+Line 3: public sealed class AgentPlanner
+
+--- Jarvis.Core\Auth\AuthProvider.cs ---
+Line 3: public sealed record AuthProvider(
+
+--- Jarvis.Core\Auth\AuthProviderInfo.cs ---
+Line 3: public sealed record AuthProviderInfo(
+
+--- Jarvis.Core\Auth\AuthProviderType.cs ---
+Line 3: public enum AuthProviderType
+
+--- Jarvis.Core\Auth\AuthRequest.cs ---
+Line 3: public sealed record AuthRequest(string? Email, string? Password, string? Provider = null);
+
+--- Jarvis.Core\Auth\AuthResponse.cs ---
+Line 3: public sealed record AuthResponse(bool Succeeded, string Message, AuthStatus Status);
+
+--- Jarvis.Core\Auth\AuthService.cs ---
+Line 5: public sealed class AuthService : IAuthService
+
+--- Jarvis.Core\Auth\AuthStatus.cs ---
+Line 3: public sealed record AuthStatus(bool IsAuthenticated, AuthUser? User, string Message);
+
+--- Jarvis.Core\Auth\AuthUser.cs ---
+Line 3: public sealed record AuthUser(
+
+--- Jarvis.Core\Auth\IAuthService.cs ---
+Line 3: public interface IAuthService
+
+--- Jarvis.Core\Auth\LocalAuthService.cs ---
+Line 3: public sealed class LocalAuthService : IAuthService
+
+--- Jarvis.Core\Auth\SignInRequest.cs ---
+Line 3: public sealed record SignInRequest(string? Email, string? Password);
+
+--- Jarvis.Core\Auth\SignUpRequest.cs ---
+Line 3: public sealed record SignUpRequest(string? Email, string? Password, string? Name = null);
+
+--- Jarvis.Core\ConnectedApps\ConnectedAppConnectionResult.cs ---
+Line 3: public sealed record ConnectedAppConnectionResult(
+
+--- Jarvis.Core\ConnectedApps\ConnectedAppInfo.cs ---
+Line 3: public sealed class ConnectedAppInfo
+
+--- Jarvis.Core\ConnectedApps\ConnectedAppProvider.cs ---
+Line 3: public enum ConnectedAppProvider
+
+--- Jarvis.Core\ConnectedApps\ConnectedAppService.cs ---
+Line 3: public sealed class ConnectedAppService : IConnectedAppService
+
+--- Jarvis.Core\ConnectedApps\ConnectedAppStatus.cs ---
+Line 3: public enum ConnectedAppStatus
+
+--- Jarvis.Core\ConnectedApps\IConnectedAppConnector.cs ---
+Line 3: public interface IConnectedAppConnector
+
+--- Jarvis.Core\ConnectedApps\IConnectedAppService.cs ---
+Line 3: public interface IConnectedAppService
+
+--- Jarvis.Core\ConnectedApps\OAuthConnection.cs ---
+Line 3: public sealed class OAuthConnection
+
+--- Jarvis.Core\Core\Assistant.cs ---
+Line 9: public sealed class Assistant
+
+--- Jarvis.Core\Data\ChatHistoryService.cs ---
+Line 8: public sealed class ChatHistoryService
+
+--- Jarvis.Core\Data\ChatSessionService.cs ---
+Line 8: public sealed class ChatSessionService
+
+--- Jarvis.Core\Data\ClassifierService.cs ---
+Line 3: public sealed class ClassifierService
+
+--- Jarvis.Core\Ingestion\IngestionModels.cs ---
+Line 5: public enum IngestionStatus
+Line 15: public enum IngestionSourceType
+Line 21: public sealed class IngestionTextBlock
+Line 30: public sealed class IngestionMemoryCandidate
+Line 48: public sealed class IngestionJob
+Line 71: public sealed record IngestionExtractionResult(
+
+--- Jarvis.Core\Ingestion\IngestionService.cs ---
+Line 10: public sealed class IngestionService
+
+--- Jarvis.Core\Ingestion\MemoryCandidateService.cs ---
+Line 5: public sealed class MemoryCandidateService
+
+--- Jarvis.Core\Ingestion\TextExtractionServices.cs ---
+Line 8: public interface ITextExtractionService
+Line 14: public sealed class PdfTextExtractionService : ITextExtractionService
+Line 119: public sealed class ImageOcrService : ITextExtractionService
+Line 377: internal sealed record TesseractLanguageStatus(IReadOnlyList<string> Languages, string ErrorMessage);
+Line 379: public sealed record TesseractOcrStatus(
+
+--- Jarvis.Core\Knowledge\KnowledgeSearchService.cs ---
+Line 5: public sealed class KnowledgeSearchService
+
+--- Jarvis.Core\Knowledge\KnowledgeService.cs ---
+Line 9: public sealed class KnowledgeService
+
+--- Jarvis.Core\Memory\MemoryClassificationService.cs ---
+Line 5: public sealed class MemoryClassificationService
+
+--- Jarvis.Core\Memory\MemoryContextBuilder.cs ---
+Line 6: public sealed class MemoryContextBuilder
+
+--- Jarvis.Core\Memory\MemoryRankingService.cs ---
+Line 6: public sealed class MemoryRankingService
+
+--- Jarvis.Core\Memory\MemoryRetrievalOptions.cs ---
+Line 3: public sealed record MemoryRetrievalOptions(
+
+--- Jarvis.Core\Memory\MemoryRetrievalResult.cs ---
+Line 5: public sealed record MemoryRetrievalResult(
+
+--- Jarvis.Core\Memory\MemoryRetrievalService.cs ---
+Line 5: public sealed class MemoryRetrievalService
+
+--- Jarvis.Core\Memory\MemoryReviewService.cs ---
+Line 5: public sealed class MemoryReviewService
+
+--- Jarvis.Core\Memory\MemoryScoringService.cs ---
+Line 3: public sealed class MemoryScoringService
+
+--- Jarvis.Core\Memory\MemorySearchCriteria.cs ---
+Line 5: public sealed record MemorySearchCriteria(
+
+--- Jarvis.Core\Memory\MemorySearchService.cs ---
+Line 5: public sealed class MemorySearchService
+
+--- Jarvis.Core\Memory\MemoryService.cs ---
+Line 8: public sealed class MemoryService
+
+--- Jarvis.Core\Migrations\FileStorageMigrationPaths.cs ---
+Line 3: public sealed record FileStorageMigrationPaths(
+
+--- Jarvis.Core\Migrations\FileStorageMigrationService.cs ---
+Line 9: public sealed class FileStorageMigrationService
+
+--- Jarvis.Core\Migrations\MigrationRecord.cs ---
+Line 3: public sealed class MigrationRecord
+
+--- Jarvis.Core\Models\AppSettings.cs ---
+Line 3: public sealed class AppSettings
+Line 43: public enum JarvisResponseStyle
+Line 49: public enum JarvisPreferredLanguage
+Line 56: public enum JarvisVerbosity
+
+--- Jarvis.Core\Models\ChatMessage.cs ---
+Line 5: public sealed class ChatMessage
+
+--- Jarvis.Core\Models\ChatSessionModels.cs ---
+Line 5: public sealed class ChatSession
+Line 26: public sealed record ChatSessionSummary(
+
+--- Jarvis.Core\Models\DiagnosticsModels.cs ---
+Line 3: public sealed record SettingsValidationResult(IReadOnlyCollection<string> Warnings);
+Line 5: public sealed record DiagnosticsResult(
+Line 17: public sealed record ServiceDiagnostic(
+
+--- Jarvis.Core\Models\InteractionLogModels.cs ---
+Line 5: public enum InteractionSource
+Line 13: public enum InteractionType
+Line 29: public enum InteractionStatus
+Line 39: public sealed class InteractionLogEntry
+Line 58: public sealed record InteractionLogRequest(
+Line 69: public sealed record InteractionStatusResult(
+
+--- Jarvis.Core\Models\KnowledgeItem.cs ---
+Line 3: public enum KnowledgeCategory
+Line 15: public sealed class KnowledgeItem
+
+--- Jarvis.Core\Models\MemoryItem.cs ---
+Line 3: public enum MemoryType
+Line 10: public enum MemoryReviewStatus
+Line 17: public static class MemoryCategories
+Line 42: public sealed class MemoryItem
+
+--- Jarvis.Core\Models\PcCommandModels.cs ---
+Line 3: public enum PcControlAction
+Line 20: public enum CommandSafetyLevel
+Line 27: public enum CommandExecutionStatus
+Line 36: public sealed record PcCommand(
+Line 41: public sealed record PcCommandCatalogItem(
+Line 47: public sealed class PcCommandLogEntry
+Line 63: public sealed class PendingPcCommand
+Line 73: public sealed record PcCommandExecuteRequest(string Input);
+Line 74: public sealed record PcCommandConfirmRequest(string ConfirmationId);
+Line 76: public sealed record PcCommandExecutionResult(
+Line 85: public sealed record AssistantInputRequest(string Message, string? ChatSessionId = null);
+Line 87: public sealed record AssistantConfirmRequest(string ConfirmationId, string? ChatSessionId = null);
+Line 89: public sealed record AssistantInputResponse(
+
+--- Jarvis.Core\Models\UserSettingDocument.cs ---
+Line 3: public sealed class UserSettingDocument
+
+--- Jarvis.Core\Models\VoicePipelineModels.cs ---
+Line 3: public enum VoiceMode
+Line 11: public enum WakeWordMode
+Line 19: public sealed class WakeWordConfiguration
+Line 29: public interface IWakeWordService
+Line 35: public sealed record WakeWordDetectionResult(
+Line 41: public enum VoicePipelineState
+Line 59: public sealed record VoicePipelineResult(
+Line 90: public sealed class VoiceHistoryItem
+Line 116: public sealed record VoicePipelineStatus(
+Line 144: public sealed record VoicePipelineRequest(bool RequireWakeWord = false);
+Line 146: public sealed record VoiceConfirmationRequest(string ConfirmationId);
+
+--- Jarvis.Core\Mongo\MongoCollectionNames.cs ---
+Line 3: public static class MongoCollectionNames
+
+--- Jarvis.Core\Mongo\MongoContext.cs ---
+Line 6: public sealed class MongoContext
+
+--- Jarvis.Core\Mongo\MongoDocumentConventions.cs ---
+Line 5: public static class MongoDocumentConventions
+
+--- Jarvis.Core\Mongo\MongoInitializer.cs ---
+Line 8: public sealed class MongoInitializer
+
+--- Jarvis.Core\Mongo\MongoOptions.cs ---
+Line 3: public sealed class MongoOptions
+
+--- Jarvis.Core\Repositories\IAuditLogRepository.cs ---
+Line 5: public interface IAuditLogRepository
+
+--- Jarvis.Core\Repositories\IChatHistoryRepository.cs ---
+Line 5: public interface IChatHistoryRepository
+
+--- Jarvis.Core\Repositories\IChatRepository.cs ---
+Line 5: public interface IChatRepository
+
+--- Jarvis.Core\Repositories\ICommandHistoryRepository.cs ---
+Line 5: public interface ICommandHistoryRepository
+
+--- Jarvis.Core\Repositories\IConnectedAppRepository.cs ---
+Line 5: public interface IConnectedAppRepository
+
+--- Jarvis.Core\Repositories\IDeviceRepository.cs ---
+Line 5: public interface IDeviceRepository
+Line 7: Task UpsertAsync(DeviceRecord device, CancellationToken cancellationToken = default);
+
+--- Jarvis.Core\Repositories\IIngestionRepository.cs ---
+Line 5: public interface IIngestionRepository
+
+--- Jarvis.Core\Repositories\IKnowledgeRepository.cs ---
+Line 5: public interface IKnowledgeRepository
+
+--- Jarvis.Core\Repositories\IMemoryRepository.cs ---
+Line 5: public interface IMemoryRepository
+
+--- Jarvis.Core\Repositories\IMigrationRepository.cs ---
+Line 5: public interface IMigrationRepository
+
+--- Jarvis.Core\Repositories\ISettingsRepository.cs ---
+Line 5: public interface ISettingsRepository
+
+--- Jarvis.Core\Repositories\IUserRepository.cs ---
+Line 5: public interface IUserRepository
+
+--- Jarvis.Core\Repositories\IUserSessionRepository.cs ---
+Line 5: public interface IUserSessionRepository
+
+--- Jarvis.Core\Repositories\IVoiceHistoryRepository.cs ---
+Line 5: public interface IVoiceHistoryRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoAuditLogRepository.cs ---
+Line 7: public sealed class MongoAuditLogRepository : IAuditLogRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoChatHistoryRepository.cs ---
+Line 7: public sealed class MongoChatHistoryRepository : IChatHistoryRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoChatRepository.cs ---
+Line 7: public sealed class MongoChatRepository : IChatRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoCommandHistoryRepository.cs ---
+Line 7: public sealed class MongoCommandHistoryRepository : ICommandHistoryRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoConnectedAppRepository.cs ---
+Line 7: public sealed class MongoConnectedAppRepository : IConnectedAppRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoDeviceRepository.cs ---
+Line 7: public sealed class MongoDeviceRepository : IDeviceRepository
+Line 16: public Task UpsertAsync(DeviceRecord device, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Repositories\Mongo\MongoIngestionRepository.cs ---
+Line 7: public sealed class MongoIngestionRepository : IIngestionRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoKnowledgeRepository.cs ---
+Line 7: public sealed class MongoKnowledgeRepository : IKnowledgeRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoMemoryRepository.cs ---
+Line 7: public sealed class MongoMemoryRepository : IMemoryRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoMigrationRepository.cs ---
+Line 7: public sealed class MongoMigrationRepository : IMigrationRepository
+Line 18: var record = await _migrations.Find(migration =>
+Line 23: return record is not null;
+Line 29: var record = new MigrationRecord
+
+--- Jarvis.Core\Repositories\Mongo\MongoSettingsRepository.cs ---
+Line 7: public sealed class MongoSettingsRepository : ISettingsRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoUserRepository.cs ---
+Line 7: public sealed class MongoUserRepository : IUserRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoUserSessionRepository.cs ---
+Line 7: public sealed class MongoUserSessionRepository : IUserSessionRepository
+
+--- Jarvis.Core\Repositories\Mongo\MongoVoiceHistoryRepository.cs ---
+Line 7: public sealed class MongoVoiceHistoryRepository : IVoiceHistoryRepository
+
+--- Jarvis.Core\Security\AuditLogger.cs ---
+Line 5: public sealed class AuditLogger
+
+--- Jarvis.Core\Security\IAuthenticationProvider.cs ---
+Line 3: public interface IAuthenticationProvider
+Line 8: public sealed record AuthenticationResult(bool Succeeded, string PrincipalId, string Reason);
+
+--- Jarvis.Core\Security\IAuthorizationService.cs ---
+Line 3: public interface IAuthorizationService
+
+--- Jarvis.Core\Security\InputValidationResult.cs ---
+Line 3: public sealed record InputValidationResult(
+
+--- Jarvis.Core\Security\InputValidator.cs ---
+Line 5: public sealed class InputValidator
+
+--- Jarvis.Core\Security\IRateLimiter.cs ---
+Line 3: public interface IRateLimiter
+
+--- Jarvis.Core\Security\PermissionDecision.cs ---
+Line 3: public enum PermissionDecision
+
+--- Jarvis.Core\Security\PermissionDefinition.cs ---
+Line 3: public sealed record PermissionDefinition(
+
+--- Jarvis.Core\Security\PermissionDefinitions.cs ---
+Line 3: public static class PermissionDefinitions
+
+--- Jarvis.Core\Security\PermissionEvaluationRequest.cs ---
+Line 5: public sealed record PermissionEvaluationRequest(
+
+--- Jarvis.Core\Security\PermissionEvaluationResult.cs ---
+Line 3: public sealed record PermissionEvaluationResult(
+
+--- Jarvis.Core\Security\PermissionGroups.cs ---
+Line 3: public static class PermissionGroups
+
+--- Jarvis.Core\Security\PermissionResolver.cs ---
+Line 5: public sealed class PermissionResolver
+
+--- Jarvis.Core\Security\PermissionService.cs ---
+Line 5: public sealed class PermissionService
+
+--- Jarvis.Core\Security\ResolvedPermissions.cs ---
+Line 3: public sealed record ResolvedPermissions(
+
+--- Jarvis.Core\Security\RoleDefinition.cs ---
+Line 5: public sealed class RoleDefinition
+
+--- Jarvis.Core\Security\RoleDefinitions.cs ---
+Line 5: public static class RoleDefinitions
+
+--- Jarvis.Core\Security\SecurityAuditResult.cs ---
+Line 3: public enum SecurityAuditResult
+
+--- Jarvis.Core\Security\SecurityDecision.cs ---
+Line 3: public sealed record SecurityDecision(
+
+--- Jarvis.Core\Security\SecurityRequest.cs ---
+Line 3: public sealed record SecurityRequest(
+
+--- Jarvis.Core\Security\SecurityRiskLevel.cs ---
+Line 3: public enum SecurityRiskLevel
+
+--- Jarvis.Core\Security\SecurityService.cs ---
+Line 3: public sealed class SecurityService
+
+--- Jarvis.Core\Services\InteractionLogService.cs ---
+Line 9: public sealed class InteractionLogService
+
+--- Jarvis.Core\Services\JarvisInputNormalizer.cs ---
+Line 5: public static partial class JarvisInputNormalizer
+
+--- Jarvis.Core\Services\JarvisPersonalityService.cs ---
+Line 5: public sealed class JarvisPersonalityService
+
+--- Jarvis.Core\Services\OllamaService.cs ---
+Line 8: public sealed class OllamaService
+
+--- Jarvis.Core\Services\SettingsService.cs ---
+Line 8: public sealed class SettingsService
+
+--- Jarvis.Core\Services\SettingsValidationService.cs ---
+Line 5: public sealed class SettingsValidationService
+
+--- Jarvis.Core\Users\DeviceRecord.cs ---
+Line 3: public sealed class DeviceRecord
+
+--- Jarvis.Core\Users\JarvisUserContext.cs ---
+Line 3: public sealed class JarvisUserContext
+
+--- Jarvis.Core\Users\SessionType.cs ---
+Line 3: public enum SessionType
+
+--- Jarvis.Core\Users\UserAccount.cs ---
+Line 3: public sealed class UserAccount
+
+--- Jarvis.Core\Users\UserRole.cs ---
+Line 3: public enum UserRole
+
+--- Jarvis.Core\Users\UserSession.cs ---
+Line 3: public sealed class UserSession
+
+--- Jarvis.Tools\Commands\AgentCommand.cs ---
+Line 5: public sealed class AgentCommand : ICommandWithResult
+
+--- Jarvis.Tools\Commands\AppCommandService.cs ---
+Line 5: public sealed class AppCommandService : ICommand
+
+--- Jarvis.Tools\Commands\BasicCommand.cs ---
+Line 3: public sealed class BasicCommand : ICommand
+
+--- Jarvis.Tools\Commands\CommandManager.cs ---
+Line 3: public sealed class CommandManager
+Line 47: public sealed record CommandManagerResult(bool WasHandled, string? Message)
+
+--- Jarvis.Tools\Commands\Commands.cs ---
+Line 7: public static class Commands
+
+--- Jarvis.Tools\Commands\FileCommand.cs ---
+Line 5: public sealed class FileCommand : ICommand
+
+--- Jarvis.Tools\Commands\HelpCommand.cs ---
+Line 3: public sealed class HelpCommand : ICommand
+
+--- Jarvis.Tools\Commands\ICommand.cs ---
+Line 3: public interface ICommand
+
+--- Jarvis.Tools\Commands\ICommandWithResult.cs ---
+Line 3: public interface ICommandWithResult : ICommand
+
+--- Jarvis.Tools\Commands\MemoryCommand.cs ---
+Line 5: public sealed class MemoryCommand : ICommand
+
+--- Jarvis.Tools\Commands\SettingsCommandService.cs ---
+Line 5: public sealed class SettingsCommandService : ICommand
+
+--- Jarvis.Tools\Services\CommandLogService.cs ---
+Line 9: public sealed class CommandLogService
+
+--- Jarvis.Tools\Services\CommandRiskClassifier.cs ---
+Line 6: public sealed class CommandRiskClassifier
+
+--- Jarvis.Tools\Services\CommandSafetyService.cs ---
+Line 5: public sealed class CommandSafetyService
+
+--- Jarvis.Tools\Services\FileIndexService.cs ---
+Line 5: public sealed class FileIndexService
+Line 432: public sealed record FileSearchResult(
+
+--- Jarvis.Tools\Services\InstalledAppService.cs ---
+Line 5: public sealed class InstalledAppService
+
+--- Jarvis.Tools\Services\IPcControlService.cs ---
+Line 5: public interface IPcControlService
+
+--- Jarvis.Tools\Services\PcCommandParser.cs ---
+Line 5: public sealed class PcCommandParser
+
+--- Jarvis.Tools\Services\PcCommandService.cs ---
+Line 6: public sealed class PcCommandService
+
+--- Jarvis.Tools\Services\WindowsPcControlService.cs ---
+Line 7: public sealed class WindowsPcControlService : IPcControlService
+Line 330: private sealed record ScreenBounds(int Left, int Top, int Width, int Height);
+
+--- Jarvis\App\CommandRouter.cs ---
+Line 6: public sealed class CommandRouter
+
+--- Jarvis\Endpoints\EndpointBootstrapper.cs ---
+Line 13: public static class EndpointBootstrapper
+
+--- Jarvis\Endpoints\EndpointContracts.cs ---
+Line 5: public sealed record ChatRequest(string Message);
+Line 6: public sealed record ChatSessionCreateRequest(string? Title);
+Line 7: public sealed record ChatSessionMessageRequest(string Message);
+Line 8: public sealed record MemoryRequest(
+Line 18: public sealed record MemoryUpdateRequest(
+Line 28: public sealed record MemoryRetrieveRequest(string Query, int? MaxResults = null);
+Line 29: public sealed record BulkMemoryRequest(
+Line 35: public sealed record IngestionCandidateUpdateRequest(
+Line 41: public sealed record BulkIngestionCandidateRequest(
+Line 46: public sealed record SaveIngestionAsKnowledgeRequest(
+Line 49: public sealed record SaveIngestionAsMemoryRequest(
+Line 55: public sealed record KnowledgeCreateRequest(
+Line 62: public sealed record SpeakRequest(string Text);
+Line 63: public sealed record VoiceCommandRequest(string Transcript, bool Confirmed = false);
+Line 64: public sealed record WakeWordCheckRequest(string Transcript);
+Line 65: public sealed record FileOpenRequest(string Path);
+
+--- Jarvis\Program.cs ---
+
+--- Jarvis\Services\IPathResolver.cs ---
+Line 3: public interface IPathResolver
+
+--- Jarvis\Services\PathResolver.cs ---
+Line 3: public sealed class PathResolver : IPathResolver
+
+--- Jarvis\Services\PiperService.cs ---
+Line 5: public sealed class PiperService
+Line 133: public sealed record PiperSpeechResult(
+
+--- Jarvis\Services\PlatformService.cs ---
+Line 3: public sealed class PlatformService
+
+--- Jarvis\Services\VoiceCommandService.cs ---
+Line 6: public sealed class VoiceCommandService
+Line 27: public sealed record VoiceCommandCatalogItem(
+Line 33: public sealed record VoiceCommandResult(
+
+--- Jarvis\Services\VoiceHistoryService.cs ---
+Line 9: public sealed class VoiceHistoryService
+
+--- Jarvis\Services\VoicePipelineService.cs ---
+Line 9: public sealed class VoicePipelineService
+Line 526: private sealed class VoicePipelineTrace
+
+--- Jarvis\Services\WakeWordService.cs ---
+Line 5: public sealed class WakeWordService : IWakeWordService
+
+--- Jarvis\Services\WhisperService.cs ---
+Line 5: public sealed class WhisperService
+Line 64: public sealed record WhisperTranscriptionResult(
+
+--- Jarvis\Startup\CliBootstrapper.cs ---
+Line 7: public static class CliBootstrapper
+
+--- Jarvis\Startup\JarvisApplication.cs ---
+Line 23: public static class JarvisApplication
+
+--- Jarvis\Startup\JarvisApplicationBuilder.cs ---
+Line 7: public sealed class JarvisApplicationBuilder
+
+--- Jarvis\Startup\JarvisRuntime.cs ---
+Line 15: public sealed class JarvisRuntime
+
+--- Jarvis\Voice\Models\SpeechToTextResult.cs ---
+Line 3: public sealed record SpeechToTextResult(
+
+--- Jarvis\Voice\SpeechService.cs ---
+Line 3: public sealed class SpeechService
+
+--- Jarvis\Voice\SpeechToTextService.cs ---
+Line 7: public sealed class SpeechToTextService
+
+--- Jarvis\Voice\TextToSpeechService.cs ---
+Line 6: public sealed class TextToSpeechService
+Line 371: public sealed record TextToSpeechResult(
+
+--- Jarvis\Voice\VoiceActivityDetector.cs ---
+Line 5: public sealed class VoiceActivityDetector
+Line 25: public sealed record VoiceActivityResult(bool SpeechDetected, string Message)
+
+--- Jarvis\Voice\VoiceCommandProcessor.cs ---
+Line 6: public sealed class VoiceCommandProcessor
+
+--- Jarvis\Voice\VoiceSettingsService.cs ---
+Line 6: public sealed class VoiceSettingsService
+
+--- Jarvis\Voice\WakeWordService.cs ---
+Line 3: public sealed class WakeWordService
+
+=== C# PUBLIC METHODS ===
+
+--- Jarvis.Agent\AgentDecision.cs ---
+Line 25: public static AgentDecision None(string reason) =>
+
+--- Jarvis.Agent\AgentPlanner.cs ---
+Line 7: public AgentDecision Plan(string input)
+Line 74: public bool RequiresConfirmation(AgentAction action) =>
+Line 78: public IReadOnlyCollection<AgentAction> GetSupportedActions() =>
+
+--- Jarvis.Core\Auth\AuthRequest.cs ---
+Line 3: public sealed record AuthRequest(string? Email, string? Password, string? Provider = null);
+
+--- Jarvis.Core\Auth\AuthResponse.cs ---
+Line 3: public sealed record AuthResponse(bool Succeeded, string Message, AuthStatus Status);
+
+--- Jarvis.Core\Auth\AuthService.cs ---
+Line 10: public AuthStatus GetStatus()
+Line 20: public IReadOnlyCollection<AuthProviderInfo> GetProviders() =>
+Line 29: public AuthResponse SignIn(SignInRequest request)
+Line 46: public AuthResponse SignUp(SignUpRequest request)
+Line 64: public AuthResponse SignOut()
+
+--- Jarvis.Core\Auth\AuthStatus.cs ---
+Line 3: public sealed record AuthStatus(bool IsAuthenticated, AuthUser? User, string Message);
+
+--- Jarvis.Core\Auth\LocalAuthService.cs ---
+Line 7: public AuthStatus GetStatus() => _inner.GetStatus();
+Line 9: public IReadOnlyCollection<AuthProviderInfo> GetProviders() => _inner.GetProviders();
+Line 11: public AuthResponse SignIn(SignInRequest request) => _inner.SignIn(request);
+Line 13: public AuthResponse SignUp(SignUpRequest request) => _inner.SignUp(request);
+Line 15: public AuthResponse SignOut() => _inner.SignOut();
+
+--- Jarvis.Core\Auth\SignInRequest.cs ---
+Line 3: public sealed record SignInRequest(string? Email, string? Password);
+
+--- Jarvis.Core\Auth\SignUpRequest.cs ---
+Line 3: public sealed record SignUpRequest(string? Email, string? Password, string? Name = null);
+
+--- Jarvis.Core\ConnectedApps\ConnectedAppInfo.cs ---
+Line 5: public ConnectedAppInfo()
+
+--- Jarvis.Core\ConnectedApps\ConnectedAppService.cs ---
+Line 7: public ConnectedAppService(IEnumerable<ConnectedAppInfo>? apps = null)
+Line 12: public IReadOnlyCollection<ConnectedAppInfo> GetApps() => _apps.Values.ToList();
+Line 14: public ConnectedAppInfo? GetApp(string provider) => _apps.GetValueOrDefault(provider);
+Line 16: public ConnectedAppConnectionResult Connect(string provider)
+Line 25: public ConnectedAppConnectionResult Disconnect(string provider)
+Line 34: public static IReadOnlyCollection<ConnectedAppInfo> GetDefaultApps() =>
+
+--- Jarvis.Core\ConnectedApps\OAuthConnection.cs ---
+Line 5: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+--- Jarvis.Core\Core\Assistant.cs ---
+Line 37: public async Task RespondAsync(string input, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Data\ChatHistoryService.cs ---
+Line 16: public ChatHistoryService(string historyPath, IChatHistoryRepository? repository = null, JarvisUserContext? userContext = null)
+Line 25: public async Task LoadAsync(CancellationToken cancellationToken = default)
+Line 48: public async Task AddAsync(ChatMessage message, CancellationToken cancellationToken = default)
+Line 62: public IEnumerable<ChatMessage> GetRecent(int count)
+
+--- Jarvis.Core\Data\ChatSessionService.cs ---
+Line 15: private readonly SemaphoreSlim _lock = new(1, 1);
+Line 17: public ChatSessionService(string sessionsPath, IChatRepository? repository = null, JarvisUserContext? userContext = null)
+Line 26: public async Task LoadAsync(CancellationToken cancellationToken = default)
+Line 49: public IReadOnlyCollection<ChatSessionSummary> GetSummaries()
+Line 57: public ChatSession? Get(string id)
+Line 62: public async Task<ChatSession> CreateAsync(string? title = null, CancellationToken cancellationToken = default)
+Line 94: public async Task AddMessageAsync(string id, ChatMessage message, CancellationToken cancellationToken = default)
+Line 126: public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Data\ClassifierService.cs ---
+Line 5: public bool LooksLikeCommand(string input)
+
+--- Jarvis.Core\Ingestion\IngestionModels.cs ---
+Line 23: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+Line 32: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+Line 50: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+--- Jarvis.Core\Ingestion\IngestionService.cs ---
+Line 31: private readonly SemaphoreSlim _gate = new(1, 1);
+Line 56: public async Task LoadAsync(CancellationToken cancellationToken = default)
+Line 121: public async Task<IngestionJob?> ExtractAsync(string id, CancellationToken cancellationToken = default)
+Line 154: public async Task<IngestionJob?> GenerateCandidatesAsync(string id, CancellationToken cancellationToken = default)
+Line 177: public async Task<(IngestionJob? Job, IngestionMemoryCandidate? Candidate, MemoryItem? Memory)> ApproveCandidateAsync(
+Line 226: public async Task<(IngestionJob? Job, IngestionMemoryCandidate? Candidate)> RejectCandidateAsync(
+Line 247: public async Task<IReadOnlyList<(IngestionJob? Job, IngestionMemoryCandidate? Candidate, MemoryItem? Memory)>> ApproveCandidatesAsync(
+Line 263: public async Task<IReadOnlyList<(IngestionJob? Job, IngestionMemoryCandidate? Candidate)>> RejectCandidatesAsync(
+Line 276: public IngestionJob? Get(string id) => Find(id);
+Line 278: public async Task<IngestionJob?> DeleteAsync(string id, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Ingestion\MemoryCandidateService.cs ---
+Line 22: public IReadOnlyList<IngestionMemoryCandidate> CreateCandidates(IngestionJob job)
+
+--- Jarvis.Core\Ingestion\TextExtractionServices.cs ---
+Line 18: public bool CanHandle(IngestionSourceType sourceType) => sourceType == IngestionSourceType.Pdf;
+Line 20: public async Task<IngestionExtractionResult> ExtractAsync(IngestionJob job, CancellationToken cancellationToken = default)
+Line 123: public ImageOcrService(SettingsService settingsService)
+Line 128: public bool CanHandle(IngestionSourceType sourceType) => sourceType == IngestionSourceType.Image;
+Line 130: public async Task<TesseractOcrStatus> GetStatusAsync(CancellationToken cancellationToken = default)
+Line 196: public async Task<IngestionExtractionResult> ExtractAsync(IngestionJob job, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Knowledge\KnowledgeService.cs ---
+Line 33: public async Task LoadAsync(CancellationToken cancellationToken = default)
+Line 85: public IReadOnlyList<KnowledgeItem> Search(string? query, KnowledgeCategory? category = null, string? sourceType = null, int limit = 50) =>
+Line 108: public object GetStats() => new
+Line 123: public async Task<KnowledgeItem?> DeleteAsync(string id, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Memory\MemoryClassificationService.cs ---
+Line 7: public MemoryType NormalizeType(MemoryType? memoryType, string? source = null)
+Line 12: public MemoryReviewStatus DefaultReviewStatus(MemoryType memoryType)
+Line 19: public string NormalizeCategory(string? category) => MemoryCategories.Normalize(category);
+
+--- Jarvis.Core\Memory\MemoryContextBuilder.cs ---
+Line 12: public string Build(IReadOnlyList<MemoryRetrievalResult> memories, int maxMemories)
+
+--- Jarvis.Core\Memory\MemoryRankingService.cs ---
+Line 25: public MemoryRetrievalResult Score(MemoryItem item, string query, DateTime nowUtc)
+Line 62: public IReadOnlySet<string> GetRelevantCategories(string query)
+
+--- Jarvis.Core\Memory\MemoryRetrievalOptions.cs ---
+Line 8: public int ClampedMaxResults => Math.Clamp(MaxResults, 1, 10);
+
+--- Jarvis.Core\Memory\MemoryRetrievalService.cs ---
+Line 18: public IReadOnlyList<MemoryRetrievalResult> Retrieve(string query, MemoryRetrievalOptions options)
+
+--- Jarvis.Core\Memory\MemoryReviewService.cs ---
+Line 7: public bool IsPending(MemoryItem item) =>
+Line 11: public MemoryItem Approve(MemoryItem item)
+Line 19: public MemoryItem Reject(MemoryItem item)
+
+--- Jarvis.Core\Memory\MemoryScoringService.cs ---
+Line 5: public int NormalizeImportance(int importance) => Math.Clamp(importance, 1, 10);
+Line 7: public int NormalizeConfidence(int confidence) => Math.Clamp(confidence, 1, 10);
+
+--- Jarvis.Core\Memory\MemorySearchService.cs ---
+Line 7: public IReadOnlyList<MemoryItem> Search(IEnumerable<MemoryItem> items, MemorySearchCriteria criteria)
+
+--- Jarvis.Core\Memory\MemoryService.cs ---
+Line 40: public async Task LoadAsync(CancellationToken cancellationToken = default)
+Line 119: public IReadOnlyList<MemoryItem> Search(MemorySearchCriteria criteria) =>
+Line 122: public IReadOnlyList<MemoryItem> GetPendingSuggestions() =>
+Line 165: public async Task<MemoryItem?> ApproveAsync(string id, CancellationToken cancellationToken = default)
+Line 178: public async Task<MemoryItem?> RejectAsync(string id, CancellationToken cancellationToken = default)
+Line 191: public async Task<IReadOnlyList<MemoryItem>> BulkApproveAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+Line 208: public async Task<IReadOnlyList<MemoryItem>> BulkRejectAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+Line 221: public async Task<int> BulkDeleteAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
+Line 269: public async Task<MemoryItem?> DeleteAsync(string id, CancellationToken cancellationToken = default)
+Line 283: public async Task ClearAsync(CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Migrations\FileStorageMigrationService.cs ---
+Line 55: public async Task RunAsync(CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Migrations\MigrationRecord.cs ---
+Line 5: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+--- Jarvis.Core\Models\ChatMessage.cs ---
+Line 7: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+Line 20: public static ChatMessage System(string content) => new() { Role = "system", Content = content };
+Line 21: public static ChatMessage User(string content) => new() { Role = "user", Content = content };
+Line 22: public static ChatMessage Assistant(string content) => new() { Role = "assistant", Content = content };
+
+--- Jarvis.Core\Models\ChatSessionModels.cs ---
+Line 8: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+--- Jarvis.Core\Models\DiagnosticsModels.cs ---
+Line 3: public sealed record SettingsValidationResult(IReadOnlyCollection<string> Warnings);
+
+--- Jarvis.Core\Models\InteractionLogModels.cs ---
+Line 41: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+--- Jarvis.Core\Models\KnowledgeItem.cs ---
+Line 17: public string Id { get; set; } = Guid.NewGuid().ToString();
+
+--- Jarvis.Core\Models\MemoryItem.cs ---
+Line 36: public static string Normalize(string? category)
+Line 44: public string Id { get; set; } = Guid.NewGuid().ToString();
+
+--- Jarvis.Core\Models\PcCommandModels.cs ---
+Line 49: public string Id { get; set; } = Guid.NewGuid().ToString();
+Line 65: public string Id { get; set; } = Guid.NewGuid().ToString();
+Line 66: public PcCommand Command { get; set; } = new(PcControlAction.Unknown, string.Empty, string.Empty);
+Line 70: public DateTime ExpiresAtUtc { get; set; } = DateTime.UtcNow.AddMinutes(2);
+Line 73: public sealed record PcCommandExecuteRequest(string Input);
+Line 74: public sealed record PcCommandConfirmRequest(string ConfirmationId);
+Line 85: public sealed record AssistantInputRequest(string Message, string? ChatSessionId = null);
+Line 87: public sealed record AssistantConfirmRequest(string ConfirmationId, string? ChatSessionId = null);
+
+--- Jarvis.Core\Models\UserSettingDocument.cs ---
+Line 5: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+Line 8: public AppSettings Settings { get; set; } = new();
+
+--- Jarvis.Core\Models\VoicePipelineModels.cs ---
+Line 92: public string Id { get; set; } = Guid.NewGuid().ToString();
+Line 144: public sealed record VoicePipelineRequest(bool RequireWakeWord = false);
+Line 146: public sealed record VoiceConfirmationRequest(string ConfirmationId);
+
+--- Jarvis.Core\Mongo\MongoContext.cs ---
+Line 8: public MongoContext(MongoOptions options)
+Line 19: public IMongoCollection<T> Collection<T>(string name) => Database.GetCollection<T>(name);
+Line 21: public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Mongo\MongoDocumentConventions.cs ---
+Line 9: public static void Register()
+
+--- Jarvis.Core\Mongo\MongoInitializer.cs ---
+Line 12: public MongoInitializer(MongoContext context)
+Line 17: public async Task InitializeAsync(CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Mongo\MongoOptions.cs ---
+Line 7: public TimeSpan ServerSelectionTimeout { get; init; } = TimeSpan.FromMilliseconds(800);
+
+--- Jarvis.Core\Repositories\Mongo\MongoAuditLogRepository.cs ---
+Line 11: public MongoAuditLogRepository(MongoContext context)
+Line 16: public async Task<IReadOnlyList<InteractionLogEntry>> GetRecentAsync(string userId, int limit, CancellationToken cancellationToken = default) =>
+Line 22: public Task AddAsync(string userId, InteractionLogEntry entry, CancellationToken cancellationToken = default)
+Line 35: public Task ClearAsync(string userId, CancellationToken cancellationToken = default) =>
+
+--- Jarvis.Core\Repositories\Mongo\MongoChatHistoryRepository.cs ---
+Line 12: public MongoChatHistoryRepository(MongoContext context)
+Line 17: public async Task<IReadOnlyList<ChatMessage>> GetAsync(string userId, CancellationToken cancellationToken = default) =>
+Line 22: public Task AddAsync(string userId, ChatMessage message, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Repositories\Mongo\MongoChatRepository.cs ---
+Line 12: public MongoChatRepository(MongoContext context)
+Line 18: public async Task<IReadOnlyList<ChatSession>> GetSessionsAsync(string userId, CancellationToken cancellationToken = default)
+Line 32: public async Task<ChatSession?> GetSessionAsync(string userId, string id, CancellationToken cancellationToken = default)
+Line 43: public Task UpsertSessionAsync(string userId, ChatSession session, CancellationToken cancellationToken = default)
+Line 60: public async Task AddMessageAsync(string userId, string sessionId, ChatMessage message, CancellationToken cancellationToken = default)
+Line 70: public async Task DeleteSessionAsync(string userId, string id, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Repositories\Mongo\MongoCommandHistoryRepository.cs ---
+Line 11: public MongoCommandHistoryRepository(MongoContext context)
+Line 16: public async Task<IReadOnlyList<PcCommandLogEntry>> GetRecentAsync(string userId, int limit, CancellationToken cancellationToken = default) =>
+Line 22: public Task AddAsync(string userId, PcCommandLogEntry entry, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Repositories\Mongo\MongoConnectedAppRepository.cs ---
+Line 11: public MongoConnectedAppRepository(MongoContext context)
+Line 16: public async Task<IReadOnlyList<ConnectedAppInfo>> GetForUserAsync(string userId, CancellationToken cancellationToken = default) =>
+Line 21: public Task UpsertAsync(string userId, ConnectedAppInfo app, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Repositories\Mongo\MongoDeviceRepository.cs ---
+Line 11: public MongoDeviceRepository(MongoContext context)
+Line 16: public Task UpsertAsync(DeviceRecord device, CancellationToken cancellationToken = default)
+Line 26: public async Task<DeviceRecord?> GetAsync(string userId, string deviceId, CancellationToken cancellationToken = default) =>
+Line 30: public async Task<IReadOnlyList<DeviceRecord>> GetForUserAsync(string userId, CancellationToken cancellationToken = default) =>
+Line 35: public Task RevokeAsync(string userId, string deviceId, CancellationToken cancellationToken = default) =>
+
+--- Jarvis.Core\Repositories\Mongo\MongoIngestionRepository.cs ---
+Line 11: public MongoIngestionRepository(MongoContext context)
+Line 16: public async Task<IReadOnlyList<IngestionJob>> GetForUserAsync(string userId, CancellationToken cancellationToken = default) =>
+Line 21: public async Task<IngestionJob?> GetAsync(string userId, string id, CancellationToken cancellationToken = default) =>
+Line 25: public Task UpsertAsync(string userId, IngestionJob job, CancellationToken cancellationToken = default)
+Line 44: public Task DeleteAsync(string userId, string id, CancellationToken cancellationToken = default) =>
+
+--- Jarvis.Core\Repositories\Mongo\MongoKnowledgeRepository.cs ---
+Line 11: public MongoKnowledgeRepository(MongoContext context)
+Line 16: public async Task<IReadOnlyList<KnowledgeItem>> GetForUserAsync(string userId, CancellationToken cancellationToken = default) =>
+Line 21: public Task UpsertAsync(string userId, KnowledgeItem item, CancellationToken cancellationToken = default)
+Line 29: public Task DeleteAsync(string userId, string id, CancellationToken cancellationToken = default) =>
+
+--- Jarvis.Core\Repositories\Mongo\MongoMemoryRepository.cs ---
+Line 11: public MongoMemoryRepository(MongoContext context)
+Line 16: public async Task<IReadOnlyList<MemoryItem>> GetForUserAsync(string userId, CancellationToken cancellationToken = default) =>
+Line 21: public Task UpsertAsync(string userId, MemoryItem item, CancellationToken cancellationToken = default)
+Line 32: public Task DeleteAsync(string userId, string id, CancellationToken cancellationToken = default) =>
+Line 35: public Task ClearAsync(string userId, CancellationToken cancellationToken = default) =>
+
+--- Jarvis.Core\Repositories\Mongo\MongoMigrationRepository.cs ---
+Line 11: public MongoMigrationRepository(MongoContext context)
+Line 16: public async Task<bool> HasCompletedAsync(string name, string version, CancellationToken cancellationToken = default)
+Line 26: public Task CompleteAsync(string name, string version, string message, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Repositories\Mongo\MongoSettingsRepository.cs ---
+Line 11: public MongoSettingsRepository(MongoContext context)
+Line 16: public async Task<AppSettings?> GetAsync(string userId, string scope, CancellationToken cancellationToken = default)
+Line 23: public Task UpsertAsync(string userId, string scope, AppSettings settings, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Repositories\Mongo\MongoUserRepository.cs ---
+Line 11: public MongoUserRepository(MongoContext context)
+Line 16: public async Task<UserAccount?> GetAsync(string userId, CancellationToken cancellationToken = default) =>
+Line 19: public Task UpsertAsync(UserAccount user, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Repositories\Mongo\MongoUserSessionRepository.cs ---
+Line 11: public MongoUserSessionRepository(MongoContext context)
+Line 16: public Task AddAsync(UserSession session, CancellationToken cancellationToken = default) =>
+Line 19: public async Task<IReadOnlyList<UserSession>> GetActiveForUserAsync(string userId, CancellationToken cancellationToken = default) =>
+Line 24: public Task RevokeAsync(string sessionId, CancellationToken cancellationToken = default) =>
+
+--- Jarvis.Core\Repositories\Mongo\MongoVoiceHistoryRepository.cs ---
+Line 11: public MongoVoiceHistoryRepository(MongoContext context)
+Line 16: public async Task<IReadOnlyList<VoiceHistoryItem>> GetRecentAsync(string userId, int limit, CancellationToken cancellationToken = default) =>
+Line 22: public Task AddAsync(string userId, VoiceHistoryItem item, CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Security\AuditLogger.cs ---
+Line 12: private readonly SemaphoreSlim _gate = new(1, 1);
+Line 14: public AuditLogger(string auditLogPath)
+
+--- Jarvis.Core\Security\IAuthenticationProvider.cs ---
+Line 8: public sealed record AuthenticationResult(bool Succeeded, string PrincipalId, string Reason);
+
+--- Jarvis.Core\Security\InputValidationResult.cs ---
+Line 9: public static InputValidationResult Valid(string command, string target) =>
+Line 12: public static InputValidationResult Invalid(string command, string target, string reason) =>
+
+--- Jarvis.Core\Security\InputValidator.cs ---
+Line 51: public InputValidationResult Validate(SecurityRequest request)
+
+--- Jarvis.Core\Security\PermissionDefinitions.cs ---
+Line 50: public static bool Exists(string permission) =>
+
+--- Jarvis.Core\Security\PermissionResolver.cs ---
+Line 7: public ResolvedPermissions Resolve(IEnumerable<UserRole> roles)
+
+--- Jarvis.Core\Security\PermissionService.cs ---
+Line 10: public PermissionService()
+Line 15: public PermissionService(JarvisUserContext userContext, PermissionResolver? resolver = null)
+Line 21: public bool CanExecute(SecurityRequest request, out string reason)
+Line 59: public PermissionEvaluationResult Evaluate(PermissionEvaluationRequest request)
+
+--- Jarvis.Core\Security\RoleDefinitions.cs ---
+Line 35: public static RoleDefinition Resolve(UserRole role) =>
+
+--- Jarvis.Core\Security\SecurityDecision.cs ---
+Line 11: public static SecurityDecision Allow(SecurityRequest request, string command, string target, string reason) =>
+Line 14: public static SecurityDecision RequireConfirmation(SecurityRequest request, string command, string target, string reason) =>
+Line 17: public static SecurityDecision Block(SecurityRequest request, string command, string target, string reason) =>
+
+--- Jarvis.Core\Services\InteractionLogService.cs ---
+Line 20: private readonly SemaphoreSlim _gate = new(1, 1);
+Line 22: public InteractionLogService(string logPath, IAuditLogRepository? repository = null, JarvisUserContext? userContext = null)
+Line 32: public async Task LoadAsync(CancellationToken cancellationToken = default)
+Line 81: public async Task AddAsync(InteractionLogEntry entry, CancellationToken cancellationToken = default)
+Line 114: public async Task ClearAsync(CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Services\JarvisInputNormalizer.cs ---
+Line 7: public static string StripAssistantPrefix(string input)
+
+--- Jarvis.Core\Services\JarvisPersonalityService.cs ---
+Line 9: public JarvisPersonalityService(SettingsService settingsService)
+Line 14: public string NormalizeUserInput(string input) => JarvisInputNormalizer.StripAssistantPrefix(input);
+Line 16: public string BuildSystemInstructions(string userInput)
+Line 43: public string FormatCommandResponse(PcCommand command, bool succeeded, string executionMessage)
+
+--- Jarvis.Core\Services\OllamaService.cs ---
+Line 13: public OllamaService(HttpClient httpClient, SettingsService settingsService)
+Line 19: public async Task<bool> IsRunningAsync(CancellationToken cancellationToken = default)
+
+--- Jarvis.Core\Services\SettingsService.cs ---
+Line 20: public SettingsService(string settingsPath, ISettingsRepository? repository = null, JarvisUserContext? userContext = null)
+Line 27: public AppSettings Current { get; private set; } = new();
+Line 29: public async Task LoadAsync(CancellationToken cancellationToken = default)
+Line 50: public Task SaveAsync(CancellationToken cancellationToken = default)
+Line 63: public static void Normalize(AppSettings settings)
+
+--- Jarvis.Core\Services\SettingsValidationService.cs ---
+Line 9: public SettingsValidationService(SettingsService settingsService)
+Line 14: public SettingsValidationResult Validate()
+
+--- Jarvis.Core\Users\DeviceRecord.cs ---
+Line 5: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+Line 9: public string Platform { get; set; } = Environment.OSVersion.Platform.ToString();
+
+--- Jarvis.Core\Users\UserAccount.cs ---
+Line 5: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+--- Jarvis.Core\Users\UserSession.cs ---
+Line 5: public string Id { get; set; } = Guid.NewGuid().ToString("N");
+Line 13: public DateTime ExpiresAtUtc { get; set; } = DateTime.UtcNow.AddDays(7);
+
+--- Jarvis.Tools\Commands\AgentCommand.cs ---
+Line 9: public AgentCommand(AgentPlanner planner)
+Line 18: public Task ExecuteAsync(string arguments, CancellationToken cancellationToken = default)
+Line 23: public Task<string> ExecuteWithResultAsync(string arguments, CancellationToken cancellationToken = default)
+
+--- Jarvis.Tools\Commands\AppCommandService.cs ---
+Line 9: public AppCommandService(PcCommandService pcCommandService)
+Line 18: public async Task ExecuteAsync(string arguments, CancellationToken cancellationToken = default)
+
+--- Jarvis.Tools\Commands\BasicCommand.cs ---
+Line 8: public BasicCommand(CommandManager commandManager, Func<bool> requestExit)
+Line 18: public Task ExecuteAsync(string arguments, CancellationToken cancellationToken = default)
+
+--- Jarvis.Tools\Commands\CommandManager.cs ---
+Line 7: public CommandManager(IEnumerable<ICommand> commands)
+Line 12: public IReadOnlyCollection<ICommand> Commands => _commands.ToList();
+Line 14: public async Task<CommandManagerResult> TryExecuteAsync(string input, CancellationToken cancellationToken = default)
+Line 47: public sealed record CommandManagerResult(bool WasHandled, string? Message)
+Line 49: public static CommandManagerResult Handled(string? message = null) => new(true, message);
+Line 51: public static CommandManagerResult NotHandled() => new(false, null);
+
+--- Jarvis.Tools\Commands\FileCommand.cs ---
+Line 9: public FileCommand(FileIndexService fileIndexService)
+Line 18: public async Task ExecuteAsync(string arguments, CancellationToken cancellationToken = default)
+
+--- Jarvis.Tools\Commands\HelpCommand.cs ---
+Line 7: public HelpCommand(CommandManager commandManager)
+Line 16: public Task ExecuteAsync(string arguments, CancellationToken cancellationToken = default)
+
+--- Jarvis.Tools\Commands\MemoryCommand.cs ---
+Line 9: public MemoryCommand(MemoryService memoryService)
+Line 18: public async Task ExecuteAsync(string arguments, CancellationToken cancellationToken = default)
+
+--- Jarvis.Tools\Commands\SettingsCommandService.cs ---
+Line 9: public SettingsCommandService(SettingsService settingsService)
+Line 18: public async Task ExecuteAsync(string arguments, CancellationToken cancellationToken = default)
+
+--- Jarvis.Tools\Services\CommandLogService.cs ---
+Line 20: private readonly SemaphoreSlim _gate = new(1, 1);
+Line 22: public CommandLogService(string logPath, ICommandHistoryRepository? repository = null, JarvisUserContext? userContext = null)
+Line 32: public async Task LoadAsync(CancellationToken cancellationToken = default)
+Line 55: public async Task AddAsync(PcCommandLogEntry entry, CancellationToken cancellationToken = default)
+
+--- Jarvis.Tools\Services\CommandRiskClassifier.cs ---
+Line 8: public SecurityRiskLevel Classify(PcCommand command)
+
+--- Jarvis.Tools\Services\CommandSafetyService.cs ---
+Line 7: public CommandSafetyLevel GetSafetyLevel(PcControlAction action)
+
+--- Jarvis.Tools\Services\FileIndexService.cs ---
+Line 63: public FileIndexService(SettingsService settingsService)
+Line 70: public Task<int> RebuildAsync(CancellationToken cancellationToken = default)
+Line 88: public IEnumerable<string> Search(string query)
+Line 176: public bool OpenFile(string path)
+Line 187: public bool OpenContainingFolder(string path)
+
+--- Jarvis.Tools\Services\InstalledAppService.cs ---
+Line 7: public Task<bool> OpenAsync(string target)
+
+--- Jarvis.Tools\Services\PcCommandParser.cs ---
+Line 7: public PcCommand Parse(string input)
+
+--- Jarvis.Tools\Services\WindowsPcControlService.cs ---
+Line 35: public WindowsPcControlService(string screenshotDirectory)
+Line 41: public Task<string> ExecuteAsync(PcCommand command, CancellationToken cancellationToken = default)
+Line 176: private static byte[] BuildBmpFile(BitmapInfoHeader header, byte[] pixels)
+Line 297: private static extern IntPtr CreateCompatibleBitmap(IntPtr hDc, int width, int height);
+Line 333: private struct BitmapInfo
+Line 340: private struct BitmapInfoHeader
+
+--- Jarvis\App\CommandRouter.cs ---
+Line 12: public CommandRouter(ClassifierService classifierService, CommandManager commandManager, Assistant assistant)
+Line 19: public async Task RouteAsync(string input, CancellationToken cancellationToken = default)
+
+--- Jarvis\Endpoints\EndpointBootstrapper.cs ---
+Line 15: public static WebApplication MapJarvisEndpoints(this WebApplication app)
+Line 54: app.MapGet("/api/auth/status", () => Results.Ok(authService.GetStatus()));
+Line 56: app.MapGet("/api/auth/providers", () => Results.Ok(authService.GetProviders()));
+Line 58: app.MapPost("/api/auth/signin", (SignInRequest request) =>
+Line 63: app.MapPost("/api/auth/signup", (SignUpRequest request) =>
+Line 68: app.MapPost("/api/auth/signout", () => Results.Ok(authService.SignOut()));
+Line 70: app.MapGet("/api/connected-apps", () => Results.Ok(connectedAppService.GetApps()));
+Line 72: app.MapPost("/api/connected-apps/{provider}/connect", (string provider) =>
+Line 83: app.MapPost("/api/connected-apps/{provider}/disconnect", (string provider) =>
+Line 94: app.MapGet("/api/status", async () => Results.Ok(new
+Line 103: app.MapGet("/api/diagnostics", async () =>
+Line 123: app.MapGet("/api/history", () => Results.Ok(chatHistoryService.Messages));
+Line 125: app.MapGet("/api/interactions/logs", (int? limit) =>
+Line 137: app.MapPost("/api/interactions/logs", async (InteractionLogRequest request, CancellationToken cancellationToken) =>
+Line 155: app.MapDelete("/api/interactions/logs", async (CancellationToken cancellationToken) =>
+Line 167: app.MapGet("/api/interactions/status", () =>
+Line 178: app.MapPost("/api/chat", async (ChatRequest request, CancellationToken cancellationToken) =>
+Line 214: app.MapPost("/api/assistant/input", async (AssistantInputRequest request, CancellationToken cancellationToken) =>
+Line 401: app.MapPost("/api/assistant/confirm", async (AssistantConfirmRequest request, CancellationToken cancellationToken) =>
+Line 448: app.MapGet("/api/chats", () =>
+Line 454: app.MapGet("/api/chats/{id}", (string id) =>
+Line 468: app.MapPost("/api/chats", async (ChatSessionCreateRequest request, CancellationToken cancellationToken) =>
+Line 480: app.MapPost("/api/chats/{id}/messages", async (string id, ChatSessionMessageRequest request, CancellationToken cancellationToken) =>
+Line 545: app.MapDelete("/api/chats/{id}", async (string id, CancellationToken cancellationToken) =>
+Line 559: app.MapGet("/api/memory", () =>
+Line 565: app.MapPost("/api/memory", async (MemoryRequest request, CancellationToken cancellationToken) =>
+Line 592: app.MapGet("/api/memory/search", (
+Line 620: app.MapGet("/api/memory/suggestions", () =>
+Line 626: app.MapPost("/api/memory/retrieve", (MemoryRetrieveRequest request) =>
+Line 656: app.MapGet("/api/memory/stats", () =>
+Line 678: app.MapGet("/api/knowledge", () =>
+Line 684: app.MapGet("/api/knowledge/stats", () =>
+Line 690: app.MapGet("/api/knowledge/search", (
+Line 702: app.MapPost("/api/knowledge", async (KnowledgeCreateRequest request, CancellationToken cancellationToken) =>
+Line 726: app.MapDelete("/api/knowledge/{id}", async (string id, CancellationToken cancellationToken) =>
+Line 738: app.MapPut("/api/memory/{id}", async (string id, MemoryUpdateRequest request, CancellationToken cancellationToken) =>
+Line 769: app.MapPost("/api/memory/bulk-approve", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+Line 781: app.MapPost("/api/memory/bulk-reject", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+Line 793: app.MapPost("/api/memory/bulk-delete", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+Line 805: app.MapPost("/api/memory/bulk-update", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+Line 823: app.MapPost("/api/memory/{id}/approve", async (string id, CancellationToken cancellationToken) =>
+Line 837: app.MapPost("/api/memory/{id}/reject", async (string id, CancellationToken cancellationToken) =>
+Line 851: app.MapDelete("/api/memory/{id}", async (string id, CancellationToken cancellationToken) =>
+Line 865: app.MapDelete("/api/memory", async (CancellationToken cancellationToken) =>
+Line 877: app.MapPost("/api/ingestion/upload", async (IFormFile file, CancellationToken cancellationToken) =>
+Line 920: app.MapGet("/api/ingestion/jobs", () =>
+Line 926: app.MapGet("/api/ingestion/jobs/{id}", (string id) =>
+Line 938: app.MapGet("/api/ingestion/jobs/{id}/file", (string id) =>
+Line 960: app.MapPost("/api/ingestion/jobs/{id}/extract", async (string id, CancellationToken cancellationToken) =>
+Line 987: app.MapPost("/api/ingestion/jobs/{id}/candidates", async (string id, CancellationToken cancellationToken) =>
+Line 1004: app.MapPost("/api/ingestion/jobs/{id}/knowledge", async (
+Line 1037: app.MapPost("/api/ingestion/jobs/{id}/memory", async (
+Line 1073: app.MapDelete("/api/ingestion/jobs/{id}", async (string id, CancellationToken cancellationToken) =>
+Line 1099: app.MapPost("/api/ingestion/candidates/{id}/approve", async (
+Line 1135: app.MapPost("/api/ingestion/candidates/bulk-approve", async (
+Line 1159: app.MapPost("/api/ingestion/candidates/{id}/reject", async (string id, CancellationToken cancellationToken) =>
+Line 1185: app.MapPost("/api/ingestion/candidates/bulk-reject", async (
+Line 1203: app.MapGet("/api/settings", () =>
+Line 1209: app.MapPost("/api/settings", async (AppSettings request, CancellationToken cancellationToken) =>
+Line 1261: app.MapPost("/api/files/index", async (CancellationToken cancellationToken) =>
+Line 1273: app.MapGet("/api/files/search", (string q) =>
+Line 1284: app.MapGet("/api/files/search-detailed", (string q, int? limit) =>
+Line 1296: app.MapPost("/api/files/open", (FileOpenRequest request) =>
+Line 1315: app.MapPost("/api/files/open-folder", (FileOpenRequest request) =>
+Line 1334: app.MapGet("/api/commands/catalog", () =>
+Line 1340: app.MapGet("/api/commands/logs", () =>
+Line 1346: app.MapPost("/api/commands/execute", async (PcCommandExecuteRequest request, CancellationToken cancellationToken) =>
+Line 1363: app.MapPost("/api/commands/confirm", async (PcCommandConfirmRequest request, CancellationToken cancellationToken) =>
+Line 1389: app.MapGet("/api/voice/status", () =>
+Line 1462: app.MapGet("/api/voice/health", async (CancellationToken cancellationToken) =>
+Line 1530: app.MapGet("/api/voice/diagnostics", () =>
+Line 1548: app.MapGet("/api/voice/wake-status", () =>
+Line 1568: app.MapPost("/api/voice/wake-check", (WakeWordCheckRequest request) =>
+Line 1584: app.MapGet("/api/voice/commands", () =>
+Line 1590: app.MapGet("/api/voice/tts-status", () =>
+Line 1614: app.MapPost("/api/voice/transcribe", async (HttpRequest request, CancellationToken cancellationToken) =>
+Line 1666: app.MapGet("/api/voice/pipeline/status", () =>
+Line 1672: app.MapGet("/api/voice/history", () =>
+Line 1678: app.MapPost("/api/voice/pipeline", async (HttpRequest request, CancellationToken cancellationToken) =>
+Line 1724: app.MapPost("/api/voice/pipeline/confirm", async (VoiceConfirmationRequest request, CancellationToken cancellationToken) =>
+Line 1751: app.MapPost("/api/voice/speak", async (SpeakRequest request, CancellationToken cancellationToken) =>
+Line 1798: app.MapPost("/api/voice/speak/stop", async (CancellationToken cancellationToken) =>
+Line 1817: app.MapPost("/api/voice/command", async (VoiceCommandRequest request, CancellationToken cancellationToken) =>
+
+--- Jarvis\Endpoints\EndpointContracts.cs ---
+Line 5: public sealed record ChatRequest(string Message);
+Line 6: public sealed record ChatSessionCreateRequest(string? Title);
+Line 7: public sealed record ChatSessionMessageRequest(string Message);
+Line 28: public sealed record MemoryRetrieveRequest(string Query, int? MaxResults = null);
+Line 62: public sealed record SpeakRequest(string Text);
+Line 63: public sealed record VoiceCommandRequest(string Transcript, bool Confirmed = false);
+Line 64: public sealed record WakeWordCheckRequest(string Transcript);
+Line 65: public sealed record FileOpenRequest(string Path);
+
+--- Jarvis\Services\PathResolver.cs ---
+Line 8: public PathResolver(string basePath, string? webRootPath = null)
+Line 23: public string AppDataDirectory => Path.Combine(_basePath, "Data");
+Line 24: public string MemoryDirectory => Path.Combine(_basePath, "Memory");
+Line 25: public string LogsDirectory => Path.Combine(AppDataDirectory, "logs");
+Line 26: public string SecurityLogsDirectory => Path.Combine(_basePath, "logs");
+Line 27: public string ScreenshotDirectory => Path.Combine(AppDataDirectory, "screenshots");
+Line 28: public string GeneratedAudioDirectory => Path.Combine(_webRootPath, "generated-audio");
+Line 29: public string IngestionUploadDirectory => Path.Combine(AppDataDirectory, "uploads", "ingestion");
+Line 30: public string VoiceHistoryPath => Path.Combine(AppDataDirectory, "voice_history.json");
+Line 31: public string IngestionJobsPath => Path.Combine(AppDataDirectory, "ingestion_jobs.json");
+Line 32: public string KnowledgePath => Path.Combine(AppDataDirectory, "knowledge.json");
+Line 33: public string MemoryPath => Path.Combine(MemoryDirectory, "memory.json");
+Line 34: public string ChatHistoryPath => Path.Combine(AppDataDirectory, "chat_history.json");
+Line 35: public string ChatSessionsPath => Path.Combine(AppDataDirectory, "chat_sessions.json");
+Line 36: public string CommandLogPath => Path.Combine(AppDataDirectory, "command_logs.json");
+Line 37: public string InteractionLogPath => Path.Combine(AppDataDirectory, "interaction_logs.json");
+Line 38: public string SecurityAuditLogPath => Path.Combine(SecurityLogsDirectory, "security-audit.log");
+Line 39: public string SettingsPath => Path.Combine(_basePath, "appsettings.json");
+
+--- Jarvis\Services\PiperService.cs ---
+Line 10: public PiperService(SettingsService settingsService, string audioOutputDirectory)
+Line 49: public async Task<PiperSpeechResult> SpeakAsync(string text, CancellationToken cancellationToken = default)
+Line 139: public static PiperSpeechResult Success(string audioUrl) =>
+Line 142: public static PiperSpeechResult NotReady(string message) =>
+Line 145: public static PiperSpeechResult Failed(string message) =>
+
+--- Jarvis\Services\PlatformService.cs ---
+Line 28: public bool IsWindows => OperatingSystem.IsWindows();
+Line 29: public bool IsLinux => OperatingSystem.IsLinux();
+Line 30: public bool IsMacOS => OperatingSystem.IsMacOS();
+
+--- Jarvis\Services\VoiceCommandService.cs ---
+Line 24: public IReadOnlyCollection<VoiceCommandCatalogItem> GetCatalog() => _processor.GetCatalog();
+Line 41: public static VoiceCommandResult NoMatch() =>
+
+--- Jarvis\Services\VoiceHistoryService.cs ---
+Line 20: private readonly SemaphoreSlim _gate = new(1, 1);
+Line 22: public VoiceHistoryService(string historyPath, IVoiceHistoryRepository? repository = null, JarvisUserContext? userContext = null)
+Line 32: public async Task LoadAsync(CancellationToken cancellationToken = default)
+Line 55: public async Task AddAsync(VoicePipelineResult result, CancellationToken cancellationToken = default)
+
+--- Jarvis\Services\VoicePipelineService.cs ---
+Line 535: public string SessionId { get; } = Guid.NewGuid().ToString("N");
+Line 552: public static VoicePipelineTrace Start(long audioSizeBytes) => new(audioSizeBytes);
+Line 554: public void CompleteStage(string stage)
+Line 560: public void Fail(string reason)
+Line 566: public void End()
+Line 572: public void RefreshProcessingDuration()
+
+--- Jarvis\Services\WakeWordService.cs ---
+Line 10: public WakeWordService(SettingsService settingsService, WhisperService whisperService)
+Line 56: public WakeWordConfiguration GetConfiguration() => new()
+Line 66: public WakeWordDetectionResult CheckTranscript(string transcript)
+
+--- Jarvis\Services\WhisperService.cs ---
+Line 10: public WhisperService(SettingsService settingsService, SpeechToTextService? speechToTextService = null)
+Line 70: public static WhisperTranscriptionResult Success(string transcript) =>
+Line 73: public static WhisperTranscriptionResult NotReady(string message) =>
+Line 76: public static WhisperTranscriptionResult Failed(string message) =>
+
+--- Jarvis\Startup\CliBootstrapper.cs ---
+Line 9: public static async Task RunAsync(SettingsService settingsService, OllamaService ollamaService, CommandRouter router)
+
+--- Jarvis\Startup\JarvisApplication.cs ---
+Line 25: public static JarvisApplicationBuilder CreateBuilder(string[] args)
+
+--- Jarvis\Startup\JarvisApplicationBuilder.cs ---
+Line 12: public JarvisApplicationBuilder(string[] args, WebApplicationBuilder builder, JarvisRuntime runtime)
+Line 21: public WebApplication Build() => _builder.Build();
+Line 23: public Task<bool> TryRunCliAsync()
+
+--- Jarvis\Voice\Models\SpeechToTextResult.cs ---
+Line 10: public static SpeechToTextResult Success(string transcript, string device) =>
+Line 13: public static SpeechToTextResult NotReady(string message) =>
+Line 16: public static SpeechToTextResult Failed(string message, string device = "cpu") =>
+
+--- Jarvis\Voice\SpeechService.cs ---
+Line 5: public Task SpeakAsync(string text, CancellationToken cancellationToken = default)
+
+--- Jarvis\Voice\SpeechToTextService.cs ---
+Line 13: public SpeechToTextService(VoiceSettingsService settingsService)
+
+--- Jarvis\Voice\TextToSpeechService.cs ---
+Line 27: public string VoiceName => string.IsNullOrWhiteSpace(_settingsService.Current.VoiceName)
+Line 31: public bool IsAvailable => IsEnabled && (HasEdgeTtsCli || HasWindowsSystemSpeech || _piperService.IsConfigured);
+Line 58: public async Task<TextToSpeechResult> SpeakAsync(string text, CancellationToken cancellationToken = default)
+Line 109: public Task StopAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+Line 281: private static int MapSystemSpeechRate(double rate) =>
+Line 284: private static int MapSystemSpeechVolume(double volume) =>
+Line 390: public static TextToSpeechResult NotReady(string message, string provider, string voiceName, string spokenText) =>
+Line 393: public static TextToSpeechResult Failed(string message, string provider, string voiceName, string spokenText) =>
+
+--- Jarvis\Voice\VoiceActivityDetector.cs ---
+Line 9: public VoiceActivityResult Detect(IFormFile audio)
+Line 25: public sealed record VoiceActivityResult(bool SpeechDetected, string Message)
+Line 27: public static VoiceActivityResult Detected(string message) => new(true, message);
+Line 29: public static VoiceActivityResult NoSpeech(string message) => new(false, message);
+
+--- Jarvis\Voice\VoiceCommandProcessor.cs ---
+Line 19: public PcCommand Parse(string transcript) => _parser.Parse(transcript);
+Line 50: public IReadOnlyCollection<VoiceCommandCatalogItem> GetCatalog() =>
+
+--- Jarvis\Voice\VoiceSettingsService.cs ---
+Line 10: public VoiceSettingsService(SettingsService settingsService)
+Line 19: public string Language => string.IsNullOrWhiteSpace(Current.VoiceLanguage)
+Line 76: public static string NormalizeLegacyLanguage(string language)
+
+--- Jarvis\Voice\WakeWordService.cs ---
+Line 5: public Task<bool> WaitForWakeWordAsync(CancellationToken cancellationToken = default)
+
+=== ENDPOINTS ===
+
+--- Jarvis\Endpoints\EndpointBootstrapper.cs ---
+Line 54: app.MapGet("/api/auth/status", () => Results.Ok(authService.GetStatus()));
+Line 56: app.MapGet("/api/auth/providers", () => Results.Ok(authService.GetProviders()));
+Line 58: app.MapPost("/api/auth/signin", (SignInRequest request) =>
+Line 63: app.MapPost("/api/auth/signup", (SignUpRequest request) =>
+Line 68: app.MapPost("/api/auth/signout", () => Results.Ok(authService.SignOut()));
+Line 70: app.MapGet("/api/connected-apps", () => Results.Ok(connectedAppService.GetApps()));
+Line 72: app.MapPost("/api/connected-apps/{provider}/connect", (string provider) =>
+Line 83: app.MapPost("/api/connected-apps/{provider}/disconnect", (string provider) =>
+Line 94: app.MapGet("/api/status", async () => Results.Ok(new
+Line 103: app.MapGet("/api/diagnostics", async () =>
+Line 123: app.MapGet("/api/history", () => Results.Ok(chatHistoryService.Messages));
+Line 125: app.MapGet("/api/interactions/logs", (int? limit) =>
+Line 137: app.MapPost("/api/interactions/logs", async (InteractionLogRequest request, CancellationToken cancellationToken) =>
+Line 155: app.MapDelete("/api/interactions/logs", async (CancellationToken cancellationToken) =>
+Line 167: app.MapGet("/api/interactions/status", () =>
+Line 178: app.MapPost("/api/chat", async (ChatRequest request, CancellationToken cancellationToken) =>
+Line 214: app.MapPost("/api/assistant/input", async (AssistantInputRequest request, CancellationToken cancellationToken) =>
+Line 401: app.MapPost("/api/assistant/confirm", async (AssistantConfirmRequest request, CancellationToken cancellationToken) =>
+Line 448: app.MapGet("/api/chats", () =>
+Line 454: app.MapGet("/api/chats/{id}", (string id) =>
+Line 468: app.MapPost("/api/chats", async (ChatSessionCreateRequest request, CancellationToken cancellationToken) =>
+Line 480: app.MapPost("/api/chats/{id}/messages", async (string id, ChatSessionMessageRequest request, CancellationToken cancellationToken) =>
+Line 545: app.MapDelete("/api/chats/{id}", async (string id, CancellationToken cancellationToken) =>
+Line 559: app.MapGet("/api/memory", () =>
+Line 565: app.MapPost("/api/memory", async (MemoryRequest request, CancellationToken cancellationToken) =>
+Line 592: app.MapGet("/api/memory/search", (
+Line 620: app.MapGet("/api/memory/suggestions", () =>
+Line 626: app.MapPost("/api/memory/retrieve", (MemoryRetrieveRequest request) =>
+Line 656: app.MapGet("/api/memory/stats", () =>
+Line 678: app.MapGet("/api/knowledge", () =>
+Line 684: app.MapGet("/api/knowledge/stats", () =>
+Line 690: app.MapGet("/api/knowledge/search", (
+Line 702: app.MapPost("/api/knowledge", async (KnowledgeCreateRequest request, CancellationToken cancellationToken) =>
+Line 726: app.MapDelete("/api/knowledge/{id}", async (string id, CancellationToken cancellationToken) =>
+Line 738: app.MapPut("/api/memory/{id}", async (string id, MemoryUpdateRequest request, CancellationToken cancellationToken) =>
+Line 769: app.MapPost("/api/memory/bulk-approve", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+Line 781: app.MapPost("/api/memory/bulk-reject", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+Line 793: app.MapPost("/api/memory/bulk-delete", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+Line 805: app.MapPost("/api/memory/bulk-update", async (BulkMemoryRequest request, CancellationToken cancellationToken) =>
+Line 823: app.MapPost("/api/memory/{id}/approve", async (string id, CancellationToken cancellationToken) =>
+Line 837: app.MapPost("/api/memory/{id}/reject", async (string id, CancellationToken cancellationToken) =>
+Line 851: app.MapDelete("/api/memory/{id}", async (string id, CancellationToken cancellationToken) =>
+Line 865: app.MapDelete("/api/memory", async (CancellationToken cancellationToken) =>
+Line 877: app.MapPost("/api/ingestion/upload", async (IFormFile file, CancellationToken cancellationToken) =>
+Line 920: app.MapGet("/api/ingestion/jobs", () =>
+Line 926: app.MapGet("/api/ingestion/jobs/{id}", (string id) =>
+Line 938: app.MapGet("/api/ingestion/jobs/{id}/file", (string id) =>
+Line 960: app.MapPost("/api/ingestion/jobs/{id}/extract", async (string id, CancellationToken cancellationToken) =>
+Line 987: app.MapPost("/api/ingestion/jobs/{id}/candidates", async (string id, CancellationToken cancellationToken) =>
+Line 1004: app.MapPost("/api/ingestion/jobs/{id}/knowledge", async (
+Line 1037: app.MapPost("/api/ingestion/jobs/{id}/memory", async (
+Line 1073: app.MapDelete("/api/ingestion/jobs/{id}", async (string id, CancellationToken cancellationToken) =>
+Line 1099: app.MapPost("/api/ingestion/candidates/{id}/approve", async (
+Line 1135: app.MapPost("/api/ingestion/candidates/bulk-approve", async (
+Line 1159: app.MapPost("/api/ingestion/candidates/{id}/reject", async (string id, CancellationToken cancellationToken) =>
+Line 1185: app.MapPost("/api/ingestion/candidates/bulk-reject", async (
+Line 1203: app.MapGet("/api/settings", () =>
+Line 1209: app.MapPost("/api/settings", async (AppSettings request, CancellationToken cancellationToken) =>
+Line 1261: app.MapPost("/api/files/index", async (CancellationToken cancellationToken) =>
+Line 1273: app.MapGet("/api/files/search", (string q) =>
+Line 1284: app.MapGet("/api/files/search-detailed", (string q, int? limit) =>
+Line 1296: app.MapPost("/api/files/open", (FileOpenRequest request) =>
+Line 1315: app.MapPost("/api/files/open-folder", (FileOpenRequest request) =>
+Line 1334: app.MapGet("/api/commands/catalog", () =>
+Line 1340: app.MapGet("/api/commands/logs", () =>
+Line 1346: app.MapPost("/api/commands/execute", async (PcCommandExecuteRequest request, CancellationToken cancellationToken) =>
+Line 1363: app.MapPost("/api/commands/confirm", async (PcCommandConfirmRequest request, CancellationToken cancellationToken) =>
+Line 1389: app.MapGet("/api/voice/status", () =>
+Line 1462: app.MapGet("/api/voice/health", async (CancellationToken cancellationToken) =>
+Line 1530: app.MapGet("/api/voice/diagnostics", () =>
+Line 1548: app.MapGet("/api/voice/wake-status", () =>
+Line 1568: app.MapPost("/api/voice/wake-check", (WakeWordCheckRequest request) =>
+Line 1584: app.MapGet("/api/voice/commands", () =>
+Line 1590: app.MapGet("/api/voice/tts-status", () =>
+Line 1614: app.MapPost("/api/voice/transcribe", async (HttpRequest request, CancellationToken cancellationToken) =>
+Line 1666: app.MapGet("/api/voice/pipeline/status", () =>
+Line 1672: app.MapGet("/api/voice/history", () =>
+Line 1678: app.MapPost("/api/voice/pipeline", async (HttpRequest request, CancellationToken cancellationToken) =>
+Line 1724: app.MapPost("/api/voice/pipeline/confirm", async (VoiceConfirmationRequest request, CancellationToken cancellationToken) =>
+Line 1751: app.MapPost("/api/voice/speak", async (SpeakRequest request, CancellationToken cancellationToken) =>
+Line 1798: app.MapPost("/api/voice/speak/stop", async (CancellationToken cancellationToken) =>
+Line 1817: app.MapPost("/api/voice/command", async (VoiceCommandRequest request, CancellationToken cancellationToken) =>
+
+--- Jarvis\Endpoints\EndpointContracts.cs ---
+
+=== FRONTEND COMPONENT IMPORTS ===
+
+--- Jarvis.Web\components\ActivityLogPanel.tsx ---
+import { useEffect, useMemo, useState } from "react";
+import { TopBar } from "./TopBar";
+import { PanelCard } from "./ui/PanelCard";
+import { StatusBadge } from "./ui/StatusBadge";
+import { jarvisApi } from "@/lib/api";
+import type { InteractionLogEntry } from "@/lib/types";
+
+--- Jarvis.Web\components\AppLayout.tsx ---
+import type React from "react";
+
+--- Jarvis.Web\components\AppShell.tsx ---
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityLogPanel } from "./ActivityLogPanel";
+import { AuthPanel } from "./AuthPanel";
+import { ChatPanel } from "./ChatPanel";
+import { ConnectedAppsPanel } from "./ConnectedAppsPanel";
+import { ControlPanel } from "./ControlPanel";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
+import { FilesPanel } from "./FilesPanel";
+import { JarvisDialog } from "./JarvisDialog";
+import { MemoryPanel } from "./MemoryPanel";
+import { SettingsPanel } from "./SettingsPanel";
+import { Sidebar } from "./Sidebar";
+import { SecurityPanel } from "./SecurityPanel";
+import { ToolsPanel } from "./ToolsPanel";
+import { Toast } from "./Toast";
+import { UserMenu } from "./UserMenu";
+import { VoicePanel } from "./VoicePanel";
+import type { PendingVoiceCommand } from "./VoiceConfirmationCard";
+import { authApi } from "@/lib/authApi";
+import { jarvisApi } from "@/lib/api";
+import { ThemeMode, ThemeService } from "@/lib/theme";
+
+--- Jarvis.Web\components\AuthPanel.tsx ---
+import { FormEvent, useEffect, useState } from "react";
+import { authApi } from "@/lib/authApi";
+import type { AuthProviderInfo, AuthStatus } from "@/lib/types";
+
+--- Jarvis.Web\components\ChatPanel.tsx ---
+import { useEffect, useRef } from "react";
+import { Composer } from "./Composer";
+import type { AssistantInputResponse, ChatMessage, ChatSessionSummary, JarvisStatus } from "@/lib/types";
+
+--- Jarvis.Web\components\Composer.tsx ---
+import { FormEvent, KeyboardEvent, useRef, useState } from "react";
+import { VoiceRecorderButton } from "./VoiceRecorderButton";
+
+--- Jarvis.Web\components\ConnectedAppsPanel.tsx ---
+import { useEffect, useState } from "react";
+import { connectedAppsApi } from "@/lib/connectedAppsApi";
+import type { ConnectedAppInfo } from "@/lib/types";
+
+--- Jarvis.Web\components\ControlPanel.tsx ---
+import { FormEvent, useEffect, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import type { PcCommandExecutionResult, PcCommandLogEntry } from "@/lib/types";
+
+--- Jarvis.Web\components\DiagnosticsPanel.tsx ---
+import { useEffect, useState } from "react";
+import { TopBar } from "./TopBar";
+import { PanelCard } from "./ui/PanelCard";
+import { StatusBadge } from "./ui/StatusBadge";
+import { jarvisApi } from "@/lib/api";
+import type { DiagnosticsResult } from "@/lib/types";
+
+--- Jarvis.Web\components\files\fileFormatting.ts ---
+
+--- Jarvis.Web\components\files\FileResultCard.tsx ---
+import type { FileSearchResult } from "@/lib/types";
+import { formatFileSize } from "./fileFormatting";
+
+--- Jarvis.Web\components\FilesPanel.tsx ---
+import { FormEvent, useState } from "react";
+import { TopBar } from "./TopBar";
+import { FileResultCard } from "./files/FileResultCard";
+import { jarvisApi } from "@/lib/api";
+import type { FileSearchResult } from "@/lib/types";
+
+--- Jarvis.Web\components\JarvisDialog.tsx ---
+import type React from "react";
+
+--- Jarvis.Web\components\JarvisStatusPanel.tsx ---
+import type { AssistantInputResponse, InteractionStatusResult, JarvisStatus } from "@/lib/types";
+
+--- Jarvis.Web\components\memory\MemoryCard.tsx ---
+import type { MemoryFormValues, MemoryItem } from "@/lib/types";
+import { MemoryEditorForm } from "./MemoryEditorForm";
+import type { MemoryDraft } from "./memoryForm";
+
+--- Jarvis.Web\components\memory\MemoryEditorForm.tsx ---
+import { FormEvent } from "react";
+import type { MemoryFormValues } from "@/lib/types";
+import { parseMemoryTags } from "./memoryForm";
+
+--- Jarvis.Web\components\memory\memoryForm.ts ---
+import type { MemoryFormValues, MemoryItem } from "@/lib/types";
+
+--- Jarvis.Web\components\memory\MemoryIngestionPanel.tsx ---
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import type { IngestionJob, IngestionMemoryCandidate, KnowledgeCategory, MemoryItem } from "@/lib/types";
+
+--- Jarvis.Web\components\memory\MemorySearchBar.tsx ---
+import { FormEvent } from "react";
+
+--- Jarvis.Web\components\MemoryPanel.tsx ---
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { TopBar } from "./TopBar";
+import { MemoryCard } from "./memory/MemoryCard";
+import { MemoryEditorForm } from "./memory/MemoryEditorForm";
+import { MemoryIngestionPanel } from "./memory/MemoryIngestionPanel";
+import { MemorySearchBar } from "./memory/MemorySearchBar";
+import { jarvisApi } from "@/lib/api";
+import type { KnowledgeCategory, KnowledgeItem, KnowledgeStats, MemoryFormValues, MemoryItem, MemoryStats } from "@/lib/types";
+
+--- Jarvis.Web\components\MessageList.tsx ---
+import { AssistantOrb } from "./ui/AssistantOrb";
+import { ChatBubble } from "./ui/ChatBubble";
+import type { ChatMessage } from "@/lib/types";
+
+--- Jarvis.Web\components\SecurityPanel.tsx ---
+import type { AssistantInputResponse, InteractionStatusResult } from "@/lib/types";
+
+--- Jarvis.Web\components\SettingsPanel.tsx ---
+import { FormEvent, useEffect, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import { ThemeMode, themeOptions } from "@/lib/theme";
+import type { AppSettings, DiagnosticsResult, VoiceStatus } from "@/lib/types";
+
+--- Jarvis.Web\components\Sidebar.tsx ---
+import type { ChatSessionSummary, JarvisStatus, ViewKey } from "@/lib/types";
+import { useMemo, useState } from "react";
+
+--- Jarvis.Web\components\StatusCard.tsx ---
+import type { JarvisStatus } from "@/lib/types";
+
+--- Jarvis.Web\components\Toast.tsx ---
+
+--- Jarvis.Web\components\ToolsPanel.tsx ---
+import type { ViewKey } from "@/lib/types";
+
+--- Jarvis.Web\components\TopBar.tsx ---
+
+--- Jarvis.Web\components\TopNavbar.tsx ---
+import { UserMenu } from "./UserMenu";
+import type { AuthStatus, ViewKey } from "@/lib/types";
+
+--- Jarvis.Web\components\ui\AssistantActionCard.tsx ---
+import { AssistantOrb } from "./AssistantOrb";
+import { StatusBadge } from "./StatusBadge";
+
+--- Jarvis.Web\components\ui\AssistantOrb.tsx ---
+
+--- Jarvis.Web\components\ui\ChatBubble.tsx ---
+import type { ChatMessage } from "@/lib/types";
+
+--- Jarvis.Web\components\ui\ChatCard.tsx ---
+import type { ChatSessionSummary } from "@/lib/types";
+
+--- Jarvis.Web\components\ui\PanelCard.tsx ---
+import type React from "react";
+
+--- Jarvis.Web\components\ui\PromptChip.tsx ---
+
+--- Jarvis.Web\components\ui\StatusBadge.tsx ---
+import type React from "react";
+
+--- Jarvis.Web\components\UserMenu.tsx ---
+import { useState } from "react";
+import { authApi } from "@/lib/authApi";
+import type { AuthStatus, ViewKey } from "@/lib/types";
+
+--- Jarvis.Web\components\VoiceCommandHelpPanel.tsx ---
+import { useEffect, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import type { VoiceCommandCatalogItem } from "@/lib/types";
+
+--- Jarvis.Web\components\VoiceConfirmationCard.tsx ---
+import type { VoiceCommandResult } from "@/lib/types";
+
+--- Jarvis.Web\components\VoiceLoopPanel.tsx ---
+import { useEffect, useRef, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import type { VoicePipelineResult, VoicePipelineState, VoicePipelineStatus } from "@/lib/types";
+import { startVoiceCapture, type VoiceCaptureSession } from "@/lib/voiceCapture";
+
+--- Jarvis.Web\components\VoicePanel.tsx ---
+import { useEffect, useRef, useState } from "react";
+import { TopBar } from "./TopBar";
+import { VoiceCommandHelpPanel } from "./VoiceCommandHelpPanel";
+import { VoiceLoopPanel } from "./VoiceLoopPanel";
+import { PanelCard } from "./ui/PanelCard";
+import { StatusBadge } from "./ui/StatusBadge";
+import { jarvisApi } from "@/lib/api";
+import type { JarvisStatus, VoiceHealthResult, VoiceHistoryItem, VoicePipelineStatus } from "@/lib/types";
+
+--- Jarvis.Web\components\VoiceRecorderButton.tsx ---
+import { useRef, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import { startVoiceCapture, type VoiceCaptureSession } from "@/lib/voiceCapture";
+
+--- Jarvis.Web\components\WakeWordPanel.tsx ---
+import { useEffect, useRef, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import { startVoiceCapture, type VoiceCaptureSession } from "@/lib/voiceCapture";
+import type { VoiceStatus } from "@/lib/types";
+
+=== FRONTEND API FUNCTIONS ===
+Line 39: export const API_BASE_URL = (
+Line 43: function apiUrl(path: string) {
+Line 47: async function request<T>(path: string, options?: RequestInit): Promise<T> {
+Line 81: async function rawLogInteraction(stage: string, input: string, error: string) {
+Line 101: export const jarvisApi = {
+Line 102: apiBaseUrl: API_BASE_URL,
+Line 103: status: () => request<JarvisStatus>("/api/status"),
+Line 104: diagnostics: () => request<DiagnosticsResult>("/api/diagnostics"),
+Line 105: history: () => request<ChatMessage[]>("/api/history"),
+Line 106: chat: (message: string) =>
+Line 111: chats: () => request<ChatSessionSummary[]>("/api/chats"),
+Line 112: chatSession: (id: string) => request<ChatSession>(`/api/chats/${encodeURIComponent(id)}`),
+Line 113: createChat: (title?: string) =>
+Line 118: sendChatMessage: (id: string, message: string) =>
+Line 123: assistantInput: (message: string, chatSessionId?: string | null) =>
+Line 128: confirmAssistantCommand: (confirmationId: string, chatSessionId?: string | null) =>
+Line 133: deleteChat: (id: string) =>
+Line 137: transcribeVoice: async (audio: Blob) => {
+Line 167: voiceStatus: () => request<VoiceStatus>("/api/voice/status"),
+Line 168: voiceHealth: () => request<VoiceHealthResult>("/api/voice/health"),
+Line 169: voiceDiagnostics: () => request<VoiceDiagnosticsResult>("/api/voice/diagnostics"),
+Line 170: voicePipelineStatus: () => request<VoicePipelineStatus>("/api/voice/pipeline/status"),
+Line 171: voiceHistory: () => request<VoiceHistoryItem[]>("/api/voice/history"),
+Line 172: runVoicePipeline: async (audio: Blob, requireWakeWord = false) => {
+Line 195: confirmVoicePipeline: (confirmationId: string) =>
+Line 200: wakeStatus: () =>
+Line 202: wakeCheck: (transcript: string) =>
+Line 207: speak: (text: string) =>
+Line 212: stopSpeaking: () =>
+Line 216: voiceCommand: (transcript: string, confirmed = false) =>
+Line 221: voiceCommands: () => request<VoiceCommandCatalogItem[]>("/api/voice/commands"),
+Line 222: memory: () => request<MemoryItem[]>("/api/memory"),
+Line 223: memoryStats: () => request<MemoryStats>("/api/memory/stats"),
+Line 224: searchMemory: (filters: {
+Line 244: suggestedMemory: () => request<MemoryItem[]>("/api/memory/suggestions"),
+Line 245: retrieveMemory: (query: string, maxResults = 5) =>
+Line 253: addMemory: (values: MemoryFormValues) =>
+Line 258: updateMemory: (id: string, values: MemoryFormValues) =>
+Line 263: deleteMemory: (id: string) =>
+Line 267: approveMemory: (id: string) =>
+Line 269: rejectMemory: (id: string) =>
+Line 271: clearMemory: () => request<MemoryItem[]>("/api/memory", { method: "DELETE" }),
+Line 272: bulkApproveMemory: (memoryIds: string[]) =>
+Line 277: bulkRejectMemory: (memoryIds: string[]) =>
+Line 282: bulkDeleteMemory: (memoryIds: string[]) =>
+Line 287: bulkUpdateMemory: (
+Line 295: knowledge: () => request<KnowledgeItem[]>("/api/knowledge"),
+Line 296: knowledgeStats: () => request<KnowledgeStats>("/api/knowledge/stats"),
+Line 297: searchKnowledge: (filters: {
+Line 315: addKnowledge: (values: {
+Line 327: deleteKnowledge: (id: string) =>
+Line 329: ingestionJobs: () => request<IngestionJob[]>("/api/ingestion/jobs"),
+Line 330: uploadIngestionFile: async (file: File) => {
+Line 350: extractIngestionJob: (id: string) =>
+Line 352: generateIngestionCandidates: (id: string) =>
+Line 354: ingestionFileUrl: (id: string) => apiUrl(`/api/ingestion/jobs/${encodeURIComponent(id)}/file`),
+Line 355: saveIngestionAsKnowledge: (id: string, values: { title?: string; category: KnowledgeCategory }) =>
+Line 360: saveIngestionAsMemory: (id: string, values: { text?: string; category?: string; memoryType?: MemoryItem["memoryType"]; importance?: number; confidence?: number }) =>
+Line 365: deleteIngestionJob: (id: string) =>
+Line 367: approveIngestionCandidate: (id: string, update: IngestionCandidateUpdate) =>
+Line 372: rejectIngestionCandidate: (id: string) =>
+Line 376: bulkApproveIngestionCandidates: (candidateIds: string[], values: { category?: string; importance?: number; confidence?: number }) =>
+Line 381: bulkRejectIngestionCandidates: (candidateIds: string[]) =>
+Line 386: settings: () => request<AppSettings>("/api/settings"),
+Line 387: saveSettings: (settings: AppSettings) =>
+Line 392: indexFiles: () => request<{ count: number }>("/api/files/index", { method: "POST" }),
+Line 393: searchFiles: (query: string) =>
+Line 395: searchFilesDetailed: (query: string, limit = 25) =>
+Line 399: openFile: (path: string) =>
+Line 404: openContainingFolder: (path: string) =>
+Line 409: commandCatalog: () => request<PcCommandCatalogItem[]>("/api/commands/catalog"),
+Line 410: commandLogs: () => request<PcCommandLogEntry[]>("/api/commands/logs"),
+Line 411: executeCommand: (input: string) =>
+Line 416: confirmCommand: (confirmationId: string) =>
+Line 421: interactionLogs: (limit = 100) =>
+Line 423: interactionStatus: () => request<InteractionStatusResult>("/api/interactions/status"),
+Line 424: clearInteractionLogs: () => request<{ cleared: boolean }>("/api/interactions/logs", { method: "DELETE" }),
+Line 425: logInteraction: (entry: {
+Line 442: function audioExtension(audio: Blob) {
+
+=== FRONTEND TYPES ===
+Line 1: export type ViewKey =
+Line 15: export type AuthProviderType = "Local" | "Google" | "Microsoft" | "GitHub" | "Discord";
+Line 17: export type AuthUser = {
+Line 24: export type AuthStatus = {
+Line 30: export type AuthProviderInfo = {
+Line 38: export type AuthResponse = {
+Line 44: export type ConnectedAppProvider = "Google" | "Microsoft" | "GitHub" | "Discord";
+Line 45: export type ConnectedAppStatus = "NotConnected" | "Connected" | "NeedsSetup";
+Line 47: export type ConnectedAppInfo = {
+Line 57: export type ConnectedAppConnectionResult = {
+Line 63: export type ChatMessage = {
+Line 69: export type ChatSession = {
+Line 77: export type ChatSessionSummary = {
+Line 86: export type MemoryItem = {
+Line 101: export type MemoryStats = {
+Line 109: export type KnowledgeCategory =
+Line 119: export type KnowledgeItem = {
+Line 136: export type KnowledgeStats = {
+Line 144: export type MemoryFormValues = {
+Line 156: export type IngestionStatus =
+Line 164: export type IngestionSourceType = "Pdf" | "Image";
+Line 166: export type IngestionTextBlock = {
+Line 174: export type IngestionMemoryCandidate = {
+Line 191: export type IngestionJob = {
+Line 213: export type IngestionCandidateUpdate = {
+Line 221: export type IngestionCandidateResult = {
+Line 228: export type AppSettings = {
+Line 265: export type JarvisStatus = {
+Line 273: export type VoiceStatus = {
+Line 330: export type VoicePipelineState =
+Line 346: export type VoicePipelineResult = {
+Line 378: export type VoicePipelineStatus = {
+Line 407: export type VoiceHistoryItem = {
+Line 428: export type VoiceHealthResult = {
+Line 454: export type TextToSpeechResult = {
+Line 466: export type VoiceDiagnosticsResult = {
+Line 472: export type VoiceCommandResult = {
+Line 481: export type VoiceCommandCatalogItem = {
+Line 488: export type WakeWordCheckResult = {
+Line 495: export type FileSearchResult = {
+Line 505: export type CommandSafetyLevel = "Safe" | "ConfirmationRequired" | "Blocked";
+Line 507: export type CommandExecutionStatus = "PendingConfirmation" | "Completed" | "Failed" | "Blocked" | "Expired";
+Line 509: export type PcCommandCatalogItem = {
+Line 516: export type PcCommandLogEntry = {
+Line 527: export type PcCommandExecutionResult = {
+Line 537: export type AssistantInputResponse = {
+Line 549: export type ServiceDiagnostic = {
+Line 554: export type DiagnosticsResult = {
+Line 567: export type InteractionSource = "Chat" | "Voice" | "Control" | "System";
+Line 568: export type InteractionType =
+Line 581: export type InteractionStatus = "Started" | "Success" | "Failed" | "Pending" | "Cancelled" | "Skipped";
+Line 583: export type InteractionLogEntry = {
+Line 597: export type InteractionStatusResult = {
+
+=== PACKAGE / PROJECT FILES ===
+
+--- Jarvis.sln ---
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis", "Jarvis\Jarvis.csproj", "{FD2E1D2A-DD43-4EED-81FF-D257A604523A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Core", "Jarvis.Core\Jarvis.Core.csproj", "{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Tools", "Jarvis.Tools\Jarvis.Tools.csproj", "{CEDCFC8C-8AE2-484E-86B0-A0255039A420}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jarvis.Agent", "Jarvis.Agent\Jarvis.Agent.csproj", "{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Debug|x64.Build.0 = Debug|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Debug|x86.Build.0 = Debug|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Release|x64.ActiveCfg = Release|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Release|x64.Build.0 = Release|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Release|x86.ActiveCfg = Release|Any CPU
+		{FD2E1D2A-DD43-4EED-81FF-D257A604523A}.Release|x86.Build.0 = Release|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Debug|x64.Build.0 = Debug|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Debug|x86.Build.0 = Debug|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Release|x64.ActiveCfg = Release|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Release|x64.Build.0 = Release|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Release|x86.ActiveCfg = Release|Any CPU
+		{E810ABA3-AA79-4092-92E3-03E74B6CA8AD}.Release|x86.Build.0 = Release|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Debug|x64.Build.0 = Debug|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Debug|x86.Build.0 = Debug|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Release|x64.ActiveCfg = Release|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Release|x64.Build.0 = Release|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Release|x86.ActiveCfg = Release|Any CPU
+		{CEDCFC8C-8AE2-484E-86B0-A0255039A420}.Release|x86.Build.0 = Release|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Debug|x64.Build.0 = Debug|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Debug|x86.Build.0 = Debug|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Release|x64.ActiveCfg = Release|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Release|x64.Build.0 = Release|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Release|x86.ActiveCfg = Release|Any CPU
+		{F7F6283B-A543-4A07-AA4B-9BC3F62BB6A0}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
+
+--- Jarvis\Jarvis.csproj ---
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="Data\chat_history.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Memory\memory.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Jarvis.Core\Jarvis.Core.csproj" />
+    <ProjectReference Include="..\Jarvis.Tools\Jarvis.Tools.csproj" />
+    <ProjectReference Include="..\Jarvis.Agent\Jarvis.Agent.csproj" />
+  </ItemGroup>
+
+</Project>
+
+--- Jarvis.Core\Jarvis.Core.csproj ---
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
+  </ItemGroup>
+
+</Project>
+
+--- Jarvis.Tools\Jarvis.Tools.csproj ---
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Jarvis.Core\Jarvis.Core.csproj" />
+    <ProjectReference Include="..\Jarvis.Agent\Jarvis.Agent.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
+
+--- Jarvis.Web\package.json ---
+{
+  "name": "jarvis-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname localhost --port 3000",
+    "build": "next build",
+    "build:prod": "next build && node scripts/publish-wwwroot.mjs",
+    "start": "next start --hostname localhost --port 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.17",
+    "typescript": "latest"
+  }
+}
+
+--- Jarvis.Web\tsconfig.json ---
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

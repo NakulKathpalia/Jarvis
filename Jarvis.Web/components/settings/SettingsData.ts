@@ -1,0 +1,16 @@
+export const settingsCategories = [
+  ["⌂", "Home"],
+  ["▣", "System"],
+  ["🎙", "Voice & Speech"],
+  ["🧠", "Memory"],
+  ["✧", "AI Model"],
+  ["▢", "OCR"],
+  ["▤", "Files & Knowledge"],
+  ["◒", "Interface"],
+  ["⚙", "Personalization"],
+  ["◇", "Privacy & Security"],
+  ["▣", "Automation"],
+  ["☁", "Backup & Sync"],
+  ["</>", "Advanced"],
+  ["ⓘ", "About"],
+];

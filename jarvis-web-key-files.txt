@@ -1,0 +1,2809 @@
+
+
+
+==================== Jarvis.Web\components\Composer.tsx ====================
+"use client";
+
+import { FormEvent, KeyboardEvent, useRef, useState } from "react";
+import { VoiceRecorderButton } from "./VoiceRecorderButton";
+
+type ComposerProps = {
+  disabled: boolean;
+  onSend: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
+  onVoiceCommand: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
+  onToast: (message: string) => void;
+};
+
+export function Composer({ disabled, onSend, onVoiceCommand, onToast }: ComposerProps) {
+  const [message, setMessage] = useState("");
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmed = message.trim();
+    if (!trimmed || disabled) return;
+
+    setMessage("");
+    await onSend(trimmed);
+    textAreaRef.current?.focus();
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  }
+
+  function handleTranscript(transcript: string) {
+    setMessage((current) => (current.trim() ? `${current.trim()}\n${transcript}` : transcript));
+    textAreaRef.current?.focus();
+    onToast("Transcript added to composer");
+  }
+
+  async function handleVoiceAsk(transcript: string) {
+    setMessage("");
+    onToast("Voice sent to Jarvis");
+    await onVoiceCommand(transcript);
+  }
+
+  return (
+    <form className="composer-wrap" onSubmit={handleSubmit}>
+      <div className="composer-box">
+        <button className="composer-icon" type="button" title="Attach file placeholder" onClick={() => onToast("Use Memory to upload files for now")}>+</button>
+        <textarea
+          ref={textAreaRef}
+          value={message}
+          rows={1}
+          placeholder="Ask anything, or say Open YouTube..."
+          onChange={(event) => setMessage(event.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <VoiceRecorderButton
+          disabled={disabled}
+          label="Mic"
+          recordingLabel="Stop"
+          title="Dictate"
+          onToast={onToast}
+          onTranscript={handleTranscript}
+        />
+        <VoiceRecorderButton
+          disabled={disabled}
+          label="Ask"
+          recordingLabel="Stop"
+          title="Voice ask"
+          onToast={onToast}
+          onTranscript={handleVoiceAsk}
+        />
+        <button className="send-button" type="submit" disabled={disabled || !message.trim()} title="Send">
+          ↑
+        </button>
+      </div>
+      <p className="composer-help">Jarvis can make mistakes. Commands still pass through security and permissions.</p>
+    </form>
+  );
+}
+
+
+==================== Jarvis.Web\components\AppShell.tsx ====================
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityLogPanel } from "./ActivityLogPanel";
+import { AuthPanel } from "./AuthPanel";
+import { ChatPanel } from "./ChatPanel";
+import { ConnectedAppsPanel } from "./ConnectedAppsPanel";
+import { ControlPanel } from "./ControlPanel";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
+import { FilesPanel } from "./FilesPanel";
+import { JarvisDialog } from "./JarvisDialog";
+import { MemoryPanel } from "./MemoryPanel";
+import { SettingsPanel } from "./SettingsPanel";
+import { Sidebar } from "./Sidebar";
+import { SecurityPanel } from "./SecurityPanel";
+import { ToolsPanel } from "./ToolsPanel";
+import { Toast } from "./Toast";
+import { UserMenu } from "./UserMenu";
+import { VoicePanel } from "./VoicePanel";
+import type { PendingVoiceCommand } from "./VoiceConfirmationCard";
+import { authApi } from "@/lib/authApi";
+import { jarvisApi } from "@/lib/api";
+import { ThemeMode, ThemeService } from "@/lib/theme";
+import type {
+  AppSettings,
+  AssistantInputResponse,
+  AuthStatus,
+  ChatMessage,
+  ChatSession,
+  ChatSessionSummary,
+  InteractionStatusResult,
+  JarvisStatus,
+  MemoryFormValues,
+  MemoryItem,
+  ViewKey
+} from "@/lib/types";
+
+type PendingAssistantCommand = {
+  confirmationId: string;
+  command: string;
+  target: string;
+  message: string;
+};
+
+type AssistantActivity = "idle" | "thinking" | "executing" | "speaking" | "completed" | "error";
+
+export function AppShell() {
+  const [activeView, setActiveView] = useState<ViewKey>("chat");
+  const [activeDialog, setActiveDialog] = useState<ViewKey | "search" | null>(null);
+  const [status, setStatus] = useState<JarvisStatus | null>(null);
+  const [chatSummaries, setChatSummaries] = useState<ChatSessionSummary[]>([]);
+  const [activeChat, setActiveChat] = useState<ChatSession | null>(null);
+  const [memory, setMemory] = useState<MemoryItem[]>([]);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
+  const [pendingVoiceCommand, setPendingVoiceCommand] = useState<PendingVoiceCommand | null>(null);
+  const [pendingAssistantCommand, setPendingAssistantCommand] = useState<PendingAssistantCommand | null>(null);
+  const [lastAssistantAction, setLastAssistantAction] = useState<AssistantInputResponse | null>(null);
+  const [assistantActivity, setAssistantActivity] = useState<AssistantActivity>("idle");
+  const [interactionStatus, setInteractionStatus] = useState<InteractionStatusResult | null>(null);
+  const [backendError, setBackendError] = useState("");
+  const [toast, setToast] = useState("");
+  const [isBusy, setIsBusy] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(ThemeMode.System);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const currentSpeechRef = useRef<HTMLAudioElement | null>(null);
+
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 2400);
+  }, []);
+
+  const refreshStatus = useCallback(async () => {
+    try {
+      setStatus(await jarvisApi.status());
+      setInteractionStatus(await jarvisApi.interactionStatus());
+      setBackendError("");
+    } catch (error) {
+      setBackendError(error instanceof Error ? error.message : "Backend unreachable");
+      throw error;
+    }
+  }, []);
+
+  const refreshChats = useCallback(async () => {
+    setChatSummaries(await jarvisApi.chats());
+  }, []);
+
+  const refreshMemory = useCallback(async () => {
+    setMemory(await jarvisApi.memory());
+  }, []);
+
+  const refreshSettings = useCallback(async () => {
+    setSettings(await jarvisApi.settings());
+  }, []);
+
+  const refreshAuth = useCallback(async () => {
+    setAuthStatus(await authApi.status());
+  }, []);
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([refreshStatus(), refreshChats(), refreshMemory(), refreshSettings(), refreshAuth()]);
+  }, [refreshAuth, refreshChats, refreshMemory, refreshSettings, refreshStatus]);
+
+  useEffect(() => {
+    refreshAll().catch((error: Error) => showToast(error.message));
+  }, [refreshAll, showToast]);
+
+  useEffect(() => {
+    const initialMode = ThemeService.getInitialMode();
+    setThemeMode(initialMode);
+    ThemeService.apply(initialMode);
+
+    const media = window.matchMedia("(prefers-color-scheme: light)");
+    const handleThemeChange = () => {
+      if (ThemeService.getInitialMode() === ThemeMode.System) {
+        ThemeService.apply(ThemeMode.System);
+      }
+    };
+
+    media.addEventListener("change", handleThemeChange);
+    return () => media.removeEventListener("change", handleThemeChange);
+  }, []);
+
+  const visibleMessages = useMemo(
+    () => (activeChat?.messages ?? []).filter((message) => message.role !== "system"),
+    [activeChat]
+  );
+
+  async function createNewChat() {
+    const session = await jarvisApi.createChat();
+    setActiveChat(session);
+    setActiveView("chat");
+    setActiveDialog(null);
+    await refreshChats();
+  }
+
+  async function openChat(id: string) {
+    const session = await jarvisApi.chatSession(id);
+    setActiveChat(session);
+    setActiveView("chat");
+    setActiveDialog(null);
+  }
+
+  async function deleteChat(id: string) {
+    const nextSummaries = await jarvisApi.deleteChat(id);
+    setChatSummaries(nextSummaries);
+    if (activeChat?.id === id) {
+      setActiveChat(null);
+    }
+    showToast("Chat deleted");
+  }
+
+  async function ensureActiveChat() {
+    if (activeChat) {
+      return activeChat;
+    }
+
+    const session = await jarvisApi.createChat();
+    setActiveChat(session);
+    await refreshChats();
+    return session;
+  }
+
+  async function sendMessage(message: string, options?: { skipAutoSpeak?: boolean }) {
+    setIsBusy(true);
+    const initialActivity = looksLikeDirectCommand(message) ? "executing" : "thinking";
+    setAssistantActivity(initialActivity);
+    setLastAssistantAction(null);
+    const session = await ensureActiveChat();
+    const optimisticMessages: ChatMessage[] = [
+      ...session.messages,
+      { role: "user", content: message },
+      { role: "assistant", content: activityMessage(initialActivity) }
+    ];
+
+    setActiveChat({ ...session, messages: optimisticMessages, updatedAtUtc: new Date().toISOString() });
+
+    try {
+      const result = await jarvisApi.assistantInput(message, session.id);
+      const assistantResponse = result.response || result.message || "(empty response)";
+      setActiveChat(result.session ?? session);
+      setLastAssistantAction(result.type === "command" && !result.requiresConfirmation ? result : null);
+      setPendingAssistantCommand(result.requiresConfirmation && result.confirmationId
+        ? {
+            confirmationId: result.confirmationId,
+            command: result.command,
+            target: result.target,
+            message: result.message
+          }
+        : null);
+      setAssistantActivity(result.type === "command" ? "executing" : "thinking");
+      await Promise.all([refreshStatus(), refreshChats()]);
+      if (result.type === "chat"
+        && !options?.skipAutoSpeak
+        && settings?.enableVoiceResponses
+        && settings?.autoSpeakResponses
+        && assistantResponse !== "(empty response)") {
+        setAssistantActivity("speaking");
+        await speakText(assistantResponse);
+      }
+      if (!result.requiresConfirmation) {
+        setAssistantActivity("completed");
+      }
+      return assistantResponse;
+    } catch (error) {
+      setAssistantActivity("error");
+      showToast(error instanceof Error ? error.message : "Chat failed");
+      setActiveChat(await jarvisApi.chatSession(session.id));
+      return "";
+    } finally {
+      window.setTimeout(() => {
+        setAssistantActivity((current) => current === "completed" ? "idle" : current);
+      }, 700);
+      setIsBusy(false);
+    }
+  }
+
+  async function confirmAssistantCommand() {
+    if (!pendingAssistantCommand) {
+      return;
+    }
+
+    setIsBusy(true);
+    setAssistantActivity("executing");
+    try {
+      const result = await jarvisApi.confirmAssistantCommand(
+        pendingAssistantCommand.confirmationId,
+        activeChat?.id
+      );
+      setPendingAssistantCommand(null);
+      setLastAssistantAction(result);
+      if (result.session) {
+        setActiveChat(result.session);
+      }
+      await Promise.all([refreshStatus(), refreshChats()]);
+      showToast(result.message);
+    } catch (error) {
+      setAssistantActivity("error");
+      showToast(error instanceof Error ? error.message : "Command confirmation failed");
+    } finally {
+      setAssistantActivity("idle");
+      setIsBusy(false);
+    }
+  }
+
+  async function cancelAssistantCommand() {
+    if (!pendingAssistantCommand) {
+      return;
+    }
+
+    const session = await ensureActiveChat();
+    setPendingAssistantCommand(null);
+    setActiveChat({
+      ...session,
+      messages: [...session.messages, { role: "assistant", content: "Command cancelled." }]
+    });
+    showToast("Command cancelled");
+  }
+
+  async function handleVoiceCommand(transcript: string, options?: { skipAutoSpeak?: boolean }) {
+    return sendMessage(transcript, options);
+  }
+
+  async function confirmVoiceCommand() {
+    if (!pendingVoiceCommand) {
+      return;
+    }
+
+    setIsBusy(true);
+    try {
+      const result = await jarvisApi.voiceCommand(pendingVoiceCommand.transcript, true);
+      setPendingVoiceCommand(null);
+      const message = result.message || "Voice command completed.";
+      const session = await ensureActiveChat();
+      setActiveChat({ ...session, messages: [...session.messages, { role: "assistant", content: message }] });
+      await Promise.all([refreshStatus(), refreshMemory(), refreshSettings(), refreshChats()]);
+      if (settings?.enableVoiceResponses && settings?.autoSpeakResponses) {
+        await speakText(message);
+      }
+      showToast("Voice command confirmed");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Voice command confirmation failed");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function cancelVoiceCommand() {
+    if (!pendingVoiceCommand) {
+      return;
+    }
+
+    setPendingVoiceCommand(null);
+    const session = await ensureActiveChat();
+    setActiveChat({ ...session, messages: [...session.messages, { role: "assistant", content: "Voice command cancelled." }] });
+    showToast("Voice command cancelled");
+  }
+
+  async function addMemory(values: MemoryFormValues) {
+    setMemory(await jarvisApi.addMemory(values));
+    await refreshStatus();
+    showToast("Memory saved");
+  }
+
+  async function updateMemory(id: string, values: MemoryFormValues) {
+    setMemory(await jarvisApi.updateMemory(id, values));
+    await refreshStatus();
+    showToast("Memory updated");
+  }
+
+  async function deleteMemory(id: string) {
+    setMemory(await jarvisApi.deleteMemory(id));
+    await refreshStatus();
+    showToast("Memory deleted");
+  }
+
+  async function approveMemory(id: string) {
+    setMemory(await jarvisApi.approveMemory(id));
+    await refreshStatus();
+    showToast("Memory approved");
+  }
+
+  async function rejectMemory(id: string) {
+    setMemory(await jarvisApi.rejectMemory(id));
+    await refreshStatus();
+    showToast("Memory rejected");
+  }
+
+  async function clearMemory() {
+    setMemory(await jarvisApi.clearMemory());
+    await refreshStatus();
+    showToast("Memory cleared");
+  }
+
+  async function saveSettings(nextSettings: AppSettings) {
+    setSettings(await jarvisApi.saveSettings(nextSettings));
+    await refreshStatus();
+    showToast("Settings saved");
+  }
+
+  function changeThemeMode(nextMode: ThemeMode) {
+    setThemeMode(nextMode);
+    ThemeService.apply(nextMode);
+  }
+
+  function changeWorkspace(view: ViewKey) {
+    if (view === "chat") {
+      setActiveView("chat");
+      setActiveDialog(null);
+      setMobileSidebarOpen(false);
+      return;
+    }
+
+    setActiveView(view);
+    setActiveDialog(view);
+    setMobileSidebarOpen(false);
+  }
+
+  function openSearch() {
+    setActiveDialog("search");
+    setMobileSidebarOpen(false);
+  }
+
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        openSearch();
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        changeWorkspace("memory");
+      }
+    }
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+
+  async function speakText(text: string) {
+    try {
+      stopCurrentSpeech();
+      const result = await jarvisApi.speak(text);
+      if (!result.audioUrl) {
+        showToast(result.message || "No audio returned");
+        return;
+      }
+
+      const audio = new Audio(resolveAudioUrl(result.audioUrl));
+      currentSpeechRef.current = audio;
+      audio.addEventListener("ended", () => {
+        if (currentSpeechRef.current === audio) {
+          currentSpeechRef.current = null;
+        }
+      });
+      await audio.play();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Speech playback failed");
+    }
+  }
+
+  function stopCurrentSpeech() {
+    const audio = currentSpeechRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      currentSpeechRef.current = null;
+    }
+    void jarvisApi.stopSpeaking().catch(() => undefined);
+  }
+
+  function resolveAudioUrl(audioUrl: string) {
+    if (audioUrl.startsWith("http://") || audioUrl.startsWith("https://")) {
+      return audioUrl;
+    }
+
+    return `${jarvisApi.apiBaseUrl}${audioUrl.startsWith("/") ? audioUrl : `/${audioUrl}`}`;
+  }
+
+  function renderDialogContent() {
+    switch (activeDialog) {
+      case "search":
+        return (
+          <div className="command-palette">
+            <button type="button" onClick={() => void createNewChat()}>Start a new chat</button>
+            <button type="button" onClick={() => changeWorkspace("memory")}>Open Memory and Knowledge</button>
+            <button type="button" onClick={() => changeWorkspace("voice")}>Open Voice controls</button>
+            <button type="button" onClick={() => changeWorkspace("settings")}>Open Settings</button>
+            <button type="button" onClick={() => changeWorkspace("diagnostics")}>Open Diagnostics</button>
+          </div>
+        );
+      case "memory":
+        return (
+          <MemoryPanel
+            items={memory}
+            onAdd={addMemory}
+            onUpdate={updateMemory}
+            onDelete={deleteMemory}
+            onApprove={approveMemory}
+            onReject={rejectMemory}
+            onClear={clearMemory}
+            onRefresh={refreshMemory}
+          />
+        );
+      case "files":
+        return <FilesPanel onToast={showToast} />;
+      case "control":
+        return <ControlPanel onToast={showToast} />;
+      case "voice":
+        return (
+          <VoicePanel
+            disabled={isBusy}
+            appStatus={status}
+            memoryCount={memory.length}
+            onRefresh={refreshAll}
+            onToast={showToast}
+          />
+        );
+      case "activity":
+        return <ActivityLogPanel />;
+      case "tools":
+        return <ToolsPanel onChangeView={changeWorkspace} />;
+      case "auth":
+        return <AuthPanel onToast={showToast} onAuthChanged={refreshAuth} />;
+      case "connectedApps":
+        return <ConnectedAppsPanel onToast={showToast} />;
+      case "settings":
+        return settings ? (
+          <SettingsPanel
+            settings={settings}
+            themeMode={themeMode}
+            onThemeModeChange={changeThemeMode}
+            onSave={saveSettings}
+          />
+        ) : <div className="dialog-empty">Settings are loading.</div>;
+      case "diagnostics":
+        return <DiagnosticsPanel />;
+      case "security":
+        return (
+          <SecurityPanel
+            interactionStatus={interactionStatus}
+            pendingAssistantCommand={pendingAssistantCommand}
+            lastAssistantAction={lastAssistantAction}
+          />
+        );
+      case "chat":
+      default:
+        return null;
+    }
+  }
+
+  const dialogMeta = activeDialog ? getViewMeta(activeDialog === "search" ? "tools" : activeDialog) : null;
+
+  return (
+    <div className="app-shell-v2">
+      <button
+        aria-label="Close sidebar"
+        className={mobileSidebarOpen ? "mobile-sidebar-backdrop open" : "mobile-sidebar-backdrop"}
+        type="button"
+        onClick={() => setMobileSidebarOpen(false)}
+      />
+      <div className={mobileSidebarOpen ? "sidebar-shell open" : "sidebar-shell"}>
+        <Sidebar
+          activeView={activeView}
+          activeChatId={activeChat?.id ?? null}
+          chats={chatSummaries}
+          onChangeView={changeWorkspace}
+          onSearch={openSearch}
+          onNewChat={createNewChat}
+          onOpenChat={openChat}
+          status={status}
+          memoryCount={memory.length}
+        />
+      </div>
+
+      <main className="jarvis-main">
+        <header className="jarvis-chat-topbar">
+          <button className="mobile-menu-button" type="button" onClick={() => setMobileSidebarOpen((current) => !current)} aria-label="Open sidebar">
+            Menu
+          </button>
+          <div className="jarvis-chat-title">
+            <span className={status?.online ? "dot online" : "dot"} />
+            <div>
+              <h2>Jarvis</h2>
+              <p>{backendError || (status?.online ? "Jarvis online." : "Backend offline.")}</p>
+            </div>
+          </div>
+          <div className="jarvis-chat-actions">
+            <button type="button" onClick={() => changeWorkspace("memory")}>Library</button>
+            <button type="button" onClick={() => changeWorkspace("voice")}>Voice</button>
+            <button type="button" onClick={() => changeWorkspace("settings")}>Settings</button>
+            <UserMenu
+              authStatus={authStatus}
+              onChangeView={changeWorkspace}
+              onAuthChanged={refreshAuth}
+              onToast={showToast}
+            />
+          </div>
+        </header>
+
+        <ChatPanel
+          autoSpeak={settings?.autoSpeakResponses ?? false}
+          messages={visibleMessages}
+          chats={chatSummaries}
+          activeChatId={activeChat?.id ?? null}
+          status={status}
+          isBusy={isBusy}
+          pendingVoiceCommand={pendingVoiceCommand}
+          pendingAssistantCommand={pendingAssistantCommand}
+          lastAssistantAction={lastAssistantAction}
+          assistantActivity={assistantActivity}
+          onRefresh={refreshAll}
+          onNewChat={createNewChat}
+          onOpenChat={openChat}
+          onDeleteChat={deleteChat}
+          onSend={sendMessage}
+          onVoiceCommand={handleVoiceCommand}
+          onConfirmVoiceCommand={confirmVoiceCommand}
+          onCancelVoiceCommand={() => void cancelVoiceCommand()}
+          onConfirmAssistantCommand={confirmAssistantCommand}
+          onCancelAssistantCommand={() => void cancelAssistantCommand()}
+          onSpeak={speakText}
+          onToast={showToast}
+        />
+      </main>
+
+      <JarvisDialog
+        open={activeDialog !== null && activeDialog !== "chat"}
+        title={activeDialog === "search" ? "Search and commands" : dialogMeta?.title ?? "Jarvis"}
+        subtitle={activeDialog === "search" ? "Jump anywhere in Jarvis." : dialogMeta?.subtitle}
+        size={activeDialog === "search" ? "md" : "xl"}
+        onClose={() => {
+          setActiveDialog(null);
+          setActiveView("chat");
+        }}
+      >
+        {renderDialogContent()}
+      </JarvisDialog>
+
+      <Toast message={toast} />
+    </div>
+  );
+}
+
+function looksLikeDirectCommand(input: string) {
+  return /^(open|launch|start|run|show|search|find|take|set|mute|unmute|volume|shutdown|restart|sleep)\b/i.test(input.trim());
+}
+
+function activityMessage(activity: AssistantActivity) {
+  switch (activity) {
+    case "executing":
+      return "Executing...";
+    case "speaking":
+      return "Speaking...";
+    case "completed":
+      return "Completed.";
+    case "error":
+      return "Something went wrong.";
+    case "thinking":
+    case "idle":
+    default:
+      return "Thinking...";
+  }
+}
+
+function getViewMeta(view: ViewKey) {
+  switch (view) {
+    case "chat":
+      return { title: "Jarvis", subtitle: "Jarvis online." };
+    case "tools":
+      return { title: "Tools", subtitle: "Quick access to Jarvis capabilities." };
+    case "voice":
+      return { title: "Voice", subtitle: "Push-to-talk, diagnostics, and response playback." };
+    case "memory":
+      return { title: "Memory and Knowledge", subtitle: "Review facts, uploads, OCR output, and reference material." };
+    case "control":
+      return { title: "Commands", subtitle: "PC control remains protected by security and permissions." };
+    case "files":
+      return { title: "Files", subtitle: "Search local indexed files." };
+    case "auth":
+      return { title: "Account", subtitle: "Local auth foundation and future providers." };
+    case "connectedApps":
+      return { title: "Connected Apps", subtitle: "Future external app connections." };
+    case "security":
+      return { title: "Security", subtitle: "Command risk and audit overview." };
+    case "settings":
+      return { title: "Settings", subtitle: "Model, voice, memory, OCR, and appearance." };
+    case "diagnostics":
+      return { title: "Diagnostics", subtitle: "Runtime health, local paths, and service status." };
+    case "activity":
+      return { title: "Activity", subtitle: "Interaction and audit timeline." };
+  }
+}
+
+
+==================== Jarvis.Web\components\ChatPanel.tsx ====================
+"use client";
+
+import { useEffect, useRef } from "react";
+import { Composer } from "./Composer";
+import type { AssistantInputResponse, ChatMessage, ChatSessionSummary, JarvisStatus } from "@/lib/types";
+
+export type PendingAssistantCommand = {
+  confirmationId: string;
+  command: string;
+  target: string;
+  message: string;
+};
+
+type AssistantActivity = "idle" | "thinking" | "executing" | "speaking" | "completed" | "error";
+
+type ChatPanelProps = {
+  messages: ChatMessage[];
+  chats: ChatSessionSummary[];
+  activeChatId: string | null;
+  status: JarvisStatus | null;
+  isBusy: boolean;
+  autoSpeak: boolean;
+  pendingVoiceCommand: unknown;
+  pendingAssistantCommand: PendingAssistantCommand | null;
+  lastAssistantAction: AssistantInputResponse | null;
+  assistantActivity: AssistantActivity;
+  onRefresh: () => Promise<void>;
+  onNewChat: () => Promise<void>;
+  onOpenChat: (id: string) => Promise<void>;
+  onDeleteChat: (id: string) => Promise<void>;
+  onSend: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
+  onVoiceCommand: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
+  onConfirmVoiceCommand: () => Promise<void>;
+  onCancelVoiceCommand: () => void;
+  onConfirmAssistantCommand: () => Promise<void>;
+  onCancelAssistantCommand: () => void;
+  onSpeak: (text: string) => Promise<void>;
+  onToast: (message: string) => void;
+};
+
+const suggestions = [
+  { title: "Open YouTube", example: "Open YouTube" },
+  { title: "Search files", example: "Find my resume" },
+  { title: "Add memory", example: "Remember that I prefer local AI" },
+  { title: "Ask memory", example: "What do you remember about me?" }
+];
+
+export function ChatPanel({
+  messages,
+  isBusy,
+  pendingAssistantCommand,
+  lastAssistantAction,
+  assistantActivity,
+  onSend,
+  onVoiceCommand,
+  onConfirmAssistantCommand,
+  onCancelAssistantCommand,
+  onToast
+}: ChatPanelProps) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length, isBusy, pendingAssistantCommand]);
+
+  return (
+    <section className="chat-screen">
+      <div className="chat-scroll">
+        <div className="chat-content">
+          {messages.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-orb">J</div>
+              <h3>How can I help?</h3>
+              <p>Chat naturally, run a command, or ask Jarvis what it remembers.</p>
+              <div className="suggestion-grid">
+                {suggestions.map((suggestion) => (
+                  <button
+                    className="suggestion-card"
+                    key={suggestion.title}
+                    type="button"
+                    onClick={() => void onSend(suggestion.example)}
+                  >
+                    <strong>{suggestion.title}</strong>
+                    <span>{suggestion.example}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {messages.map((message, index) => (
+            <article className={`message-row ${message.role}`} key={`${message.role}-${index}-${message.content.slice(0, 12)}`}>
+              {message.role === "assistant" && <div className="message-avatar">J</div>}
+              <div className="message-bubble">
+                {message.content}
+              </div>
+            </article>
+          ))}
+
+          {pendingAssistantCommand && (
+            <div className="confirmation-card">
+              <strong>This action is risky. Type: yes run it</strong>
+              <p>{pendingAssistantCommand.message}</p>
+              <div>
+                <button type="button" onClick={() => void onConfirmAssistantCommand()}>yes run it</button>
+                <button type="button" onClick={onCancelAssistantCommand}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {!pendingAssistantCommand && lastAssistantAction?.type === "command" && (
+            <div className="command-feedback">
+              {lastAssistantAction.message}
+            </div>
+          )}
+
+          {(isBusy || assistantActivity === "completed") && (
+            <div className="thinking-line">{activityLabel(assistantActivity)}</div>
+          )}
+          <div ref={scrollRef} />
+        </div>
+      </div>
+
+      <Composer disabled={isBusy} onSend={onSend} onVoiceCommand={onVoiceCommand} onToast={onToast} />
+    </section>
+  );
+}
+
+function activityLabel(activity: AssistantActivity) {
+  switch (activity) {
+    case "executing":
+      return "Executing";
+    case "speaking":
+      return "Speaking";
+    case "completed":
+      return "Completed";
+    case "error":
+      return "Something went wrong";
+    case "thinking":
+    case "idle":
+    default:
+      return "Thinking";
+  }
+}
+
+
+==================== Jarvis.Web\components\JarvisDialog.tsx ====================
+"use client";
+
+import type React from "react";
+
+type JarvisDialogProps = {
+  open: boolean;
+  title: string;
+  subtitle?: string;
+  size?: "md" | "lg" | "xl";
+  children: React.ReactNode;
+  onClose: () => void;
+};
+
+export function JarvisDialog({ open, title, subtitle, size = "lg", children, onClose }: JarvisDialogProps) {
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div className="jarvis-dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        aria-modal="true"
+        className={`jarvis-dialog jarvis-dialog-${size}`}
+        role="dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="jarvis-dialog-header">
+          <div>
+            <h2>{title}</h2>
+            {subtitle && <p>{subtitle}</p>}
+          </div>
+          <button aria-label={`Close ${title}`} className="dialog-close-button" type="button" onClick={onClose}>
+            x
+          </button>
+        </header>
+        <div className="jarvis-dialog-body">{children}</div>
+      </section>
+    </div>
+  );
+}
+
+
+==================== Jarvis.Web\components\MemoryPanel.tsx ====================
+"use client";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { TopBar } from "./TopBar";
+import { MemoryCard } from "./memory/MemoryCard";
+import { MemoryEditorForm } from "./memory/MemoryEditorForm";
+import { MemoryIngestionPanel } from "./memory/MemoryIngestionPanel";
+import { MemorySearchBar } from "./memory/MemorySearchBar";
+import {
+  cleanMemoryDraft,
+  emptyMemoryDraft,
+  memoryToDraft,
+  type MemoryDraft
+} from "./memory/memoryForm";
+import { jarvisApi } from "@/lib/api";
+import type { KnowledgeCategory, KnowledgeItem, KnowledgeStats, MemoryFormValues, MemoryItem, MemoryStats } from "@/lib/types";
+
+type MemoryPanelProps = {
+  items: MemoryItem[];
+  onAdd: (values: MemoryFormValues) => Promise<void>;
+  onUpdate: (id: string, values: MemoryFormValues) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onApprove: (id: string) => Promise<void>;
+  onReject: (id: string) => Promise<void>;
+  onClear: () => Promise<void>;
+  onRefresh: () => Promise<void>;
+};
+
+export function MemoryPanel({ items, onAdd, onUpdate, onDelete, onApprove, onReject, onClear, onRefresh }: MemoryPanelProps) {
+  const [activeTab, setActiveTab] = useState<"memory" | "knowledge">("memory");
+  const [draft, setDraft] = useState<MemoryFormValues>(emptyMemoryDraft);
+  const [displayItems, setDisplayItems] = useState(items);
+  const [editing, setEditing] = useState<MemoryDraft | null>(null);
+  const [selectedMemoryIds, setSelectedMemoryIds] = useState<string[]>([]);
+  const [expandedMemoryIds, setExpandedMemoryIds] = useState<string[]>([]);
+  const [collapsedSections, setCollapsedSections] = useState<string[]>([]);
+  const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
+  const [bulkCategory, setBulkCategory] = useState("General");
+  const [bulkImportance, setBulkImportance] = useState(3);
+  const [bulkConfidence, setBulkConfidence] = useState(7);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchCategory, setSearchCategory] = useState("");
+  const [searchTag, setSearchTag] = useState("");
+  const [searchMemoryType, setSearchMemoryType] = useState("");
+  const [searchReviewStatus, setSearchReviewStatus] = useState("");
+  const [searchMinImportance, setSearchMinImportance] = useState("");
+  const [searchMinConfidence, setSearchMinConfidence] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [memoryStats, setMemoryStats] = useState<MemoryStats | null>(null);
+  const [knowledgeStats, setKnowledgeStats] = useState<KnowledgeStats | null>(null);
+  const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
+  const [knowledgeQuery, setKnowledgeQuery] = useState("");
+  const [knowledgeCategory, setKnowledgeCategory] = useState<KnowledgeCategory | "">("");
+  const [knowledgeSource, setKnowledgeSource] = useState("");
+  const [knowledgeFrom, setKnowledgeFrom] = useState("");
+  const [knowledgeTo, setKnowledgeTo] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+
+  const searchActive = useMemo(
+    () =>
+      Boolean(
+        searchQuery.trim() ||
+          searchCategory.trim() ||
+          searchTag.trim() ||
+          searchMemoryType ||
+          searchReviewStatus ||
+          searchMinImportance ||
+          searchMinConfidence
+      ),
+    [
+      searchCategory,
+      searchMemoryType,
+      searchMinConfidence,
+      searchMinImportance,
+      searchQuery,
+      searchReviewStatus,
+      searchTag
+    ]
+  );
+
+  const sections = useMemo(() => buildMemorySections(displayItems), [displayItems]);
+
+  useEffect(() => {
+    if (!searchActive) {
+      setDisplayItems(items);
+    }
+  }, [items, searchActive]);
+
+  useEffect(() => {
+    refreshStatsAndKnowledge().catch(() => undefined);
+  }, [items.length]);
+
+  async function refreshStatsAndKnowledge() {
+    const [stats, knowledge, knowledgeSummary] = await Promise.all([
+      jarvisApi.memoryStats(),
+      jarvisApi.knowledge(),
+      jarvisApi.knowledgeStats()
+    ]);
+    setMemoryStats(stats);
+    setKnowledgeItems(knowledge);
+    setKnowledgeStats(knowledgeSummary);
+  }
+
+  async function runSearch(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+
+    if (!searchActive) {
+      setDisplayItems(items);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      setDisplayItems(
+        await jarvisApi.searchMemory({
+          query: searchQuery,
+          category: searchCategory,
+          tag: searchTag,
+          minImportance: parseOptionalNumber(searchMinImportance),
+          minConfidence: parseOptionalNumber(searchMinConfidence),
+          memoryType: searchMemoryType as MemoryItem["memoryType"] | "",
+          reviewStatus: searchReviewStatus as MemoryItem["reviewStatus"] | ""
+        })
+      );
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  function resetSearch() {
+    setSearchQuery("");
+    setSearchCategory("");
+    setSearchTag("");
+    setSearchMemoryType("");
+    setSearchReviewStatus("");
+    setSearchMinImportance("");
+    setSearchMinConfidence("");
+    setDisplayItems(items);
+  }
+
+  async function runKnowledgeSearch() {
+    setIsSearching(true);
+    try {
+      setKnowledgeItems(await jarvisApi.searchKnowledge({
+        query: knowledgeQuery,
+        category: knowledgeCategory,
+        sourceType: knowledgeSource,
+        importedAfterUtc: knowledgeFrom ? new Date(`${knowledgeFrom}T00:00:00`).toISOString() : undefined,
+        importedBeforeUtc: knowledgeTo ? new Date(`${knowledgeTo}T23:59:59`).toISOString() : undefined,
+        limit: 80
+      }));
+      setKnowledgeStats(await jarvisApi.knowledgeStats());
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  async function resetKnowledgeSearch() {
+    setKnowledgeQuery("");
+    setKnowledgeCategory("");
+    setKnowledgeSource("");
+    setKnowledgeFrom("");
+    setKnowledgeTo("");
+    await refreshStatsAndKnowledge();
+  }
+
+  async function handleAdd(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!draft.text.trim()) {
+      return;
+    }
+
+    await saveMemoryChange(async () => {
+      await onAdd(cleanMemoryDraft(draft));
+      setDraft(emptyMemoryDraft);
+    });
+  }
+
+  async function handleUpdate() {
+    if (!editing?.id || !editing.text.trim()) {
+      return;
+    }
+
+    await saveMemoryChange(async () => {
+      await onUpdate(editing.id!, cleanMemoryDraft(editing));
+      setEditing(null);
+    });
+  }
+
+  async function handleDelete(id: string) {
+    await saveMemoryChange(async () => {
+      await onDelete(id);
+      if (editing?.id === id) {
+        setEditing(null);
+      }
+    });
+  }
+
+  async function handleApprove(id: string) {
+    await saveMemoryChange(async () => {
+      await onApprove(id);
+    });
+  }
+
+  async function handleReject(id: string) {
+    await saveMemoryChange(async () => {
+      await onReject(id);
+    });
+  }
+
+  async function handleClear() {
+    setIsClearing(true);
+    try {
+      await onClear();
+      setSearchQuery("");
+      setSearchCategory("");
+      setSearchTag("");
+      setSearchMemoryType("");
+      setSearchReviewStatus("");
+      setSearchMinImportance("");
+      setSearchMinConfidence("");
+      setDisplayItems([]);
+    } finally {
+      setIsClearing(false);
+    }
+  }
+
+  async function saveMemoryChange(action: () => Promise<void>) {
+    setIsSaving(true);
+    try {
+      await action();
+      await onRefresh();
+      await refreshStatsAndKnowledge();
+      if (searchActive) {
+        await runSearch();
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleBulkAction(action: "approve" | "reject" | "delete" | "update" | "convert") {
+    if (selectedMemoryIds.length === 0) {
+      setStatusMessage("Select memories first.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const result =
+        action === "approve" ? await jarvisApi.bulkApproveMemory(selectedMemoryIds) :
+        action === "reject" ? await jarvisApi.bulkRejectMemory(selectedMemoryIds) :
+        action === "delete" ? await jarvisApi.bulkDeleteMemory(selectedMemoryIds) :
+        await jarvisApi.bulkUpdateMemory(selectedMemoryIds, {
+          category: bulkCategory,
+          importance: bulkImportance,
+          confidence: bulkConfidence,
+          convertSuggestedToPermanent: action === "convert"
+        });
+      setDisplayItems(result.memories);
+      setSelectedMemoryIds([]);
+      await onRefresh();
+      await refreshStatsAndKnowledge();
+      setStatusMessage("Bulk action completed.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <section className="tool-panel">
+      <TopBar
+        title="Memory"
+        subtitle="Review personal memories and separate reference knowledge"
+        action={
+          <button className="danger-button" type="button" onClick={handleClear} disabled={isClearing}>
+            {isClearing ? "Clearing" : "Clear"}
+          </button>
+        }
+      />
+
+      <div className="memory-tabs">
+        <button className={activeTab === "memory" ? "active" : ""} type="button" onClick={() => setActiveTab("memory")}>
+          Memory
+        </button>
+        <button className={activeTab === "knowledge" ? "active" : ""} type="button" onClick={() => setActiveTab("knowledge")}>
+          Knowledge
+        </button>
+      </div>
+
+      {activeTab === "memory" && (
+        <>
+      <MemorySearchBar
+        query={searchQuery}
+        category={searchCategory}
+        tag={searchTag}
+        memoryType={searchMemoryType}
+        reviewStatus={searchReviewStatus}
+        minImportance={searchMinImportance}
+        minConfidence={searchMinConfidence}
+        isSearching={isSearching}
+        searchActive={searchActive}
+        onQueryChange={setSearchQuery}
+        onCategoryChange={setSearchCategory}
+        onTagChange={setSearchTag}
+        onMemoryTypeChange={setSearchMemoryType}
+        onReviewStatusChange={setSearchReviewStatus}
+        onMinImportanceChange={setSearchMinImportance}
+        onMinConfidenceChange={setSearchMinConfidence}
+        onSearch={runSearch}
+        onReset={resetSearch}
+      />
+
+      <MemoryIngestionPanel onMemoryChanged={onRefresh} />
+
+      <MemoryStatsPanel stats={memoryStats} />
+
+      <BulkMemoryToolbar
+        selectedCount={selectedMemoryIds.length}
+        category={bulkCategory}
+        importance={bulkImportance}
+        confidence={bulkConfidence}
+        disabled={isSaving}
+        onCategoryChange={setBulkCategory}
+        onImportanceChange={setBulkImportance}
+        onConfidenceChange={setBulkConfidence}
+        onApprove={() => void handleBulkAction("approve")}
+        onReject={() => void handleBulkAction("reject")}
+        onDelete={() => void handleBulkAction("delete")}
+        onUpdate={() => void handleBulkAction("update")}
+        onConvert={() => void handleBulkAction("convert")}
+      />
+      {statusMessage && <div className="control-message">{statusMessage}</div>}
+
+      <MemoryEditorForm
+        draft={draft}
+        submitLabel="Add memory"
+        isSaving={isSaving}
+        onChange={setDraft}
+        onSubmit={handleAdd}
+      />
+
+      <div className="memory-review-summary">
+        {sections.map((section) => (
+          <span key={section.title}>
+            {section.title}: <strong>{section.items.length}</strong>
+          </span>
+        ))}
+      </div>
+
+      <div className="memory-section-list">
+        {displayItems.length === 0 && <div className="list-empty">No memories saved yet.</div>}
+
+        {sections.map((section) => (
+          <MemorySection
+            key={section.title}
+            section={section}
+            collapsed={collapsedSections.includes(section.title)}
+            visibleCount={visibleCounts[section.title] ?? 20}
+            selectedIds={selectedMemoryIds}
+            expandedIds={expandedMemoryIds}
+            editing={editing}
+            isSaving={isSaving}
+            onToggleCollapsed={() => setCollapsedSections((current) => toggleValue(current, section.title))}
+            onLoadMore={() => setVisibleCounts((current) => ({ ...current, [section.title]: (current[section.title] ?? 20) + 20 }))}
+            onSelectAll={() => setSelectedMemoryIds((current) => mergeIds(current, section.items.map((item) => item.id)))}
+            onToggleSelected={(id) => setSelectedMemoryIds((current) => toggleValue(current, id))}
+            onToggleExpanded={(id) => setExpandedMemoryIds((current) => toggleValue(current, id))}
+            onEdit={(memory) => setEditing(memoryToDraft(memory))}
+            onCancelEdit={() => setEditing(null)}
+            onEditingChange={setEditing}
+            onSaveEdit={handleUpdate}
+            onDelete={handleDelete}
+            onApprove={handleApprove}
+            onReject={handleReject}
+          />
+        ))}
+      </div>
+        </>
+      )}
+
+      {activeTab === "knowledge" && (
+        <KnowledgePanel
+          items={knowledgeItems}
+          stats={knowledgeStats}
+          query={knowledgeQuery}
+          category={knowledgeCategory}
+          source={knowledgeSource}
+          from={knowledgeFrom}
+          to={knowledgeTo}
+          isSearching={isSearching}
+          onQueryChange={setKnowledgeQuery}
+          onCategoryChange={setKnowledgeCategory}
+          onSourceChange={setKnowledgeSource}
+          onFromChange={setKnowledgeFrom}
+          onToChange={setKnowledgeTo}
+          onSearch={runKnowledgeSearch}
+          onReset={resetKnowledgeSearch}
+        />
+      )}
+    </section>
+  );
+}
+
+function MemoryStatsPanel({ stats }: { stats: MemoryStats | null }) {
+  if (!stats) {
+    return null;
+  }
+
+  return (
+    <section className="simple-card memory-stats-panel">
+      <div className="memory-section-heading compact">
+        <div>
+          <h3>Memory Statistics</h3>
+          <p>Quick health check for the personal memory store.</p>
+        </div>
+      </div>
+      <div className="memory-review-summary">
+        <span>Total: <strong>{stats.total}</strong></span>
+        <span>Approved: <strong>{stats.approved}</strong></span>
+        <span>Pending: <strong>{stats.pending}</strong></span>
+        <span>Rejected: <strong>{stats.rejected}</strong></span>
+      </div>
+      <div className="memory-review-summary">
+        {stats.categories.slice(0, 8).map((item) => (
+          <span key={item.category}>{item.category}: <strong>{item.count}</strong></span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BulkMemoryToolbar({
+  selectedCount,
+  category,
+  importance,
+  confidence,
+  disabled,
+  onCategoryChange,
+  onImportanceChange,
+  onConfidenceChange,
+  onApprove,
+  onReject,
+  onDelete,
+  onUpdate,
+  onConvert
+}: {
+  selectedCount: number;
+  category: string;
+  importance: number;
+  confidence: number;
+  disabled: boolean;
+  onCategoryChange: (value: string) => void;
+  onImportanceChange: (value: number) => void;
+  onConfidenceChange: (value: number) => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onDelete: () => void;
+  onUpdate: () => void;
+  onConvert: () => void;
+}) {
+  return (
+    <section className="simple-card bulk-toolbar">
+      <div className="memory-section-heading compact">
+        <div>
+          <h3>Bulk Management</h3>
+          <p>{selectedCount} selected. Apply fields or review actions without opening each card.</p>
+        </div>
+      </div>
+      <div className="memory-form compact">
+        <label>
+          <span>Category</span>
+          <select value={category} onChange={(event) => onCategoryChange(event.target.value)}>
+            {["Astrology", "Tarot", "Occult", "Vastu", "Projects", "Preferences", "Identity", "Education", "Work", "Goals", "Health", "General"].map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Importance</span>
+          <input type="number" min={1} max={10} value={importance} onChange={(event) => onImportanceChange(Number(event.target.value) || 3)} />
+        </label>
+        <label>
+          <span>Confidence</span>
+          <input type="number" min={1} max={10} value={confidence} onChange={(event) => onConfidenceChange(Number(event.target.value) || 7)} />
+        </label>
+      </div>
+      <div className="memory-actions">
+        <button className="soft-button" type="button" disabled={disabled || selectedCount === 0} onClick={onUpdate}>Apply Fields</button>
+        <button className="soft-button" type="button" disabled={disabled || selectedCount === 0} onClick={onConvert}>Convert to Permanent</button>
+        <button className="soft-button" type="button" disabled={disabled || selectedCount === 0} onClick={onApprove}>Approve</button>
+        <button className="danger-button" type="button" disabled={disabled || selectedCount === 0} onClick={onReject}>Reject</button>
+        <button className="danger-button" type="button" disabled={disabled || selectedCount === 0} onClick={onDelete}>Delete</button>
+      </div>
+    </section>
+  );
+}
+
+function KnowledgePanel({
+  items,
+  stats,
+  query,
+  category,
+  source,
+  from,
+  to,
+  isSearching,
+  onQueryChange,
+  onCategoryChange,
+  onSourceChange,
+  onFromChange,
+  onToChange,
+  onSearch,
+  onReset
+}: {
+  items: KnowledgeItem[];
+  stats: KnowledgeStats | null;
+  query: string;
+  category: KnowledgeCategory | "";
+  source: string;
+  from: string;
+  to: string;
+  isSearching: boolean;
+  onQueryChange: (value: string) => void;
+  onCategoryChange: (value: KnowledgeCategory | "") => void;
+  onSourceChange: (value: string) => void;
+  onFromChange: (value: string) => void;
+  onToChange: (value: string) => void;
+  onSearch: () => Promise<void>;
+  onReset: () => Promise<void>;
+}) {
+  const terms = query.split(" ", 5).filter(Boolean);
+  return (
+    <section className="simple-card knowledge-panel">
+      <div className="memory-section-heading compact">
+        <div>
+          <h3>Knowledge</h3>
+          <p>Reference material from OCR and PDFs. Separate from personal memories.</p>
+        </div>
+        <strong>{stats?.total ?? items.length}</strong>
+      </div>
+      <div className="memory-form compact">
+        <label>
+          <span>Search Knowledge</span>
+          <input value={query} placeholder="Search reference text" onChange={(event) => onQueryChange(event.target.value)} />
+        </label>
+        <label>
+          <span>Category</span>
+          <select value={category} onChange={(event) => onCategoryChange(event.target.value as KnowledgeCategory | "")}>
+            <option value="">All</option>
+            {["Astrology", "Tarot", "Occult", "Vastu", "Research", "Books", "Documents", "General"].map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Source</span>
+          <select value={source} onChange={(event) => onSourceChange(event.target.value)}>
+            <option value="">All</option>
+            <option value="Image">OCR/Image</option>
+            <option value="Pdf">PDF</option>
+            <option value="Manual">Manual</option>
+          </select>
+        </label>
+        <label>
+          <span>From</span>
+          <input type="date" value={from} onChange={(event) => onFromChange(event.target.value)} />
+        </label>
+        <label>
+          <span>To</span>
+          <input type="date" value={to} onChange={(event) => onToChange(event.target.value)} />
+        </label>
+      </div>
+      <div className="memory-actions">
+        <button className="soft-button" type="button" disabled={isSearching} onClick={() => void onSearch()}>{isSearching ? "Searching" : "Search"}</button>
+        <button className="soft-button" type="button" disabled={isSearching} onClick={() => void onReset()}>Reset</button>
+      </div>
+      {stats && (
+        <div className="memory-review-summary">
+          {stats.categories.slice(0, 6).map((item) => <span key={item.category}>{item.category}: <strong>{item.count}</strong></span>)}
+          {stats.sources.slice(0, 4).map((item) => <span key={item.sourceType}>{item.sourceType}: <strong>{item.count}</strong></span>)}
+        </div>
+      )}
+      <div className="item-list compact">
+        {items.slice(0, 40).map((item) => (
+          <article className="list-card memory-card" key={item.id}>
+            <div className="memory-card-head">
+              <strong>{highlight(item.title, terms)}</strong>
+              <div className="memory-badges">
+                <span className="memory-badge">{item.category}</span>
+                <span className="memory-badge">{item.sourceType || "Manual"}</span>
+                <span className="memory-badge">{item.wordCount} words</span>
+                <span className="memory-badge">{item.accessCount} views</span>
+              </div>
+            </div>
+            <p>{highlight(item.content.slice(0, 420), terms)}{item.content.length > 420 ? "..." : ""}</p>
+          </article>
+        ))}
+        {items.length === 0 && <div className="list-empty compact">No knowledge saved yet.</div>}
+      </div>
+    </section>
+  );
+}
+
+type MemorySectionModel = {
+  title: string;
+  description: string;
+  items: MemoryItem[];
+};
+
+type MemorySectionProps = {
+  section: MemorySectionModel;
+  collapsed: boolean;
+  visibleCount: number;
+  selectedIds: string[];
+  expandedIds: string[];
+  editing: MemoryDraft | null;
+  isSaving: boolean;
+  onToggleCollapsed: () => void;
+  onLoadMore: () => void;
+  onSelectAll: () => void;
+  onToggleSelected: (id: string) => void;
+  onToggleExpanded: (id: string) => void;
+  onEdit: (item: MemoryItem) => void;
+  onCancelEdit: () => void;
+  onEditingChange: (draft: MemoryDraft) => void;
+  onSaveEdit: () => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onApprove: (id: string) => Promise<void>;
+  onReject: (id: string) => Promise<void>;
+};
+
+function MemorySection({
+  section,
+  collapsed,
+  visibleCount,
+  selectedIds,
+  expandedIds,
+  editing,
+  isSaving,
+  onToggleCollapsed,
+  onLoadMore,
+  onSelectAll,
+  onToggleSelected,
+  onToggleExpanded,
+  onEdit,
+  onCancelEdit,
+  onEditingChange,
+  onSaveEdit,
+  onDelete,
+  onApprove,
+  onReject
+}: MemorySectionProps) {
+  const visibleItems = section.items.slice(0, visibleCount);
+
+  return (
+    <section className="memory-review-section">
+      <div className="memory-section-heading">
+        <button className="section-toggle" type="button" onClick={onToggleCollapsed}>
+          {collapsed ? "+" : "-"}
+        </button>
+        <div>
+          <h3>{section.title}</h3>
+          <p>{section.description}</p>
+        </div>
+        <strong>{section.items.length}</strong>
+      </div>
+
+      {!collapsed && (
+        <>
+          <div className="memory-actions">
+            <button className="soft-button" type="button" disabled={section.items.length === 0} onClick={onSelectAll}>
+              Select All
+            </button>
+          </div>
+          {visibleItems.length === 0 ? (
+            <div className="list-empty compact">No memories in this section.</div>
+          ) : (
+            <div className="item-list compact">
+              {visibleItems.map((item) => (
+                <CompactMemoryRow
+                  key={item.id}
+                  item={item}
+                  selected={selectedIds.includes(item.id)}
+                  expanded={expandedIds.includes(item.id)}
+                  editing={editing}
+                  isSaving={isSaving}
+                  onToggleSelected={() => onToggleSelected(item.id)}
+                  onToggleExpanded={() => onToggleExpanded(item.id)}
+                  onEdit={onEdit}
+                  onCancelEdit={onCancelEdit}
+                  onEditingChange={onEditingChange}
+                  onSaveEdit={onSaveEdit}
+                  onDelete={onDelete}
+                  onApprove={onApprove}
+                  onReject={onReject}
+                />
+              ))}
+            </div>
+          )}
+          {section.items.length > visibleItems.length && (
+            <button className="soft-button load-more-button" type="button" onClick={onLoadMore}>
+              Load 20 more
+            </button>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function CompactMemoryRow({
+  item,
+  selected,
+  expanded,
+  editing,
+  isSaving,
+  onToggleSelected,
+  onToggleExpanded,
+  onEdit,
+  onCancelEdit,
+  onEditingChange,
+  onSaveEdit,
+  onDelete,
+  onApprove,
+  onReject
+}: {
+  item: MemoryItem;
+  selected: boolean;
+  expanded: boolean;
+  editing: MemoryDraft | null;
+  isSaving: boolean;
+  onToggleSelected: () => void;
+  onToggleExpanded: () => void;
+  onEdit: (item: MemoryItem) => void;
+  onCancelEdit: () => void;
+  onEditingChange: (draft: MemoryDraft) => void;
+  onSaveEdit: () => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onApprove: (id: string) => Promise<void>;
+  onReject: (id: string) => Promise<void>;
+}) {
+  return (
+    <article className="memory-row-card">
+      <div className="memory-row-main">
+        <input type="checkbox" checked={selected} onChange={onToggleSelected} />
+        <button className="memory-row-text" type="button" onClick={onToggleExpanded}>
+          <strong>{item.text.slice(0, 120)}{item.text.length > 120 ? "..." : ""}</strong>
+          <span>{item.category} - {item.memoryType} - {item.reviewStatus} - I{item.importance} C{item.confidence}</span>
+        </button>
+        <button className="soft-button" type="button" onClick={onToggleExpanded}>{expanded ? "Collapse" : "Expand"}</button>
+      </div>
+      {expanded && (
+        <MemoryCard
+          item={item}
+          editing={editing}
+          isSaving={isSaving}
+          onEdit={onEdit}
+          onCancelEdit={onCancelEdit}
+          onEditingChange={onEditingChange}
+          onSaveEdit={onSaveEdit}
+          onDelete={onDelete}
+          onApprove={onApprove}
+          onReject={onReject}
+        />
+      )}
+    </article>
+  );
+}
+
+function buildMemorySections(items: MemoryItem[]): MemorySectionModel[] {
+  const sorted = [...items].sort((left, right) => new Date(right.updatedAtUtc).getTime() - new Date(left.updatedAtUtc).getTime());
+  return [
+    {
+      title: "Suggested Memories",
+      description: "Pending suggestions waiting for approval, rejection, or edit.",
+      items: sorted.filter((item) => item.memoryType === "SuggestedMemory" && item.reviewStatus === "Pending")
+    },
+    {
+      title: "Permanent Memories",
+      description: "Approved long-term memories available for retrieval.",
+      items: sorted.filter(
+        (item) =>
+          item.memoryType !== "TemporaryContext" &&
+          item.reviewStatus !== "Pending" &&
+          item.reviewStatus !== "Rejected"
+      )
+    },
+    {
+      title: "Temporary Context",
+      description: "Short-lived context. Expired items are not used in retrieval.",
+      items: sorted.filter((item) => item.memoryType === "TemporaryContext" && item.reviewStatus !== "Rejected")
+    },
+    {
+      title: "Rejected Memories",
+      description: "Rejected memories are retained for review and never used in retrieval.",
+      items: sorted.filter((item) => item.reviewStatus === "Rejected")
+    }
+  ];
+}
+
+function parseOptionalNumber(value: string) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function toggleValue(values: string[], value: string) {
+  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+}
+
+function mergeIds(current: string[], ids: string[]) {
+  return Array.from(new Set([...current, ...ids]));
+}
+
+function highlight(text: string, terms: string[]) {
+  if (terms.length === 0) {
+    return text;
+  }
+
+  let result = text;
+  for (const term of terms) {
+    result = result.replace(new RegExp(`(${escapeRegExp(term)})`, "ig"), "[$1]");
+  }
+
+  return result;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+
+==================== Jarvis.Web\lib\api.ts ====================
+import type {
+  AppSettings,
+  AssistantInputResponse,
+  ChatMessage,
+  ChatSession,
+  ChatSessionSummary,
+  DiagnosticsResult,
+  FileSearchResult,
+  InteractionLogEntry,
+  InteractionSource,
+  InteractionStatus,
+  InteractionStatusResult,
+  InteractionType,
+  IngestionCandidateResult,
+  IngestionCandidateUpdate,
+  IngestionJob,
+  JarvisStatus,
+  KnowledgeCategory,
+  KnowledgeItem,
+  KnowledgeStats,
+  MemoryItem,
+  MemoryFormValues,
+  MemoryStats,
+  PcCommandCatalogItem,
+  PcCommandExecutionResult,
+  TextToSpeechResult,
+  PcCommandLogEntry,
+  VoiceCommandCatalogItem,
+  VoiceCommandResult,
+  VoiceDiagnosticsResult,
+  VoiceHealthResult,
+  VoiceHistoryItem,
+  VoicePipelineResult,
+  VoicePipelineStatus,
+  WakeWordCheckResult,
+  VoiceStatus
+} from "./types";
+
+export const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_JARVIS_API_URL ?? "http://localhost:5055"
+).replace(/\/$/, "");
+
+function apiUrl(path: string) {
+  return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(path), {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers ?? {})
+      },
+      ...options
+    });
+  } catch (error) {
+    if (!path.startsWith("/api/interactions")) {
+      void rawLogInteraction("frontend-network-error", path, error instanceof Error ? error.message : "Network error");
+    }
+    throw error;
+  }
+
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try {
+      const body = (await response.json()) as { error?: string };
+      message = body.error ?? message;
+    } catch {
+      // Keep the default error.
+    }
+    if (!path.startsWith("/api/interactions")) {
+      void rawLogInteraction("frontend-api-error", path, message);
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function rawLogInteraction(stage: string, input: string, error: string) {
+  try {
+    await fetch(apiUrl("/api/interactions/logs"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "System",
+        type: "Error",
+        stage,
+        input,
+        status: "Failed",
+        message: "Frontend API request failed.",
+        error
+      })
+    });
+  } catch {
+    // If the backend is down, the UI status banner is the useful signal.
+  }
+}
+
+export const jarvisApi = {
+  apiBaseUrl: API_BASE_URL,
+  status: () => request<JarvisStatus>("/api/status"),
+  diagnostics: () => request<DiagnosticsResult>("/api/diagnostics"),
+  history: () => request<ChatMessage[]>("/api/history"),
+  chat: (message: string) =>
+    request<{ response: string }>("/api/chat", {
+      method: "POST",
+      body: JSON.stringify({ message })
+    }),
+  chats: () => request<ChatSessionSummary[]>("/api/chats"),
+  chatSession: (id: string) => request<ChatSession>(`/api/chats/${encodeURIComponent(id)}`),
+  createChat: (title?: string) =>
+    request<ChatSession>("/api/chats", {
+      method: "POST",
+      body: JSON.stringify({ title })
+    }),
+  sendChatMessage: (id: string, message: string) =>
+    request<{ response: string; session: ChatSession }>(`/api/chats/${encodeURIComponent(id)}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ message })
+    }),
+  assistantInput: (message: string, chatSessionId?: string | null) =>
+    request<AssistantInputResponse>("/api/assistant/input", {
+      method: "POST",
+      body: JSON.stringify({ message, chatSessionId })
+    }),
+  confirmAssistantCommand: (confirmationId: string, chatSessionId?: string | null) =>
+    request<AssistantInputResponse>("/api/assistant/confirm", {
+      method: "POST",
+      body: JSON.stringify({ confirmationId, chatSessionId })
+    }),
+  deleteChat: (id: string) =>
+    request<ChatSessionSummary[]>(`/api/chats/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    }),
+  transcribeVoice: async (audio: Blob) => {
+    const formData = new FormData();
+    formData.append("audio", audio, `jarvis-voice-${Date.now()}${audioExtension(audio)}`);
+
+    const response = await fetch(apiUrl("/api/voice/transcribe"), {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      let message = `Voice request failed (${response.status})`;
+      try {
+        const body = (await response.json()) as { error?: string };
+        message = body.error ?? message;
+      } catch {
+        // Keep the default error.
+      }
+      throw new Error(message);
+    }
+
+    return response.json() as Promise<{
+      transcript: string;
+      ready: boolean;
+      succeeded: boolean;
+      fileName: string;
+      contentType: string;
+      sizeBytes: number;
+      message: string;
+    }>;
+  },
+  voiceStatus: () => request<VoiceStatus>("/api/voice/status"),
+  voiceHealth: () => request<VoiceHealthResult>("/api/voice/health"),
+  voiceDiagnostics: () => request<VoiceDiagnosticsResult>("/api/voice/diagnostics"),
+  voicePipelineStatus: () => request<VoicePipelineStatus>("/api/voice/pipeline/status"),
+  voiceHistory: () => request<VoiceHistoryItem[]>("/api/voice/history"),
+  runVoicePipeline: async (audio: Blob, requireWakeWord = false) => {
+    const formData = new FormData();
+    formData.append("audio", audio, `jarvis-pipeline-${Date.now()}${audioExtension(audio)}`);
+    formData.append("requireWakeWord", String(requireWakeWord));
+
+    const response = await fetch(apiUrl("/api/voice/pipeline"), {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      let message = `Voice pipeline failed (${response.status})`;
+      try {
+        const body = (await response.json()) as { error?: string };
+        message = body.error ?? message;
+      } catch {
+        // Keep the default error.
+      }
+      throw new Error(message);
+    }
+
+    return response.json() as Promise<VoicePipelineResult>;
+  },
+  confirmVoicePipeline: (confirmationId: string) =>
+    request<VoicePipelineResult>("/api/voice/pipeline/confirm", {
+      method: "POST",
+      body: JSON.stringify({ confirmationId })
+    }),
+  wakeStatus: () =>
+    request<VoiceStatus["wakeWord"]>("/api/voice/wake-status"),
+  wakeCheck: (transcript: string) =>
+    request<WakeWordCheckResult>("/api/voice/wake-check", {
+      method: "POST",
+      body: JSON.stringify({ transcript })
+    }),
+  speak: (text: string) =>
+    request<TextToSpeechResult>("/api/voice/speak", {
+      method: "POST",
+      body: JSON.stringify({ text })
+    }),
+  stopSpeaking: () =>
+    request<{ stopped: boolean; message: string }>("/api/voice/speak/stop", {
+      method: "POST"
+    }),
+  voiceCommand: (transcript: string, confirmed = false) =>
+    request<VoiceCommandResult>("/api/voice/command", {
+      method: "POST",
+      body: JSON.stringify({ transcript, confirmed })
+    }),
+  voiceCommands: () => request<VoiceCommandCatalogItem[]>("/api/voice/commands"),
+  memory: () => request<MemoryItem[]>("/api/memory"),
+  memoryStats: () => request<MemoryStats>("/api/memory/stats"),
+  searchMemory: (filters: {
+    query?: string;
+    category?: string;
+    tag?: string;
+    minImportance?: number;
+    minConfidence?: number;
+    memoryType?: MemoryItem["memoryType"] | "";
+    reviewStatus?: MemoryItem["reviewStatus"] | "";
+  }) => {
+    const params = new URLSearchParams();
+    if (filters.query?.trim()) params.set("q", filters.query.trim());
+    if (filters.category?.trim()) params.set("category", filters.category.trim());
+    if (filters.tag?.trim()) params.set("tag", filters.tag.trim());
+    if (filters.minImportance) params.set("minImportance", String(filters.minImportance));
+    if (filters.minConfidence) params.set("minConfidence", String(filters.minConfidence));
+    if (filters.memoryType) params.set("memoryType", filters.memoryType);
+    if (filters.reviewStatus) params.set("reviewStatus", filters.reviewStatus);
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return request<MemoryItem[]>(`/api/memory/search${suffix}`);
+  },
+  suggestedMemory: () => request<MemoryItem[]>("/api/memory/suggestions"),
+  retrieveMemory: (query: string, maxResults = 5) =>
+    request<{ memories: Array<{ memory: MemoryItem; score: number; matchedTerms: string[]; matchedCategories: string[] }> }>(
+      "/api/memory/retrieve",
+      {
+        method: "POST",
+        body: JSON.stringify({ query, maxResults })
+      }
+    ),
+  addMemory: (values: MemoryFormValues) =>
+    request<MemoryItem[]>("/api/memory", {
+      method: "POST",
+      body: JSON.stringify(values)
+    }),
+  updateMemory: (id: string, values: MemoryFormValues) =>
+    request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(values)
+    }),
+  deleteMemory: (id: string) =>
+    request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    }),
+  approveMemory: (id: string) =>
+    request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}/approve`, { method: "POST" }),
+  rejectMemory: (id: string) =>
+    request<MemoryItem[]>(`/api/memory/${encodeURIComponent(id)}/reject`, { method: "POST" }),
+  clearMemory: () => request<MemoryItem[]>("/api/memory", { method: "DELETE" }),
+  bulkApproveMemory: (memoryIds: string[]) =>
+    request<{ updated: number; memories: MemoryItem[] }>("/api/memory/bulk-approve", {
+      method: "POST",
+      body: JSON.stringify({ memoryIds })
+    }),
+  bulkRejectMemory: (memoryIds: string[]) =>
+    request<{ updated: number; memories: MemoryItem[] }>("/api/memory/bulk-reject", {
+      method: "POST",
+      body: JSON.stringify({ memoryIds })
+    }),
+  bulkDeleteMemory: (memoryIds: string[]) =>
+    request<{ removed: number; memories: MemoryItem[] }>("/api/memory/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ memoryIds })
+    }),
+  bulkUpdateMemory: (
+    memoryIds: string[],
+    values: { category?: string; importance?: number; confidence?: number; convertSuggestedToPermanent?: boolean }
+  ) =>
+    request<{ updated: number; memories: MemoryItem[] }>("/api/memory/bulk-update", {
+      method: "POST",
+      body: JSON.stringify({ memoryIds, ...values })
+    }),
+  knowledge: () => request<KnowledgeItem[]>("/api/knowledge"),
+  knowledgeStats: () => request<KnowledgeStats>("/api/knowledge/stats"),
+  searchKnowledge: (filters: {
+    query?: string;
+    category?: KnowledgeCategory | "";
+    sourceType?: string;
+    importedAfterUtc?: string;
+    importedBeforeUtc?: string;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters.query?.trim()) params.set("q", filters.query.trim());
+    if (filters.category) params.set("category", filters.category);
+    if (filters.sourceType?.trim()) params.set("sourceType", filters.sourceType.trim());
+    if (filters.importedAfterUtc) params.set("importedAfterUtc", filters.importedAfterUtc);
+    if (filters.importedBeforeUtc) params.set("importedBeforeUtc", filters.importedBeforeUtc);
+    if (filters.limit) params.set("limit", String(filters.limit));
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return request<KnowledgeItem[]>(`/api/knowledge/search${suffix}`);
+  },
+  addKnowledge: (values: {
+    title: string;
+    content: string;
+    category: KnowledgeCategory;
+    source?: string;
+    sourceFile?: string;
+    sourceType?: string;
+  }) =>
+    request<KnowledgeItem>("/api/knowledge", {
+      method: "POST",
+      body: JSON.stringify(values)
+    }),
+  deleteKnowledge: (id: string) =>
+    request<KnowledgeItem[]>(`/api/knowledge/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  ingestionJobs: () => request<IngestionJob[]>("/api/ingestion/jobs"),
+  uploadIngestionFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch(apiUrl("/api/ingestion/upload"), {
+      method: "POST",
+      body: formData
+    });
+    if (!response.ok) {
+      let message = `Upload failed (${response.status})`;
+      try {
+        const body = (await response.json()) as { error?: string };
+        message = body.error ?? message;
+      } catch {
+        // Keep the default error.
+      }
+      throw new Error(message);
+    }
+
+    return response.json() as Promise<IngestionJob>;
+  },
+  extractIngestionJob: (id: string) =>
+    request<IngestionJob>(`/api/ingestion/jobs/${encodeURIComponent(id)}/extract`, { method: "POST" }),
+  generateIngestionCandidates: (id: string) =>
+    request<IngestionJob>(`/api/ingestion/jobs/${encodeURIComponent(id)}/candidates`, { method: "POST" }),
+  ingestionFileUrl: (id: string) => apiUrl(`/api/ingestion/jobs/${encodeURIComponent(id)}/file`),
+  saveIngestionAsKnowledge: (id: string, values: { title?: string; category: KnowledgeCategory }) =>
+    request<{ knowledge: KnowledgeItem; items: KnowledgeItem[] }>(`/api/ingestion/jobs/${encodeURIComponent(id)}/knowledge`, {
+      method: "POST",
+      body: JSON.stringify(values)
+    }),
+  saveIngestionAsMemory: (id: string, values: { text?: string; category?: string; memoryType?: MemoryItem["memoryType"]; importance?: number; confidence?: number }) =>
+    request<{ memory: MemoryItem; memories: MemoryItem[] }>(`/api/ingestion/jobs/${encodeURIComponent(id)}/memory`, {
+      method: "POST",
+      body: JSON.stringify(values)
+    }),
+  deleteIngestionJob: (id: string) =>
+    request<IngestionJob[]>(`/api/ingestion/jobs/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  approveIngestionCandidate: (id: string, update: IngestionCandidateUpdate) =>
+    request<IngestionCandidateResult>(`/api/ingestion/candidates/${encodeURIComponent(id)}/approve`, {
+      method: "POST",
+      body: JSON.stringify(update)
+    }),
+  rejectIngestionCandidate: (id: string) =>
+    request<IngestionCandidateResult>(`/api/ingestion/candidates/${encodeURIComponent(id)}/reject`, {
+      method: "POST"
+    }),
+  bulkApproveIngestionCandidates: (candidateIds: string[], values: { category?: string; importance?: number; confidence?: number }) =>
+    request<{ approved: number; jobs: IngestionJob[]; memories: MemoryItem[] }>("/api/ingestion/candidates/bulk-approve", {
+      method: "POST",
+      body: JSON.stringify({ candidateIds, ...values })
+    }),
+  bulkRejectIngestionCandidates: (candidateIds: string[]) =>
+    request<{ rejected: number; jobs: IngestionJob[] }>("/api/ingestion/candidates/bulk-reject", {
+      method: "POST",
+      body: JSON.stringify({ candidateIds })
+    }),
+  settings: () => request<AppSettings>("/api/settings"),
+  saveSettings: (settings: AppSettings) =>
+    request<AppSettings>("/api/settings", {
+      method: "POST",
+      body: JSON.stringify(settings)
+    }),
+  indexFiles: () => request<{ count: number }>("/api/files/index", { method: "POST" }),
+  searchFiles: (query: string) =>
+    request<string[]>(`/api/files/search?q=${encodeURIComponent(query)}`),
+  searchFilesDetailed: (query: string, limit = 25) =>
+    request<FileSearchResult[]>(
+      `/api/files/search-detailed?q=${encodeURIComponent(query)}&limit=${limit}`
+    ),
+  openFile: (path: string) =>
+    request<{ success: boolean; message: string }>(`/api/files/open`, {
+      method: "POST",
+      body: JSON.stringify({ path })
+    }),
+  openContainingFolder: (path: string) =>
+    request<{ success: boolean; message: string }>(`/api/files/open-folder`, {
+      method: "POST",
+      body: JSON.stringify({ path })
+    }),
+  commandCatalog: () => request<PcCommandCatalogItem[]>("/api/commands/catalog"),
+  commandLogs: () => request<PcCommandLogEntry[]>("/api/commands/logs"),
+  executeCommand: (input: string) =>
+    request<PcCommandExecutionResult>("/api/commands/execute", {
+      method: "POST",
+      body: JSON.stringify({ input })
+    }),
+  confirmCommand: (confirmationId: string) =>
+    request<PcCommandExecutionResult>("/api/commands/confirm", {
+      method: "POST",
+      body: JSON.stringify({ confirmationId })
+    }),
+  interactionLogs: (limit = 100) =>
+    request<InteractionLogEntry[]>(`/api/interactions/logs?limit=${limit}`),
+  interactionStatus: () => request<InteractionStatusResult>("/api/interactions/status"),
+  clearInteractionLogs: () => request<{ cleared: boolean }>("/api/interactions/logs", { method: "DELETE" }),
+  logInteraction: (entry: {
+    source: InteractionSource;
+    type: InteractionType;
+    stage: string;
+    input?: string;
+    output?: string;
+    status: InteractionStatus;
+    message?: string;
+    error?: string;
+    metadata?: Record<string, unknown>;
+  }) =>
+    request<{ logged: boolean }>("/api/interactions/logs", {
+      method: "POST",
+      body: JSON.stringify(entry)
+  })
+};
+
+function audioExtension(audio: Blob) {
+  if (audio.type.includes("wav")) {
+    return ".wav";
+  }
+
+  if (audio.type.includes("webm")) {
+    return ".webm";
+  }
+
+  return ".wav";
+}
+
+
+==================== Jarvis.Web\lib\types.ts ====================
+export type ViewKey =
+  | "chat"
+  | "voice"
+  | "memory"
+  | "control"
+  | "files"
+  | "tools"
+  | "auth"
+  | "connectedApps"
+  | "security"
+  | "settings"
+  | "activity"
+  | "diagnostics";
+
+export type AuthProviderType = "Local" | "Google" | "Microsoft" | "GitHub" | "Discord";
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  name: string;
+  provider: AuthProviderType;
+};
+
+export type AuthStatus = {
+  isAuthenticated: boolean;
+  user?: AuthUser | null;
+  message: string;
+};
+
+export type AuthProviderInfo = {
+  id: string;
+  name: string;
+  type: AuthProviderType;
+  configured: boolean;
+  message: string;
+};
+
+export type AuthResponse = {
+  succeeded: boolean;
+  message: string;
+  status: AuthStatus;
+};
+
+export type ConnectedAppProvider = "Google" | "Microsoft" | "GitHub" | "Discord";
+export type ConnectedAppStatus = "NotConnected" | "Connected" | "NeedsSetup";
+
+export type ConnectedAppInfo = {
+  provider: ConnectedAppProvider;
+  id: string;
+  name: string;
+  status: ConnectedAppStatus;
+  description: string;
+  configured: boolean;
+  capabilities: string[];
+};
+
+export type ConnectedAppConnectionResult = {
+  succeeded: boolean;
+  message: string;
+  app?: ConnectedAppInfo | null;
+};
+
+export type ChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+  createdAtUtc?: string;
+};
+
+export type ChatSession = {
+  id: string;
+  title: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  messages: ChatMessage[];
+};
+
+export type ChatSessionSummary = {
+  id: string;
+  title: string;
+  preview: string;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  messageCount: number;
+};
+
+export type MemoryItem = {
+  id: string;
+  text: string;
+  category: string;
+  tags: string[];
+  importance: number;
+  confidence: number;
+  source: string;
+  memoryType: "TemporaryContext" | "SuggestedMemory" | "PermanentMemory";
+  reviewStatus: "Pending" | "Approved" | "Rejected";
+  expiresAtUtc?: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+};
+
+export type MemoryStats = {
+  total: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  categories: Array<{ category: string; count: number }>;
+};
+
+export type KnowledgeCategory =
+  | "Astrology"
+  | "Tarot"
+  | "Occult"
+  | "Vastu"
+  | "Research"
+  | "Books"
+  | "Documents"
+  | "General";
+
+export type KnowledgeItem = {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  category: KnowledgeCategory;
+  source: string;
+  sourceFile: string;
+  sourceType: string;
+  characterCount: number;
+  wordCount: number;
+  accessCount: number;
+  lastAccessedAtUtc?: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+};
+
+export type KnowledgeStats = {
+  total: number;
+  categories: Array<{ category: KnowledgeCategory; count: number }>;
+  sources: Array<{ sourceType: string; count: number }>;
+  recent: KnowledgeItem[];
+  frequentlyAccessed: KnowledgeItem[];
+};
+
+export type MemoryFormValues = {
+  text: string;
+  category: string;
+  tags: string[];
+  importance: number;
+  confidence: number;
+  source: string;
+  memoryType: MemoryItem["memoryType"];
+  reviewStatus?: MemoryItem["reviewStatus"] | null;
+  expiresAtUtc?: string | null;
+};
+
+export type IngestionStatus =
+  | "Uploaded"
+  | "Extracted"
+  | "OcrRequired"
+  | "ExtractionFailed"
+  | "CandidatesGenerated"
+  | "Completed";
+
+export type IngestionSourceType = "Pdf" | "Image";
+
+export type IngestionTextBlock = {
+  id: string;
+  pageNumber?: number | null;
+  text: string;
+  confidence: number;
+  status: string;
+};
+
+export type IngestionMemoryCandidate = {
+  id: string;
+  userId: string;
+  content: string;
+  suggestedCategory: string;
+  suggestedMemoryType: MemoryItem["memoryType"];
+  suggestedImportance: number;
+  suggestedConfidence: number;
+  sourceFile: string;
+  sourcePage?: number | null;
+  sourceTextRange: string;
+  reviewStatus: MemoryItem["reviewStatus"];
+  approvedMemoryId?: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+};
+
+export type IngestionJob = {
+  id: string;
+  userId: string;
+  fileName: string;
+  fileType: string;
+  storedPath: string;
+  status: IngestionStatus;
+  extractedText: string;
+  textBlocks: IngestionTextBlock[];
+  createdAtUtc: string;
+  updatedAtUtc: string;
+  errorMessage: string;
+  sourceType: IngestionSourceType;
+  extractionSource: string;
+  extractionLanguage: string;
+  extractionConfidence: number;
+  extractedCharacterCount: number;
+  extractedWordCount: number;
+  candidates: IngestionMemoryCandidate[];
+  suggestedMemoryIds: string[];
+};
+
+export type IngestionCandidateUpdate = {
+  content?: string;
+  category?: string;
+  memoryType?: MemoryItem["memoryType"];
+  importance?: number;
+  confidence?: number;
+};
+
+export type IngestionCandidateResult = {
+  job: IngestionJob;
+  candidate: IngestionMemoryCandidate;
+  memory?: MemoryItem;
+  memories?: MemoryItem[];
+};
+
+export type AppSettings = {
+  ollamaBaseUrl: string;
+  model: string;
+  ollamaContextLength: number;
+  systemPrompt: string;
+  maxHistoryMessages: number;
+  memoryRetrievalEnabled: boolean;
+  maxRetrievedMemories: number;
+  useTemporaryContext: boolean;
+  useSuggestedMemories: boolean;
+  fileIndexRoot: string;
+  voiceMode: "PushToTalk" | "WakeWord" | "AlwaysListening" | "Hybrid";
+  autoExecuteCommands: boolean;
+  voiceLanguage: string;
+  noiseSuppression: boolean;
+  whisperExecutablePath: string;
+  whisperModelPath: string;
+  whisperLanguage: string;
+  piperExecutablePath: string;
+  piperModelPath: string;
+  tesseractExecutablePath: string;
+  tesseractLanguage: string;
+  enableVoiceResponses: boolean;
+  voiceName: string;
+  speechRate: number;
+  speechVolume: number;
+  autoSpeakAssistantReplies: boolean;
+  autoSpeakResponses: boolean;
+  responseStyle: "Jarvis" | "Neutral";
+  preferredLanguage: "Auto" | "English" | "RomanHinglish";
+  verbosity: "Short" | "Balanced" | "Detailed";
+  wakeWordEnabled: boolean;
+  wakeWordPhrase: string;
+  wakeWordDetectorPath: string;
+  wakeWordModelPath: string;
+};
+
+export type JarvisStatus = {
+  online: boolean;
+  model: string;
+  ollamaBaseUrl: string;
+  memoryCount: number;
+  historyCount: number;
+};
+
+export type VoiceStatus = {
+  mode: "PushToTalk" | "WakeWord" | "AlwaysListening" | "Hybrid";
+  implementedMode: "PushToTalk";
+  autoExecuteCommands: boolean;
+  voiceLanguage: string;
+  noiseSuppression: boolean;
+  whisper: {
+    configured: boolean;
+    message: string;
+    whisperExecutablePath: string;
+    whisperModelPath: string;
+    whisperLanguage: string;
+    voiceLanguage: string;
+    engine: string;
+    preferredDevice: string;
+    fallbackDevice: string;
+  };
+  piper: {
+    configured: boolean;
+    message: string;
+    piperExecutablePath: string;
+    piperModelPath: string;
+    autoSpeakResponses: boolean;
+  };
+  ocr: {
+    available: boolean;
+    configured: boolean;
+    status: string;
+    message: string;
+    executablePath: string;
+    language: string;
+    hindiAvailable: boolean;
+    installedLanguages: string[];
+    tesseractExecutablePath: string;
+    tesseractLanguage: string;
+  };
+  tts: {
+    enabled: boolean;
+    available: boolean;
+    provider: string;
+    voiceName: string;
+    speechRate: number;
+    speechVolume: number;
+    autoSpeakAssistantReplies: boolean;
+    message: string;
+  };
+  wakeWord: {
+    enabled: boolean;
+    configured: boolean;
+    mode?: string;
+    message: string;
+    wakeWordPhrase: string;
+    wakeWordDetectorPath: string;
+    wakeWordModelPath: string;
+  };
+};
+
+export type VoicePipelineState =
+  | "Idle"
+  | "Listening"
+  | "Recording"
+  | "Processing"
+  | "Transcribing"
+  | "Understanding"
+  | "WakeWordChecking"
+  | "CommandDetected"
+  | "AwaitingConfirmation"
+  | "ExecutingCommand"
+  | "GeneratingAIResponse"
+  | "Speaking"
+  | "Completed"
+  | "Error";
+
+export type VoicePipelineResult = {
+  transcript: string;
+  wakeWordDetected: boolean;
+  commandDetected: boolean;
+  commandName: string;
+  requiresConfirmation: boolean;
+  aiResponse: string;
+  audioUrl: string;
+  state: VoicePipelineState;
+  success: boolean;
+  message: string;
+  confirmationId?: string | null;
+  voiceSessionId: string;
+  startedAtUtc?: string | null;
+  endedAtUtc?: string | null;
+  audioSizeBytes: number;
+  recordingDurationMs: number;
+  processingDurationMs: number;
+  sttDurationMs: number;
+  commandDurationMs: number;
+  speechDurationMs: number;
+  failureReason: string;
+  lastCompletedStage: string;
+  sttDevice: string;
+  spokenResponse: string;
+  ttsProvider: string;
+  voiceUsed: string;
+  playbackReady: boolean;
+  playbackFailureReason: string;
+  commandExecuted: boolean;
+};
+
+export type VoicePipelineStatus = {
+  state: VoicePipelineState;
+  updatedAtUtc: string;
+  lastTranscript: string;
+  lastAiResponse: string;
+  message: string;
+  voiceSessionId: string;
+  startedAtUtc?: string | null;
+  endedAtUtc?: string | null;
+  audioSizeBytes: number;
+  recordingDurationMs: number;
+  processingDurationMs: number;
+  sttDurationMs: number;
+  commandDurationMs: number;
+  speechDurationMs: number;
+  commandDetected: boolean;
+  commandExecuted: boolean;
+  commandName: string;
+  errorDetails: string;
+  lastCompletedStage: string;
+  microphoneStatus: string;
+  sttDevice: string;
+  spokenResponse: string;
+  ttsProvider: string;
+  voiceUsed: string;
+  playbackReady: boolean;
+  playbackFailureReason: string;
+};
+
+export type VoiceHistoryItem = {
+  id: string;
+  timestampUtc: string;
+  transcript: string;
+  response: string;
+  command: string;
+  assistantResponse: string;
+  spokenResponse: string;
+  state: VoicePipelineState;
+  success: boolean;
+  commandDetected: boolean;
+  commandExecuted: boolean;
+  processingDurationMs: number;
+  sttDurationMs: number;
+  commandDurationMs: number;
+  speechDurationMs: number;
+  ttsProvider: string;
+  voiceUsed: string;
+  failureReason: string;
+};
+
+export type VoiceHealthResult = {
+  microphone: { status: string; message: string };
+  audioCapture: { status: string; message: string };
+  whisper: { available: boolean; message: string; preferredDevice: string; fallbackDevice: string; mode: string };
+  ollama: { available: boolean; message: string };
+  tts: { available: boolean; provider: string; voiceName: string; playbackCapability: string; message: string };
+  ocr: {
+    available: boolean;
+    status: string;
+    message: string;
+    executablePath: string;
+    language: string;
+    hindiAvailable: boolean;
+    installedLanguages: string[];
+  };
+  voiceService: {
+    status: VoicePipelineState;
+    message: string;
+    lastCompletedStage: string;
+    errorDetails: string;
+    audioDuration: number;
+    playbackSuccess: boolean;
+    playbackFailureReason: string;
+  };
+};
+
+export type TextToSpeechResult = {
+  audioUrl: string;
+  ready: boolean;
+  succeeded: boolean;
+  message: string;
+  provider: string;
+  voiceName: string;
+  spokenText: string;
+  speechDurationMs: number;
+  failureReason: string;
+};
+
+export type VoiceDiagnosticsResult = {
+  status: VoicePipelineStatus;
+  recentHistory: VoiceHistoryItem[];
+  recentLogs: InteractionLogEntry[];
+};
+
+export type VoiceCommandResult = {
+  handled: boolean;
+  requiresConfirmation: boolean;
+  command: string;
+  message: string;
+  confirmationValue?: string;
+  results?: string[];
+};
+
+export type VoiceCommandCatalogItem = {
+  category: string;
+  description: string;
+  examples: string[];
+  requiresConfirmation: boolean;
+};
+
+export type WakeWordCheckResult = {
+  detected: boolean;
+  message: string;
+  transcript: string;
+  phrase: string;
+};
+
+export type FileSearchResult = {
+  path: string;
+  fileName: string;
+  relativePath: string;
+  matchType: string;
+  snippet?: string | null;
+  sizeBytes: number;
+  lastWriteTimeUtc: string;
+};
+
+export type CommandSafetyLevel = "Safe" | "ConfirmationRequired" | "Blocked";
+
+export type CommandExecutionStatus = "PendingConfirmation" | "Completed" | "Failed" | "Blocked" | "Expired";
+
+export type PcCommandCatalogItem = {
+  command: string;
+  description: string;
+  safetyLevel: CommandSafetyLevel;
+  examples: string[];
+};
+
+export type PcCommandLogEntry = {
+  id: string;
+  timestampUtc: string;
+  originalInput: string;
+  parsedCommand: string;
+  target: string;
+  safetyLevel: CommandSafetyLevel;
+  status: CommandExecutionStatus;
+  resultMessage: string;
+};
+
+export type PcCommandExecutionResult = {
+  handled: boolean;
+  requiresConfirmation: boolean;
+  command: string;
+  target: string;
+  message: string;
+  confirmationToken?: string | null;
+  confirmationId?: string | null;
+};
+
+export type AssistantInputResponse = {
+  type: "command" | "chat";
+  handled: boolean;
+  requiresConfirmation: boolean;
+  command: string;
+  target: string;
+  message: string;
+  response?: string | null;
+  confirmationId?: string | null;
+  session?: ChatSession | null;
+};
+
+export type ServiceDiagnostic = {
+  healthy: boolean;
+  message: string;
+};
+
+export type DiagnosticsResult = {
+  platform: string;
+  appDataPath: string;
+  memoryPath: string;
+  logsPath: string;
+  screenshotPath: string;
+  generatedAudioPath: string;
+  ollama: ServiceDiagnostic;
+  whisper: ServiceDiagnostic;
+  piper: ServiceDiagnostic;
+  warnings: string[];
+};
+
+export type InteractionSource = "Chat" | "Voice" | "Control" | "System";
+export type InteractionType =
+  | "UserInput"
+  | "VoiceRecording"
+  | "Transcription"
+  | "WakeWordCheck"
+  | "CommandParsing"
+  | "Confirmation"
+  | "CommandExecution"
+  | "AiFallback"
+  | "AiResponse"
+  | "Tts"
+  | "Error"
+  | "SystemStatus";
+export type InteractionStatus = "Started" | "Success" | "Failed" | "Pending" | "Cancelled" | "Skipped";
+
+export type InteractionLogEntry = {
+  id: string;
+  timestampUtc: string;
+  source: InteractionSource;
+  type: InteractionType;
+  stage: string;
+  input: string;
+  output: string;
+  status: InteractionStatus;
+  message: string;
+  error: string;
+  metadata: Record<string, unknown>;
+};
+
+export type InteractionStatusResult = {
+  backendConnected: boolean;
+  lastAction?: InteractionLogEntry | null;
+  lastVoiceTranscript?: InteractionLogEntry | null;
+  lastCommandParsed?: InteractionLogEntry | null;
+  lastError?: InteractionLogEntry | null;
+};

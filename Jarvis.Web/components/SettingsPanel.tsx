@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { jarvisApi } from "@/lib/api";
 import { ThemeMode, themeOptions } from "@/lib/theme";
 import type { AppSettings, DiagnosticsResult, VoiceStatus } from "@/lib/types";
@@ -40,20 +40,35 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
   }, [settings]);
 
   useEffect(() => {
-    jarvisApi.voiceStatus().then(setVoiceStatus).catch(() => setVoiceStatus(null));
-    jarvisApi.diagnostics().then(setDiagnostics).catch(() => setDiagnostics(null));
+    refreshStatus();
   }, []);
+
+  async function refreshStatus() {
+    try {
+      const [voice, diag] = await Promise.all([
+        jarvisApi.voiceStatus(),
+        jarvisApi.diagnostics(),
+      ]);
+      setVoiceStatus(voice);
+      setDiagnostics(diag);
+    } catch {
+      setVoiceStatus(null);
+      setDiagnostics(null);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
-    await onSave(draft);
-    setVoiceStatus(await jarvisApi.voiceStatus());
-    setDiagnostics(await jarvisApi.diagnostics());
-    setIsSaving(false);
+    try {
+      const saved = await onSave(draft);
+      await refreshStatus();
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  function resetDefaults() {
+  function restoreLoadedSettings() {
     setDraft(settings);
   }
 
@@ -80,10 +95,7 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
         </nav>
 
         <div className="settings-left-bottom">
-          <button type="button" onClick={resetDefaults}>↺ Reset to defaults</button>
-          <button type="button" onClick={() => onThemeModeChange(themeMode === "dark" ? "light" : "dark")}>
-            ◐ Dark mode
-          </button>
+          <button type="button" onClick={restoreLoadedSettings}>↺ Reset unsaved changes</button>
         </div>
       </aside>
 
@@ -93,8 +105,9 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
             <h2>Settings</h2>
             <p>Manage how Jarvis behaves, remembers, and interacts with you.</p>
           </div>
-          <button className="settings-restore" type="button" onClick={resetDefaults}>
-            ↻ Restore defaults
+
+          <button className="settings-restore" type="button" onClick={restoreLoadedSettings}>
+            ↻ Restore loaded settings
           </button>
         </div>
 
@@ -102,114 +115,131 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
           <section className="quick-access">
             <h3>Quick Access</h3>
             <div className="quick-grid">
-              <QuickCard icon="🧠" title="Memory" text="View and manage memories" />
-              <QuickCard icon="▤" title="Knowledge Library" text="Browse your knowledge base" />
-              <QuickCard icon="⇧" title="Imports" text="Review and manage imports" />
-              <QuickCard icon="≋" title="Voice" text="Configure voice settings" />
-              <QuickCard icon="▭" title="Appearance" text="Customize look and feel" />
+              <QuickCard icon="🧠" title="Memory" text="Memory retrieval and saved context" />
+              <QuickCard icon="▤" title="Knowledge Library" text="Files and indexed knowledge" />
+              <QuickCard icon="⇧" title="OCR" text="Image and document reading" />
+              <QuickCard icon="≋" title="Voice" text="Speech and wake word" />
+              <QuickCard icon="▭" title="Appearance" text="Theme and interface" />
             </div>
           </section>
 
           <div className="settings-card-grid">
             <Card title="Memory">
               <ToggleRow
-                title="Auto-save important conversations"
-                text="Jarvis will automatically save important information to memory."
+                title="Use relevant memories"
+                text="Jarvis can use saved memories in assistant replies."
                 checked={draft.memoryRetrievalEnabled}
                 onChange={(value) => setDraft({ ...draft, memoryRetrievalEnabled: value })}
               />
+
+              <InputRow
+                title="Retrieved memories"
+                text="Maximum memories Jarvis can retrieve per response."
+                type="number"
+                value={draft.maxRetrievedMemories}
+                onChange={(value) =>
+                  setDraft({ ...draft, maxRetrievedMemories: Number.parseInt(value, 10) || 5 })
+                }
+              />
+
               <ToggleRow
-                title="Memory review"
-                text="Review suggested memories before saving."
+                title="Use temporary context"
+                text="Use unexpired temporary context while replying."
+                checked={draft.useTemporaryContext}
+                onChange={(value) => setDraft({ ...draft, useTemporaryContext: value })}
+              />
+
+              <ToggleRow
+                title="Use suggested memories"
+                text="Use approved suggested memories."
                 checked={draft.useSuggestedMemories}
                 onChange={(value) => setDraft({ ...draft, useSuggestedMemories: value })}
               />
-              <SelectRow
-                title="Memory retention"
-                text="Choose how long temporary memories are kept."
-                value={draft.useTemporaryContext ? "30 days" : "Off"}
-                onChange={(value) => setDraft({ ...draft, useTemporaryContext: value !== "Off" })}
-                options={["Off", "7 days", "30 days", "90 days"]}
-              />
-              <InputRow
-                title="Maximum memories"
-                text="Limit the number of memories stored."
-                type="number"
-                value={draft.maxRetrievedMemories}
-                onChange={(value) => setDraft({ ...draft, maxRetrievedMemories: Number.parseInt(value, 10) || 5 })}
-              />
-              <ActionRow title="Manage memory" text="View, edit or delete memories." button="Open Memory" />
             </Card>
 
             <Card title="Voice & Speech">
               <SelectRow
-                title="Voice input (Speech-to-Text)"
-                text={voiceStatus?.whisper.message ?? "Checking"}
-                value="Whisper (Local)"
-                onChange={() => undefined}
-                options={["Whisper (Local)"]}
+                title="Voice mode"
+                text="Choose how Jarvis listens."
+                value={draft.voiceMode}
+                onChange={(value) => setDraft({ ...draft, voiceMode: value as AppSettings["voiceMode"] })}
+                options={["PushToTalk", "WakeWord", "AlwaysListening", "Hybrid"]}
               />
+
               <SelectRow
-                title="Voice output (Text-to-Speech)"
-                text={voiceStatus?.piper.message ?? "Checking"}
-                value="edge-tts (Local)"
-                onChange={() => undefined}
-                options={["edge-tts (Local)", "Piper (Local)"]}
+                title="Voice language"
+                text="Speech recognition language."
+                value={draft.voiceLanguage}
+                onChange={(value) => setDraft({ ...draft, voiceLanguage: value })}
+                options={["en", "hi", "auto"]}
               />
+
               <ToggleRow
-                title="Wake word"
-                text="Enable wake word detection."
-                checked={draft.wakeWordEnabled}
-                onChange={(value) => setDraft({ ...draft, wakeWordEnabled: value })}
+                title="Noise suppression"
+                text="Prefer noise suppression for microphone input."
+                checked={draft.noiseSuppression}
+                onChange={(value) => setDraft({ ...draft, noiseSuppression: value })}
               />
+
+              <ToggleRow
+                title="Enable voice responses"
+                text="Allow Jarvis to speak responses."
+                checked={draft.enableVoiceResponses}
+                onChange={(value) => setDraft({ ...draft, enableVoiceResponses: value })}
+              />
+
               <InputRow
-                title="Wake word phrase"
-                text=""
-                value={draft.wakeWordPhrase}
-                onChange={(value) => setDraft({ ...draft, wakeWordPhrase: value })}
+                title="Voice name"
+                text="TTS voice name."
+                value={draft.voiceName}
+                onChange={(value) => setDraft({ ...draft, voiceName: value })}
               />
-              <ToggleRow
-                title="Auto listen"
-                text="Automatically start listening."
-                checked={draft.voiceMode === "AlwaysListening"}
-                onChange={(value) =>
-                  setDraft({ ...draft, voiceMode: value ? "AlwaysListening" : "PushToTalk" })
-                }
+
+              <InputRow
+                title="Speech rate"
+                text="Voice speed."
+                type="number"
+                value={draft.speechRate}
+                onChange={(value) => setDraft({ ...draft, speechRate: Number(value) })}
               />
-              <ActionRow title="" text="" button="Configure Voice" />
+
+              <InputRow
+                title="Speech volume"
+                text="Voice volume."
+                type="number"
+                value={draft.speechVolume}
+                onChange={(value) => setDraft({ ...draft, speechVolume: Number(value) })}
+              />
             </Card>
 
             <Card title="AI Model">
-              <InputRow
-                title="Provider"
-                text="Select the AI model provider."
-                value="Ollama (Local)"
-                onChange={() => undefined}
-              />
-              <InputRow
-                title="Model"
-                text="Select the model Jarvis should use."
-                value={draft.model}
-                onChange={(value) => setDraft({ ...draft, model: value })}
-              />
               <InputRow
                 title="Ollama URL"
                 text="Local Ollama server address."
                 value={draft.ollamaBaseUrl}
                 onChange={(value) => setDraft({ ...draft, ollamaBaseUrl: value })}
               />
+
               <InputRow
-                title="Context length"
-                text="Maximum context Jarvis can use."
+                title="Model"
+                text="Model Jarvis should use."
+                value={draft.model}
+                onChange={(value) => setDraft({ ...draft, model: value })}
+              />
+
+              <InputRow
+                title="Ollama context length"
+                text="Maximum context length."
                 type="number"
-                value={draft.ollamaContextLength || 8192}
+                value={draft.ollamaContextLength}
                 onChange={(value) =>
                   setDraft({ ...draft, ollamaContextLength: Number.parseInt(value, 10) || 8192 })
                 }
               />
+
               <InputRow
                 title="History messages"
-                text="Recent messages sent to model."
+                text="Recent messages sent with prompt."
                 type="number"
                 value={draft.maxHistoryMessages}
                 onChange={(value) =>
@@ -220,22 +250,67 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
 
             <Card title="Files & Knowledge">
               <InputRow
-                title="Knowledge base location"
-                text="Folder Jarvis uses for indexing."
+                title="File root"
+                text="Folder Jarvis uses for file search and indexing."
                 value={draft.fileIndexRoot}
                 onChange={(value) => setDraft({ ...draft, fileIndexRoot: value })}
               />
-              <ToggleRow
-                title="Auto index new files"
-                text="Automatically index new files and documents."
-                checked={true}
-                onChange={() => undefined}
+
+              <InputRow
+                title="Tesseract executable"
+                text="OCR executable path."
+                value={draft.tesseractExecutablePath}
+                onChange={(value) => setDraft({ ...draft, tesseractExecutablePath: value })}
               />
-              <ActionRow title="Supported file types" text="pdf, docx, txt, md, jpg, png, webp" button="Manage" />
-              <ActionRow title="Re-index all" text="Rebuild the entire knowledge index." button="Re-index" />
+
+              <InputRow
+                title="Tesseract language"
+                text="OCR language pack setting."
+                value={draft.tesseractLanguage}
+                onChange={(value) => setDraft({ ...draft, tesseractLanguage: value })}
+              />
+
+              <StatusLine title="OCR status" value={voiceStatus?.ocr.message ?? "Checking"} />
             </Card>
 
-            <Card title="Appearance">
+            <Card title="Whisper & Piper">
+              <InputRow
+                title="Whisper executable"
+                text="Faster-Whisper executable path."
+                value={draft.whisperExecutablePath}
+                onChange={(value) => setDraft({ ...draft, whisperExecutablePath: value })}
+              />
+
+              <InputRow
+                title="Whisper model"
+                text="Faster-Whisper model path or name."
+                value={draft.whisperModelPath}
+                onChange={(value) => setDraft({ ...draft, whisperModelPath: value })}
+              />
+
+              <InputRow
+                title="Whisper language"
+                text="Legacy compatibility language."
+                value={draft.whisperLanguage}
+                onChange={(value) => setDraft({ ...draft, whisperLanguage: value })}
+              />
+
+              <InputRow
+                title="Piper executable"
+                text="Piper executable path."
+                value={draft.piperExecutablePath}
+                onChange={(value) => setDraft({ ...draft, piperExecutablePath: value })}
+              />
+
+              <InputRow
+                title="Piper model"
+                text="Piper model path."
+                value={draft.piperModelPath}
+                onChange={(value) => setDraft({ ...draft, piperModelPath: value })}
+              />
+            </Card>
+
+            <Card title="Interface">
               <div className="settings-theme-options">
                 {themeOptions.map((option) => (
                   <label key={option.value}>
@@ -250,43 +325,82 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
                   </label>
                 ))}
               </div>
-            </Card>
 
-            <Card title="Advanced">
               <SelectRow
-                title="Voice language"
-                text="Language used for recognition."
-                value={draft.voiceLanguage}
-                onChange={(value) => setDraft({ ...draft, voiceLanguage: value })}
-                options={["en", "hi", "auto"]}
+                title="Response style"
+                text="Assistant personality style."
+                value={draft.responseStyle}
+                onChange={(value) => setDraft({ ...draft, responseStyle: value as AppSettings["responseStyle"] })}
+                options={["Jarvis", "Neutral"]}
               />
+
               <SelectRow
                 title="Preferred language"
-                text="Language style for replies."
-                value={draft.preferredLanguage ?? "Auto"}
+                text="Assistant reply language."
+                value={draft.preferredLanguage}
                 onChange={(value) =>
                   setDraft({ ...draft, preferredLanguage: value as AppSettings["preferredLanguage"] })
                 }
                 options={["Auto", "English", "RomanHinglish"]}
               />
+
               <SelectRow
                 title="Verbosity"
-                text="Response detail level."
-                value={draft.verbosity ?? "Short"}
+                text="Assistant answer length."
+                value={draft.verbosity}
                 onChange={(value) => setDraft({ ...draft, verbosity: value as AppSettings["verbosity"] })}
                 options={["Short", "Balanced", "Detailed"]}
               />
+            </Card>
+
+            <Card title="Automation & Wake Word">
               <ToggleRow
                 title="Auto-execute safe commands"
                 text="Run recognized safe commands automatically."
                 checked={draft.autoExecuteCommands}
                 onChange={(value) => setDraft({ ...draft, autoExecuteCommands: value })}
               />
+
               <ToggleRow
-                title="Voice responses"
-                text="Enable spoken Jarvis responses."
-                checked={draft.enableVoiceResponses}
-                onChange={(value) => setDraft({ ...draft, enableVoiceResponses: value })}
+                title="Auto-speak assistant replies"
+                text="Speak assistant replies automatically."
+                checked={draft.autoSpeakAssistantReplies}
+                onChange={(value) => setDraft({ ...draft, autoSpeakAssistantReplies: value })}
+              />
+
+              <ToggleRow
+                title="Auto-speak chat responses"
+                text="Speak chat responses automatically."
+                checked={draft.autoSpeakResponses}
+                onChange={(value) => setDraft({ ...draft, autoSpeakResponses: value })}
+              />
+
+              <ToggleRow
+                title="Enable wake word"
+                text="Allow wake word detection."
+                checked={draft.wakeWordEnabled}
+                onChange={(value) => setDraft({ ...draft, wakeWordEnabled: value })}
+              />
+
+              <InputRow
+                title="Wake word phrase"
+                text="Phrase used to wake Jarvis."
+                value={draft.wakeWordPhrase}
+                onChange={(value) => setDraft({ ...draft, wakeWordPhrase: value })}
+              />
+
+              <InputRow
+                title="Wake detector"
+                text="Wake word detector executable path."
+                value={draft.wakeWordDetectorPath}
+                onChange={(value) => setDraft({ ...draft, wakeWordDetectorPath: value })}
+              />
+
+              <InputRow
+                title="Wake model"
+                text="Wake word model path."
+                value={draft.wakeWordModelPath}
+                onChange={(value) => setDraft({ ...draft, wakeWordModelPath: value })}
               />
             </Card>
 
@@ -295,7 +409,11 @@ export function SettingsPanel({ settings, themeMode, onThemeModeChange, onSave }
               <StatusLine title="App Data" value={diagnostics?.appDataPath ?? "Checking"} />
               <StatusLine title="Memory" value={diagnostics?.memoryPath ?? "Checking"} />
               <StatusLine title="Logs" value={diagnostics?.logsPath ?? "Checking"} />
+              <StatusLine title="Screenshots" value={diagnostics?.screenshotPath ?? "Checking"} />
+              <StatusLine title="Audio" value={diagnostics?.generatedAudioPath ?? "Checking"} />
               <StatusLine title="Ollama" value={diagnostics?.ollama.message ?? "Checking"} />
+              <StatusLine title="Whisper" value={diagnostics?.whisper.message ?? "Checking"} />
+              <StatusLine title="Piper" value={diagnostics?.piper.message ?? "Checking"} />
             </Card>
 
             <label className="settings-prompt-card">
@@ -330,7 +448,7 @@ function QuickCard({ icon, title, text }: { icon: string; title: string; text: s
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="settings-glass-card">
       <h3>{title}</h3>
@@ -383,7 +501,7 @@ function InputRow({
         <strong>{title}</strong>
         {text && <p>{text}</p>}
       </div>
-      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+      <input type={type} value={value ?? ""} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
@@ -409,22 +527,12 @@ function SelectRow({
       </div>
       <select value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
+          <option key={option} value={option}>
+            {option}
+          </option>
         ))}
       </select>
     </label>
-  );
-}
-
-function ActionRow({ title, text, button }: { title: string; text: string; button: string }) {
-  return (
-    <div className="setting-row">
-      <div>
-        {title && <strong>{title}</strong>}
-        {text && <p>{text}</p>}
-      </div>
-      <button className="small-action" type="button">{button}</button>
-    </div>
   );
 }
 

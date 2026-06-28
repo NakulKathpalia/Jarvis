@@ -24,12 +24,14 @@ type ChatPanelProps = {
   pendingAssistantCommand: PendingAssistantCommand | null;
   lastAssistantAction: AssistantInputResponse | null;
   assistantActivity: AssistantActivity;
+  uploadStatus?: string;
   onRefresh: () => Promise<void>;
   onNewChat: () => Promise<void>;
   onOpenChat: (id: string) => Promise<void>;
   onDeleteChat: (id: string) => Promise<void>;
   onSend: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
   onVoiceCommand: (message: string, options?: { skipAutoSpeak?: boolean }) => Promise<string>;
+  onAttachmentsSelected?: (files: File[]) => Promise<void>;
   onConfirmVoiceCommand: () => Promise<void>;
   onCancelVoiceCommand: () => void;
   onConfirmAssistantCommand: () => Promise<void>;
@@ -40,8 +42,8 @@ type ChatPanelProps = {
 
 const suggestions = [
   { title: "Open YouTube", example: "Open YouTube" },
-  { title: "Search files", example: "Find my resume" },
-  { title: "Add memory", example: "Remember that I prefer local AI" },
+  { title: "Upload PDF", example: "Upload a PDF and save useful parts as memory or knowledge" },
+  { title: "Upload Image", example: "Upload an image and extract text with OCR" },
   { title: "Ask memory", example: "What do you remember about me?" }
 ];
 
@@ -51,8 +53,10 @@ export function ChatPanel({
   pendingAssistantCommand,
   lastAssistantAction,
   assistantActivity,
+  uploadStatus,
   onSend,
   onVoiceCommand,
+  onAttachmentsSelected,
   onConfirmAssistantCommand,
   onCancelAssistantCommand,
   onToast
@@ -61,7 +65,7 @@ export function ChatPanel({
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, isBusy, pendingAssistantCommand]);
+  }, [messages.length, isBusy, pendingAssistantCommand, uploadStatus]);
 
   return (
     <section className="chat-screen">
@@ -71,7 +75,7 @@ export function ChatPanel({
             <div className="empty-state">
               <div className="empty-orb">J</div>
               <h3>How can I help?</h3>
-              <p>Chat naturally, run a command, or ask Jarvis what it remembers.</p>
+              <p>Chat naturally, run a command, upload notes, or ask Jarvis what it remembers.</p>
               <div className="suggestion-grid">
                 {suggestions.map((suggestion) => (
                   <button
@@ -97,6 +101,12 @@ export function ChatPanel({
             </article>
           ))}
 
+          {uploadStatus && (
+            <div className="command-feedback upload-feedback">
+              {uploadStatus}
+            </div>
+          )}
+
           {pendingAssistantCommand && (
             <div className="confirmation-card">
               <strong>This action is risky. Type: yes run it</strong>
@@ -121,7 +131,13 @@ export function ChatPanel({
         </div>
       </div>
 
-      <Composer disabled={isBusy} onSend={onSend} onVoiceCommand={onVoiceCommand} onToast={onToast} />
+      <Composer
+        disabled={isBusy}
+        onSend={onSend}
+        onVoiceCommand={onVoiceCommand}
+        onAttachmentsSelected={onAttachmentsSelected}
+        onToast={onToast}
+      />
     </section>
   );
 }

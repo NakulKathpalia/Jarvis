@@ -1,0 +1,408 @@
+=== JARVIS.WEB FILE TREE ===
+app\globals.css
+app\layout.tsx
+app\page.tsx
+components\ActivityLogPanel.tsx
+components\AppLayout.tsx
+components\AppShell.tsx
+components\AuthPanel.tsx
+components\ChatPanel.tsx
+components\Composer.tsx
+components\ConnectedAppsPanel.tsx
+components\ControlPanel.tsx
+components\DiagnosticsPanel.tsx
+components\files\fileFormatting.ts
+components\files\FileResultCard.tsx
+components\FilesPanel.tsx
+components\JarvisDialog.tsx
+components\JarvisStatusPanel.tsx
+components\memory\MemoryCard.tsx
+components\memory\MemoryEditorForm.tsx
+components\memory\memoryForm.ts
+components\memory\MemoryIngestionPanel.tsx
+components\memory\MemorySearchBar.tsx
+components\MemoryPanel.tsx
+components\MessageList.tsx
+components\SecurityPanel.tsx
+components\SettingsPanel.tsx
+components\Sidebar.tsx
+components\StatusCard.tsx
+components\Toast.tsx
+components\ToolsPanel.tsx
+components\TopBar.tsx
+components\TopNavbar.tsx
+components\ui\AssistantActionCard.tsx
+components\ui\AssistantOrb.tsx
+components\ui\ChatBubble.tsx
+components\ui\ChatCard.tsx
+components\ui\PanelCard.tsx
+components\ui\PromptChip.tsx
+components\ui\StatusBadge.tsx
+components\UserMenu.tsx
+components\VoiceCommandHelpPanel.tsx
+components\VoiceConfirmationCard.tsx
+components\VoiceLoopPanel.tsx
+components\VoicePanel.tsx
+components\VoiceRecorderButton.tsx
+components\WakeWordPanel.tsx
+lib\api.ts
+lib\authApi.ts
+lib\connectedAppsApi.ts
+lib\theme.ts
+lib\types.ts
+lib\voiceCapture.ts
+next.config.mjs
+next-env.d.ts
+package.json
+package-lock.json
+postcss.config.mjs
+scripts\publish-wwwroot.mjs
+tailwind.config.ts
+tsconfig.json
+tsconfig.tsbuildinfo
+
+=== IMPORTANT FILE LINE COUNTS ===
+app\globals.css : 669 lines
+app\layout.tsx : 17 lines
+app\page.tsx : 4 lines
+components\ActivityLogPanel.tsx : 126 lines
+components\AppLayout.tsx : 38 lines
+components\AppShell.tsx : 572 lines
+components\AuthPanel.tsx : 129 lines
+components\ChatPanel.tsx : 130 lines
+components\Composer.tsx : 72 lines
+components\ConnectedAppsPanel.tsx : 87 lines
+components\ControlPanel.tsx : 110 lines
+components\DiagnosticsPanel.tsx : 72 lines
+components\files\fileFormatting.ts : 13 lines
+components\files\FileResultCard.tsx : 32 lines
+components\FilesPanel.tsx : 91 lines
+components\JarvisDialog.tsx : 36 lines
+components\JarvisStatusPanel.tsx : 63 lines
+components\memory\MemoryCard.tsx : 186 lines
+components\memory\MemoryEditorForm.tsx : 180 lines
+components\memory\memoryForm.ts : 46 lines
+components\memory\MemoryIngestionPanel.tsx : 520 lines
+components\memory\MemorySearchBar.tsx : 113 lines
+components\MemoryPanel.tsx : 778 lines
+components\MessageList.tsx : 35 lines
+components\SecurityPanel.tsx : 66 lines
+components\SettingsPanel.tsx : 430 lines
+components\Sidebar.tsx : 144 lines
+components\StatusCard.tsx : 25 lines
+components\Toast.tsx : 6 lines
+components\ToolsPanel.tsx : 74 lines
+components\TopBar.tsx : 16 lines
+components\TopNavbar.tsx : 46 lines
+components\ui\AssistantActionCard.tsx : 68 lines
+components\ui\AssistantOrb.tsx : 30 lines
+components\ui\ChatBubble.tsx : 31 lines
+components\ui\ChatCard.tsx : 42 lines
+components\ui\PanelCard.tsx : 12 lines
+components\ui\PromptChip.tsx : 15 lines
+components\ui\StatusBadge.tsx : 18 lines
+components\UserMenu.tsx : 66 lines
+components\VoiceCommandHelpPanel.tsx : 50 lines
+components\VoiceConfirmationCard.tsx : 40 lines
+components\VoiceLoopPanel.tsx : 319 lines
+components\VoicePanel.tsx : 258 lines
+components\VoiceRecorderButton.tsx : 117 lines
+components\WakeWordPanel.tsx : 131 lines
+lib\api.ts : 435 lines
+lib\authApi.ts : 36 lines
+lib\connectedAppsApi.ts : 29 lines
+lib\theme.ts : 35 lines
+lib\types.ts : 554 lines
+lib\voiceCapture.ts : 115 lines
+next-env.d.ts : 5 lines
+tailwind.config.ts : 54 lines
+
+=== COMPONENT IMPORTS ===
+
+--- components\ActivityLogPanel.tsx ---
+import { useEffect, useMemo, useState } from "react";
+import { TopBar } from "./TopBar";
+import { PanelCard } from "./ui/PanelCard";
+import { StatusBadge } from "./ui/StatusBadge";
+import { jarvisApi } from "@/lib/api";
+import type { InteractionLogEntry } from "@/lib/types";
+
+--- components\AppLayout.tsx ---
+import type React from "react";
+
+--- components\AppShell.tsx ---
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityLogPanel } from "./ActivityLogPanel";
+import { AuthPanel } from "./AuthPanel";
+import { ChatPanel } from "./ChatPanel";
+import { ConnectedAppsPanel } from "./ConnectedAppsPanel";
+import { ControlPanel } from "./ControlPanel";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
+import { FilesPanel } from "./FilesPanel";
+import { JarvisDialog } from "./JarvisDialog";
+import { MemoryPanel } from "./MemoryPanel";
+import { SettingsPanel } from "./SettingsPanel";
+import { Sidebar } from "./Sidebar";
+import { SecurityPanel } from "./SecurityPanel";
+import { ToolsPanel } from "./ToolsPanel";
+import { Toast } from "./Toast";
+import { UserMenu } from "./UserMenu";
+import { VoicePanel } from "./VoicePanel";
+import type { PendingVoiceCommand } from "./VoiceConfirmationCard";
+import { authApi } from "@/lib/authApi";
+import { jarvisApi } from "@/lib/api";
+import { ThemeMode, ThemeService } from "@/lib/theme";
+
+--- components\AuthPanel.tsx ---
+import { FormEvent, useEffect, useState } from "react";
+import { authApi } from "@/lib/authApi";
+import type { AuthProviderInfo, AuthStatus } from "@/lib/types";
+
+--- components\ChatPanel.tsx ---
+import { useEffect, useRef } from "react";
+import { Composer } from "./Composer";
+import type { AssistantInputResponse, ChatMessage, ChatSessionSummary, JarvisStatus } from "@/lib/types";
+
+--- components\Composer.tsx ---
+import { FormEvent, KeyboardEvent, useRef, useState } from "react";
+import { VoiceRecorderButton } from "./VoiceRecorderButton";
+
+--- components\ConnectedAppsPanel.tsx ---
+import { useEffect, useState } from "react";
+import { connectedAppsApi } from "@/lib/connectedAppsApi";
+import type { ConnectedAppInfo } from "@/lib/types";
+
+--- components\ControlPanel.tsx ---
+import { FormEvent, useEffect, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import type { PcCommandExecutionResult, PcCommandLogEntry } from "@/lib/types";
+
+--- components\DiagnosticsPanel.tsx ---
+import { useEffect, useState } from "react";
+import { TopBar } from "./TopBar";
+import { PanelCard } from "./ui/PanelCard";
+import { StatusBadge } from "./ui/StatusBadge";
+import { jarvisApi } from "@/lib/api";
+import type { DiagnosticsResult } from "@/lib/types";
+
+--- components\files\fileFormatting.ts ---
+
+--- components\files\FileResultCard.tsx ---
+import type { FileSearchResult } from "@/lib/types";
+import { formatFileSize } from "./fileFormatting";
+
+--- components\FilesPanel.tsx ---
+import { FormEvent, useState } from "react";
+import { TopBar } from "./TopBar";
+import { FileResultCard } from "./files/FileResultCard";
+import { jarvisApi } from "@/lib/api";
+import type { FileSearchResult } from "@/lib/types";
+
+--- components\JarvisDialog.tsx ---
+import type React from "react";
+
+--- components\JarvisStatusPanel.tsx ---
+import type { AssistantInputResponse, InteractionStatusResult, JarvisStatus } from "@/lib/types";
+
+--- components\memory\MemoryCard.tsx ---
+import type { MemoryFormValues, MemoryItem } from "@/lib/types";
+import { MemoryEditorForm } from "./MemoryEditorForm";
+import type { MemoryDraft } from "./memoryForm";
+
+--- components\memory\MemoryEditorForm.tsx ---
+import { FormEvent } from "react";
+import type { MemoryFormValues } from "@/lib/types";
+import { parseMemoryTags } from "./memoryForm";
+
+--- components\memory\memoryForm.ts ---
+import type { MemoryFormValues, MemoryItem } from "@/lib/types";
+
+--- components\memory\MemoryIngestionPanel.tsx ---
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import type { IngestionJob, IngestionMemoryCandidate, KnowledgeCategory, MemoryItem } from "@/lib/types";
+
+--- components\memory\MemorySearchBar.tsx ---
+import { FormEvent } from "react";
+
+--- components\MemoryPanel.tsx ---
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { TopBar } from "./TopBar";
+import { MemoryCard } from "./memory/MemoryCard";
+import { MemoryEditorForm } from "./memory/MemoryEditorForm";
+import { MemoryIngestionPanel } from "./memory/MemoryIngestionPanel";
+import { MemorySearchBar } from "./memory/MemorySearchBar";
+import { jarvisApi } from "@/lib/api";
+import type { KnowledgeCategory, KnowledgeItem, KnowledgeStats, MemoryFormValues, MemoryItem, MemoryStats } from "@/lib/types";
+
+--- components\MessageList.tsx ---
+import { AssistantOrb } from "./ui/AssistantOrb";
+import { ChatBubble } from "./ui/ChatBubble";
+import type { ChatMessage } from "@/lib/types";
+
+--- components\SecurityPanel.tsx ---
+import type { AssistantInputResponse, InteractionStatusResult } from "@/lib/types";
+
+--- components\SettingsPanel.tsx ---
+import { FormEvent, useEffect, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import { ThemeMode, themeOptions } from "@/lib/theme";
+import type { AppSettings, DiagnosticsResult, VoiceStatus } from "@/lib/types";
+
+--- components\Sidebar.tsx ---
+import type { ChatSessionSummary, JarvisStatus, ViewKey } from "@/lib/types";
+import { useMemo, useState } from "react";
+
+--- components\StatusCard.tsx ---
+import type { JarvisStatus } from "@/lib/types";
+
+--- components\Toast.tsx ---
+
+--- components\ToolsPanel.tsx ---
+import type { ViewKey } from "@/lib/types";
+
+--- components\TopBar.tsx ---
+
+--- components\TopNavbar.tsx ---
+import { UserMenu } from "./UserMenu";
+import type { AuthStatus, ViewKey } from "@/lib/types";
+
+--- components\ui\AssistantActionCard.tsx ---
+import { AssistantOrb } from "./AssistantOrb";
+import { StatusBadge } from "./StatusBadge";
+
+--- components\ui\AssistantOrb.tsx ---
+
+--- components\ui\ChatBubble.tsx ---
+import type { ChatMessage } from "@/lib/types";
+
+--- components\ui\ChatCard.tsx ---
+import type { ChatSessionSummary } from "@/lib/types";
+
+--- components\ui\PanelCard.tsx ---
+import type React from "react";
+
+--- components\ui\PromptChip.tsx ---
+
+--- components\ui\StatusBadge.tsx ---
+import type React from "react";
+
+--- components\UserMenu.tsx ---
+import { useState } from "react";
+import { authApi } from "@/lib/authApi";
+import type { AuthStatus, ViewKey } from "@/lib/types";
+
+--- components\VoiceCommandHelpPanel.tsx ---
+import { useEffect, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import type { VoiceCommandCatalogItem } from "@/lib/types";
+
+--- components\VoiceConfirmationCard.tsx ---
+import type { VoiceCommandResult } from "@/lib/types";
+
+--- components\VoiceLoopPanel.tsx ---
+import { useEffect, useRef, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import type { VoicePipelineResult, VoicePipelineState, VoicePipelineStatus } from "@/lib/types";
+import { startVoiceCapture, type VoiceCaptureSession } from "@/lib/voiceCapture";
+
+--- components\VoicePanel.tsx ---
+import { useEffect, useRef, useState } from "react";
+import { TopBar } from "./TopBar";
+import { VoiceCommandHelpPanel } from "./VoiceCommandHelpPanel";
+import { VoiceLoopPanel } from "./VoiceLoopPanel";
+import { PanelCard } from "./ui/PanelCard";
+import { StatusBadge } from "./ui/StatusBadge";
+import { jarvisApi } from "@/lib/api";
+import type { JarvisStatus, VoiceHealthResult, VoiceHistoryItem, VoicePipelineStatus } from "@/lib/types";
+
+--- components\VoiceRecorderButton.tsx ---
+import { useRef, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import { startVoiceCapture, type VoiceCaptureSession } from "@/lib/voiceCapture";
+
+--- components\WakeWordPanel.tsx ---
+import { useEffect, useRef, useState } from "react";
+import { jarvisApi } from "@/lib/api";
+import { startVoiceCapture, type VoiceCaptureSession } from "@/lib/voiceCapture";
+import type { VoiceStatus } from "@/lib/types";
+
+=== API FUNCTIONS ===
+Line 39: export const API_BASE_URL = (
+Line 43: function apiUrl(path: string) {
+Line 47: async function request<T>(path: string, options?: RequestInit): Promise<T> {
+Line 67: const body = (await response.json()) as { error?: string };
+Line 81: async function rawLogInteraction(stage: string, input: string, error: string) {
+Line 101: export const jarvisApi = {
+Line 137: transcribeVoice: async (audio: Blob) => {
+Line 138: const formData = new FormData();
+Line 141: const response = await fetch(apiUrl("/api/voice/transcribe"), {
+Line 149: const body = (await response.json()) as { error?: string };
+Line 172: runVoicePipeline: async (audio: Blob, requireWakeWord = false) => {
+Line 173: const formData = new FormData();
+Line 177: const response = await fetch(apiUrl("/api/voice/pipeline"), {
+Line 185: const body = (await response.json()) as { error?: string };
+Line 233: const params = new URLSearchParams();
+Line 241: const suffix = params.toString() ? `?${params.toString()}` : "";
+Line 305: const params = new URLSearchParams();
+Line 312: const suffix = params.toString() ? `?${params.toString()}` : "";
+Line 330: uploadIngestionFile: async (file: File) => {
+Line 331: const formData = new FormData();
+Line 333: const response = await fetch(apiUrl("/api/ingestion/upload"), {
+Line 340: const body = (await response.json()) as { error?: string };
+Line 442: function audioExtension(audio: Blob) {
+
+=== TYPES ===
+Line 1: export type ViewKey =
+Line 15: export type AuthProviderType = "Local" | "Google" | "Microsoft" | "GitHub" | "Discord";
+Line 17: export type AuthUser = {
+Line 24: export type AuthStatus = {
+Line 30: export type AuthProviderInfo = {
+Line 38: export type AuthResponse = {
+Line 44: export type ConnectedAppProvider = "Google" | "Microsoft" | "GitHub" | "Discord";
+Line 45: export type ConnectedAppStatus = "NotConnected" | "Connected" | "NeedsSetup";
+Line 47: export type ConnectedAppInfo = {
+Line 57: export type ConnectedAppConnectionResult = {
+Line 63: export type ChatMessage = {
+Line 69: export type ChatSession = {
+Line 77: export type ChatSessionSummary = {
+Line 86: export type MemoryItem = {
+Line 101: export type MemoryStats = {
+Line 109: export type KnowledgeCategory =
+Line 119: export type KnowledgeItem = {
+Line 136: export type KnowledgeStats = {
+Line 144: export type MemoryFormValues = {
+Line 156: export type IngestionStatus =
+Line 164: export type IngestionSourceType = "Pdf" | "Image";
+Line 166: export type IngestionTextBlock = {
+Line 174: export type IngestionMemoryCandidate = {
+Line 191: export type IngestionJob = {
+Line 213: export type IngestionCandidateUpdate = {
+Line 221: export type IngestionCandidateResult = {
+Line 228: export type AppSettings = {
+Line 265: export type JarvisStatus = {
+Line 273: export type VoiceStatus = {
+Line 330: export type VoicePipelineState =
+Line 346: export type VoicePipelineResult = {
+Line 378: export type VoicePipelineStatus = {
+Line 407: export type VoiceHistoryItem = {
+Line 428: export type VoiceHealthResult = {
+Line 454: export type TextToSpeechResult = {
+Line 466: export type VoiceDiagnosticsResult = {
+Line 472: export type VoiceCommandResult = {
+Line 481: export type VoiceCommandCatalogItem = {
+Line 488: export type WakeWordCheckResult = {
+Line 495: export type FileSearchResult = {
+Line 505: export type CommandSafetyLevel = "Safe" | "ConfirmationRequired" | "Blocked";
+Line 507: export type CommandExecutionStatus = "PendingConfirmation" | "Completed" | "Failed" | "Blocked" | "Expired";
+Line 509: export type PcCommandCatalogItem = {
+Line 516: export type PcCommandLogEntry = {
+Line 527: export type PcCommandExecutionResult = {
+Line 537: export type AssistantInputResponse = {
+Line 549: export type ServiceDiagnostic = {
+Line 554: export type DiagnosticsResult = {
+Line 567: export type InteractionSource = "Chat" | "Voice" | "Control" | "System";
+Line 568: export type InteractionType =
+Line 581: export type InteractionStatus = "Started" | "Success" | "Failed" | "Pending" | "Cancelled" | "Skipped";
+Line 583: export type InteractionLogEntry = {
+Line 597: export type InteractionStatusResult = {

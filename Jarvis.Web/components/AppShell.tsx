@@ -57,6 +57,7 @@ export function AppShell() {
   const [pendingAssistantCommand, setPendingAssistantCommand] = useState<PendingAssistantCommand | null>(null);
   const [lastAssistantAction, setLastAssistantAction] = useState<AssistantInputResponse | null>(null);
   const [assistantActivity, setAssistantActivity] = useState<AssistantActivity>("idle");
+  const [uploadStatus, setUploadStatus] = useState("");
   const [interactionStatus, setInteractionStatus] = useState<InteractionStatusResult | null>(null);
   const [backendError, setBackendError] = useState("");
   const [toast, setToast] = useState("");
@@ -260,6 +261,83 @@ export function AppShell() {
   async function handleVoiceCommand(transcript: string, options?: { skipAutoSpeak?: boolean }) {
     return sendMessage(transcript, options);
   }
+
+  async function handleChatAttachments(files: File[]) {
+  if (files.length === 0) {
+    return;
+  }
+
+  setIsBusy(true);
+
+  try {
+    const session = await ensureActiveChat();
+
+    setActiveChat({
+      ...session,
+      messages: [
+        ...session.messages,
+        {
+          role: "user",
+          content: `Uploaded ${files.length} file${files.length === 1 ? "" : "s"} for Jarvis ingestion.`
+        },
+        {
+          role: "assistant",
+          content: "Reading uploaded files..."
+        }
+      ],
+      updatedAtUtc: new Date().toISOString()
+    });
+
+    for (const file of files) {
+      setUploadStatus(`Uploading ${file.name}...`);
+
+      const uploaded = await jarvisApi.uploadIngestionFile(file);
+
+      setUploadStatus(`Extracting text from ${file.name}...`);
+
+      const extracted = await jarvisApi.extractIngestionJob(uploaded.id);
+
+      if (extracted.status === "OcrRequired" || extracted.status === "ExtractionFailed") {
+        setUploadStatus(`Could not extract text from ${file.name}: ${extracted.errorMessage || extracted.status}`);
+        continue;
+      }
+
+      setUploadStatus(`Generating memory candidates from ${file.name}...`);
+
+      const candidateJob = await jarvisApi.generateIngestionCandidates(uploaded.id);
+
+      const candidateCount = candidateJob.candidates?.length ?? 0;
+
+      const latest = await ensureActiveChat();
+
+      setActiveChat({
+        ...latest,
+        messages: [
+          ...latest.messages,
+          {
+            role: "assistant",
+            content:
+              candidateCount > 0
+                ? `Done. I extracted text from ${file.name} and created ${candidateCount} review candidate${candidateCount === 1 ? "" : "s"}. Open Library to approve them as Memory or save as Knowledge.`
+                : `Done. I extracted text from ${file.name}, but no memory candidates were created. Open Library to review the extracted text.`
+          }
+        ],
+        updatedAtUtc: new Date().toISOString()
+      });
+    }
+
+    await Promise.all([refreshMemory(), refreshChats(), refreshStatus()]);
+    setUploadStatus("Upload processing completed.");
+    showToast("Upload processed. Open Library to review.");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Upload failed";
+    setUploadStatus(message);
+    showToast(message);
+  } finally {
+    window.setTimeout(() => setUploadStatus(""), 3000);
+    setIsBusy(false);
+  }
+}
 
   async function confirmVoiceCommand() {
     if (!pendingVoiceCommand) {
@@ -550,6 +628,8 @@ export function AppShell() {
           pendingAssistantCommand={pendingAssistantCommand}
           lastAssistantAction={lastAssistantAction}
           assistantActivity={assistantActivity}
+          uploadStatus={uploadStatus}
+          onAttachmentsSelected={handleChatAttachments}
           onRefresh={refreshAll}
           onNewChat={createNewChat}
           onOpenChat={openChat}
