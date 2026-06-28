@@ -24,7 +24,8 @@ public sealed class TaskPlanner : ITaskPlanner
             ["Browser"] = "Browser Agent",
             ["Research"] = "Research Agent",
             ["Security"] = "Security Agent",
-            ["Knowledge"] = "Knowledge Agent"
+            ["Knowledge"] = "Knowledge Agent",
+            ["Echo"] = "EchoAgent"
         })
     {
     }
