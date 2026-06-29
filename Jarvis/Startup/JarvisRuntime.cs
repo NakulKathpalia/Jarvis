@@ -9,6 +9,7 @@ using Jarvis.Memory;
 using Jarvis.Security;
 using Jarvis.Services;
 using Jarvis.Voice;
+using Jarvis.VoiceAgent;
 
 namespace Jarvis.Startup;
 
@@ -49,6 +50,7 @@ public sealed class JarvisRuntime
     public required CommandManager CommandManager { get; init; }
     public required Assistant Assistant { get; init; }
     public required VoicePipelineService VoicePipelineService { get; init; }
+    public required VoiceAgentRuntime VoiceAgentRuntime { get; init; }
     public required CommandRouter Router { get; init; }
     public required HttpClient HttpClient { get; init; }
 }

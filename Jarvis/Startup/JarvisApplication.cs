@@ -15,6 +15,7 @@ using Jarvis.Security;
 using Jarvis.Services;
 using Jarvis.Users;
 using Jarvis.Voice;
+using Jarvis.VoiceAgent;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -244,6 +245,13 @@ public static class JarvisApplication
             interactionLogService,
             textToSpeechService);
 
+        var voiceAgentRuntime = new VoiceAgentRuntime(
+            voicePipelineService,
+            whisperService,
+            textToSpeechService,
+            wakeWordService,
+            voiceCommandService);
+
         var router = new CommandRouter(classifierService, commandManager, assistant);
 
         return new JarvisRuntime
@@ -283,6 +291,7 @@ public static class JarvisApplication
             CommandManager = commandManager,
             Assistant = assistant,
             VoicePipelineService = voicePipelineService,
+            VoiceAgentRuntime = voiceAgentRuntime,
             Router = router,
             HttpClient = httpClient
         };

@@ -16,7 +16,7 @@ public sealed class TaskPlanner : ITaskPlanner
     public TaskPlanner()
         : this(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["Voice"] = "Voice Agent",
+            ["Voice"] = "VoiceAgent",
             ["Coding"] = "Coding Agent",
             ["Memory"] = "Memory Agent",
             ["Vision"] = "Vision Agent",

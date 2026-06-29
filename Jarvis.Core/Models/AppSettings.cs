@@ -6,6 +6,7 @@ public sealed class AppSettings
 
     public string OllamaBaseUrl { get; set; } = "http://localhost:11434";
     public string Model { get; set; } = "llama3.2:3b";
+    public string PreferredCodingModel { get; set; } = "qwen2.5-coder:14b";
     public int OllamaContextLength { get; set; } = DefaultOllamaContextLength;
     public string SystemPrompt { get; set; } = "You are Jarvis, a local-first, privacy-focused personal AI assistant.";
     public int MaxHistoryMessages { get; set; } = 20;

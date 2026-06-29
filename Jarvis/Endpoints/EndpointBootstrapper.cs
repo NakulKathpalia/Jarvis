@@ -47,6 +47,7 @@ public static class EndpointBootstrapper
         var commandManager = runtime.CommandManager;
         var assistant = runtime.Assistant;
         var voicePipelineService = runtime.VoicePipelineService;
+        var voiceAgentRuntime = runtime.VoiceAgentRuntime;
 
         app.UseCors();
         app.UseDefaultFiles();
@@ -1455,7 +1456,8 @@ public static class EndpointBootstrapper
                 settingsService.Current.WakeWordPhrase,
                 settingsService.Current.WakeWordDetectorPath,
                 settingsService.Current.WakeWordModelPath
-            }
+            },
+            voiceAgent = voiceAgentRuntime.Status
         });
         });
 
@@ -1523,7 +1525,8 @@ public static class EndpointBootstrapper
                     audioDuration = voicePipelineService.Status.SpeechDurationMs,
                     playbackSuccess = voicePipelineService.Status.PlaybackReady,
                     playbackFailureReason = voicePipelineService.Status.PlaybackFailureReason
-                }
+                },
+                voiceAgent = voiceAgentRuntime.Status
             });
         });
 
@@ -1538,6 +1541,8 @@ public static class EndpointBootstrapper
             return Results.Ok(new
             {
                 status = voicePipelineService.Status,
+                voiceAgent = voiceAgentRuntime.Status,
+                voiceAgentPlan = voiceAgentRuntime.LastPlan,
                 recentHistory = voiceHistoryService.Items.Take(10),
                 recentLogs = interactionLogService.Logs
                     .Where(log => log.Source == InteractionSource.Voice)
@@ -1565,7 +1570,7 @@ public static class EndpointBootstrapper
         });
         });
         
-        app.MapPost("/api/voice/wake-check", (WakeWordCheckRequest request) =>
+        app.MapPost("/api/voice/wake-check", async (WakeWordCheckRequest request) =>
         {
             var denied = DenyIfMissing(PermissionDefinitions.VoiceUse);
             if (denied is not null)
@@ -1578,7 +1583,8 @@ public static class EndpointBootstrapper
                 return Results.BadRequest(new { error = "Transcript is required." });
             }
         
-            return Results.Ok(wakeWordService.CheckTranscript(request.Transcript));
+            var result = await voiceAgentRuntime.CheckWakeWordAsync(request.Transcript);
+            return Results.Ok(result);
         });
         
         app.MapGet("/api/voice/commands", () =>
@@ -1640,7 +1646,7 @@ public static class EndpointBootstrapper
                 audio.FileName,
                 $"{audio.Length} bytes",
                 cancellationToken: cancellationToken);
-            var result = await whisperService.TranscribeAsync(audio, cancellationToken);
+            var result = await voiceAgentRuntime.TranscribeAsync(audio, cancellationToken);
             await interactionLogService.AddAsync(
                 InteractionSource.Voice,
                 InteractionType.Transcription,
@@ -1707,7 +1713,7 @@ public static class EndpointBootstrapper
                 audio.FileName,
                 $"{audio.Length} bytes",
                 cancellationToken: cancellationToken);
-            var result = await voicePipelineService.ProcessAsync(audio, requireWakeWord, cancellationToken);
+            var result = await voiceAgentRuntime.ProcessAsync(audio, requireWakeWord, cancellationToken);
             await interactionLogService.AddAsync(
                 InteractionSource.Voice,
                 result.CommandDetected ? InteractionType.CommandExecution : InteractionType.AiFallback,
@@ -1734,7 +1740,7 @@ public static class EndpointBootstrapper
                 return Results.BadRequest(new { error = "Confirmation id is required." });
             }
         
-            var result = await voicePipelineService.ConfirmAsync(request.ConfirmationId.Trim(), cancellationToken);
+            var result = await voiceAgentRuntime.ConfirmAsync(request.ConfirmationId.Trim(), cancellationToken);
             await interactionLogService.AddAsync(
                 InteractionSource.Voice,
                 InteractionType.Confirmation,
@@ -1770,7 +1776,7 @@ public static class EndpointBootstrapper
                 "Generating spoken response.",
                 text,
                 cancellationToken: cancellationToken);
-            var result = await textToSpeechService.SpeakAsync(text, cancellationToken);
+            var result = await voiceAgentRuntime.SpeakAsync(text, cancellationToken);
             await interactionLogService.AddAsync(
                 InteractionSource.Voice,
                 InteractionType.Tts,
@@ -1803,7 +1809,7 @@ public static class EndpointBootstrapper
                 return denied;
             }
 
-            await textToSpeechService.StopAsync(cancellationToken);
+            await voiceAgentRuntime.StopSpeakingAsync(cancellationToken);
             await interactionLogService.AddAsync(
                 InteractionSource.Voice,
                 InteractionType.Tts,
@@ -1827,7 +1833,7 @@ public static class EndpointBootstrapper
                 return Results.BadRequest(new { error = "Transcript is required." });
             }
         
-            var result = await voiceCommandService.TryExecuteAsync(
+            var result = await voiceAgentRuntime.ExecuteCommandAsync(
                 request.Transcript,
                 request.Confirmed,
                 cancellationToken);

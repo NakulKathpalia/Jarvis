@@ -21,6 +21,11 @@ public sealed class ToolResult
     public string Output { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the optional backend result value.
+    /// </summary>
+    public object? Value { get; set; }
+
+    /// <summary>
     /// Gets or sets the failure message when execution fails.
     /// </summary>
     public string ErrorMessage { get; set; } = string.Empty;
