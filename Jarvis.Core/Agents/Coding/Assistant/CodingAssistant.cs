@@ -10,6 +10,7 @@ using Jarvis.Core.Agents.Coding.Parsing;
 using Jarvis.Core.Agents.Coding.Planner;
 using Jarvis.Core.Agents.Coding.Review;
 using Jarvis.Core.Agents.Coding.Review.Quality;
+using Jarvis.Core.Agents.Coding.Runnable;
 using Jarvis.Core.Agents.Coding.Services;
 
 /// <summary>
@@ -50,6 +51,13 @@ public sealed class CodingAssistant
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        var runnableDetector = new RunnableTaskDetector();
+        if (request.Mode is CodingAssistantMode.RunnablePreview or CodingAssistantMode.RunnableApply ||
+            (request.Mode == CodingAssistantMode.SuggestPatch && runnableDetector.IsRunnableUiRequest(request.UserRequest)))
+        {
+            return RunRunnable(request, runnableDetector);
+        }
 
         var repositoryContext = BuildRepositoryContext(request);
         if (request.Mode is CodingAssistantMode.AutonomousPreview or CodingAssistantMode.AutonomousApplyWithApproval)
@@ -119,6 +127,36 @@ public sealed class CodingAssistant
             Suggestion = suggestion,
             ChangePreview = changePreview,
             ReviewResult = review
+        };
+    }
+
+    private static CodingAssistantResult RunRunnable(CodingAssistantRequest request, RunnableTaskDetector detector)
+    {
+        var taskType = detector.Detect(request.UserRequest);
+        if (taskType == RunnableTaskType.None)
+        {
+            taskType = RunnableTaskType.StaticHtml;
+        }
+
+        var applyToRepository = request.Mode == CodingAssistantMode.RunnableApply && request.ApplyToRepository;
+        var workspace = new RunnableWorkspaceManager().Create(request.RepositoryPath, applyToRepository);
+        var generator = new RunnableUiGenerator();
+        var files = generator.WriteFiles(workspace, generator.Generate(request.UserRequest, taskType));
+        var port = new PortFinder().FindAvailablePort(taskType == RunnableTaskType.React ? 5173 : 3000);
+        var result = new LocalDevServer().Start(workspace, taskType, port);
+        result.TaskType = taskType;
+        result.WorkspacePath = workspace.RootPath;
+        foreach (var file in files)
+        {
+            result.CreatedFiles.Add(file);
+        }
+
+        return new CodingAssistantResult
+        {
+            Succeeded = result.Succeeded,
+            RunnableResult = result,
+            FilesChanged = applyToRepository,
+            ErrorMessage = result.Succeeded ? string.Empty : string.Join(Environment.NewLine, result.Errors)
         };
     }
 

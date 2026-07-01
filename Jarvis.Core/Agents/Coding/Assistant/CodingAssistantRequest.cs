@@ -41,4 +41,9 @@ public sealed class CodingAssistantRequest
     /// Gets or sets a deterministic approved patch request.
     /// </summary>
     public PatchRequest? ApprovedPatchRequest { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether runnable output may be written to the repository.
+    /// </summary>
+    public bool ApplyToRepository { get; set; }
 }

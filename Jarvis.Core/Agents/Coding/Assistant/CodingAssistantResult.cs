@@ -7,6 +7,7 @@ using Jarvis.Core.Agents.Coding.MultiAgent;
 using Jarvis.Core.Agents.Coding.Models;
 using Jarvis.Core.Agents.Coding.Review;
 using Jarvis.Core.Agents.Coding.Review.Quality;
+using Jarvis.Core.Agents.Coding.Runnable;
 
 /// <summary>
 /// Represents a local coding assistant result.
@@ -72,4 +73,9 @@ public sealed class CodingAssistantResult
     /// Gets or sets a value indicating whether files were changed.
     /// </summary>
     public bool FilesChanged { get; set; }
+
+    /// <summary>
+    /// Gets or sets runnable UI result.
+    /// </summary>
+    public RunnableResult RunnableResult { get; set; } = new();
 }

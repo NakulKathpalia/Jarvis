@@ -43,5 +43,15 @@ public enum CodingAssistantMode
     /// <summary>
     /// Run sequential multi-agent preview.
     /// </summary>
-    MultiAgentPreview
+    MultiAgentPreview,
+
+    /// <summary>
+    /// Generate and run a UI task in a safe workspace.
+    /// </summary>
+    RunnablePreview,
+
+    /// <summary>
+    /// Generate and run a UI task with explicit repository apply support.
+    /// </summary>
+    RunnableApply
 }

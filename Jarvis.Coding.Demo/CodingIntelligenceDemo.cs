@@ -7,6 +7,8 @@ using Jarvis.Core.Agents.Coding.Build;
 using Jarvis.Core.Agents.Coding.Git;
 using Jarvis.Core.Agents.Coding.AI;
 using Jarvis.Core.Agents.Coding.Assistant;
+using Jarvis.Core.Agents.Coding.Execution;
+using Jarvis.Core.Agents.Coding.Experience;
 using Jarvis.Core.Agents.Coding.MultiAgent;
 using Jarvis.Core.Agents.Coding.Models;
 using Jarvis.Core.Agents.Coding.Patch;
@@ -27,6 +29,13 @@ public static class CodingIntelligenceDemo
     /// <returns>The process exit code.</returns>
     public static async Task<int> Main(string[] args)
     {
+        if (args.Contains("--runnable", StringComparer.OrdinalIgnoreCase))
+        {
+            var runnableRepositoryPath = args.FirstOrDefault(arg => !arg.StartsWith("--", StringComparison.Ordinal)) ??
+                Directory.GetCurrentDirectory();
+            return RunRunnableDemo(runnableRepositoryPath);
+        }
+
         var repositoryPath = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
         var reader = new RepositoryReader();
         var repository = reader.Read(repositoryPath);
@@ -71,6 +80,8 @@ public static class CodingIntelligenceDemo
         PrintLines(contextPackage.RelevantFiles.Select(file => $"{file.Path}:{file.StartLine}-{file.EndLine}"));
         Console.WriteLine("CodingPlan:");
         PrintLines(planningResult.Plan.Steps.Select(step => $"{step.Order}. {step.Title} [{step.Strategy}]"));
+        RunExperienceDemo();
+        RunTimelineDemo();
         var patchResult = RunPatchValidation();
         var buildAndGitResult = await RunBuildAndGitValidationAsync(repository.RootPath);
         var coderResult = await RunLocalCoderDemoAsync(repository.RootPath);
@@ -102,6 +113,36 @@ public static class CodingIntelligenceDemo
         registry.Register(new TypeScriptParser());
         registry.Register(new JavaScriptParser());
         return registry;
+    }
+
+    private static int RunRunnableDemo(string repositoryPath)
+    {
+        var assistant = new CodingAssistant(new OllamaCodingModelClient());
+        var result = assistant.RunAsync(new CodingAssistantRequest
+        {
+            RepositoryPath = repositoryPath,
+            UserRequest = "create a login page",
+            Mode = CodingAssistantMode.RunnablePreview
+        }).GetAwaiter().GetResult();
+
+        Console.WriteLine("Runnable UI Demo:");
+        Console.WriteLine($"- Task Type: {result.RunnableResult.TaskType}");
+        Console.WriteLine($"- Workspace: {result.RunnableResult.WorkspacePath}");
+        Console.WriteLine($"- Port: {result.RunnableResult.Port}");
+        Console.WriteLine($"- URL: {result.RunnableResult.Url}");
+        Console.WriteLine($"- Server Status: {result.RunnableResult.ServerStatus}");
+        Console.WriteLine($"- Process Id: {result.RunnableResult.ProcessId}");
+        Console.WriteLine($"- Stop Server: {result.RunnableResult.StopInstructions}");
+        Console.WriteLine("- Created Files:");
+        PrintLines(result.RunnableResult.CreatedFiles.Select(file => file.FullPath));
+        if (result.RunnableResult.Errors.Count > 0)
+        {
+            Console.WriteLine("- Errors:");
+            PrintLines(result.RunnableResult.Errors);
+        }
+
+        Console.WriteLine($"- Main Repo Modified: {result.FilesChanged}");
+        return result.Succeeded ? 0 : 1;
     }
 
     private static void PrintLines(IEnumerable<string> lines)
@@ -328,6 +369,119 @@ public static class CodingIntelligenceDemo
         {
             Console.WriteLine($"- {finding.Severity} {finding.Category}: {finding.Message}");
         }
+    }
+
+    private static void RunExperienceDemo()
+    {
+        var engine = new ExperienceEngine();
+        engine.Record(CreateExperience(
+            "Add health check endpoint",
+            success: true,
+            ["Jarvis/Endpoints/EndpointBootstrapper.cs"],
+            ["EndpointBootstrapper", "MapJarvisEndpoints"],
+            ""));
+        engine.Record(CreateExperience(
+            "Add JWT Authentication",
+            success: false,
+            ["Jarvis/Auth/AuthenticationService.cs", "Jarvis/Endpoints/EndpointBootstrapper.cs"],
+            ["AuthenticationService", "IAuthenticationProvider"],
+            "Missing middleware registration"));
+        engine.Record(CreateExperience(
+            "Add command audit endpoint",
+            success: true,
+            ["Jarvis/Endpoints/EndpointBootstrapper.cs", "Jarvis.Core/Repositories/IAuditLogRepository.cs"],
+            ["AuditLogger", "EndpointBootstrapper"],
+            ""));
+
+        var result = engine.Query(new ExperienceQuery
+        {
+            Repository = "jarvis",
+            UserRequest = "Add JWT Authentication",
+            MaxResults = 3
+        });
+
+        Console.WriteLine("Experience Demo:");
+        Console.WriteLine("Most similar sessions:");
+        PrintLines(result.SimilarSuccessfulSessions.Select(session => $"{session.UserRequest} [{session.Provider}/{session.Model}]"));
+        Console.WriteLine("Recommended files:");
+        PrintLines(result.RecommendedFiles);
+        Console.WriteLine("Recommended symbols:");
+        PrintLines(result.RecommendedSymbols);
+        Console.WriteLine("Common failures:");
+        PrintLines(result.CommonFailurePatterns.Select(pattern => $"{pattern.Reason} ({pattern.Count})"));
+        Console.WriteLine($"Recommended strategy: {result.RecommendedStrategy}");
+        Console.WriteLine($"Preferred style: {result.ProjectProfile.ToContextText()}");
+    }
+
+    private static ExperienceSession CreateExperience(
+        string request,
+        bool success,
+        IEnumerable<string> files,
+        IEnumerable<string> symbols,
+        string failureReason)
+    {
+        var session = new ExperienceSession
+        {
+            UserRequest = request,
+            Repository = "jarvis",
+            Provider = "Ollama",
+            Model = "qwen3:8b",
+            Prompt = request,
+            CompressedPrompt = request,
+            Context = "namespace Jarvis.Endpoints; app.MapGet async Task GetRequiredService nullable?",
+            PatchPreview = "Preview only",
+            AppliedPatch = success ? "Applied fake patch" : string.Empty,
+            Success = success,
+            FailureReason = failureReason,
+            UserApproval = success,
+            Duration = TimeSpan.FromSeconds(success ? 12 : 8)
+        };
+        session.SelectedFiles.AddRange(files);
+        session.SelectedSymbols.AddRange(symbols);
+        session.CodingPlan.Add("Inspect endpoint registration.");
+        session.CodingPlan.Add("Prepare minimal patch.");
+        return session;
+    }
+
+    private static void RunTimelineDemo()
+    {
+        var reporter = new ExecutionReporter();
+        reporter.EventEmitted += (_, executionEvent) =>
+        {
+            if (executionEvent.Type == ExecutionEventType.Completed)
+            {
+                Console.WriteLine($"✓ {executionEvent.Message}");
+            }
+            else if (executionEvent.Type == ExecutionEventType.Started)
+            {
+                Console.WriteLine($"⏳ {executionEvent.Message}");
+            }
+        };
+
+        reporter.Start(ExecutionStage.RepositoryScan, "Repository Loaded");
+        reporter.Complete(ExecutionStage.RepositoryScan, "Repository Loaded");
+        reporter.SetProcessedCounts(10, 30);
+        reporter.Start(ExecutionStage.ContextBuilding, "Context Building");
+        reporter.Complete(ExecutionStage.ContextBuilding, "Context Built");
+        reporter.Start(ExecutionStage.AIRequest, "AI Generating");
+        reporter.SetModel("Ollama", "qwen3:8b");
+        reporter.Complete(ExecutionStage.AIRequest, "AI Response Received");
+        reporter.Start(ExecutionStage.Review, "Review Started");
+        reporter.Complete(ExecutionStage.Review, "Review Complete");
+        reporter.Complete(ExecutionStage.PatchPreview, "Patch Ready");
+        reporter.Start(ExecutionStage.Build, "Build Started");
+        reporter.Complete(ExecutionStage.Build, "Build Passed");
+        reporter.Complete(ExecutionStage.Finished, "Finished");
+
+        Console.WriteLine("Execution Timeline Demo:");
+        Console.WriteLine($"Elapsed: {reporter.Timeline.Session.Progress.Elapsed.TotalSeconds:n2}s");
+        Console.WriteLine($"Model: {reporter.Timeline.Session.Progress.CurrentModel}");
+        Console.WriteLine($"Provider: {reporter.Timeline.Session.Progress.CurrentProvider}");
+        Console.WriteLine($"Files Selected: {reporter.Timeline.Session.Progress.FilesProcessed}");
+        Console.WriteLine($"Symbols Selected: {reporter.Timeline.Session.Progress.SymbolsProcessed}");
+        Console.WriteLine($"Current Stage: {reporter.Timeline.Session.Progress.CurrentStage}");
+        Console.WriteLine($"Average AI Time: {reporter.Metrics.AverageAITime.TotalMilliseconds:n0}ms");
+        Console.WriteLine($"Average Build Time: {reporter.Metrics.AverageBuildTime.TotalMilliseconds:n0}ms");
     }
 
     private static CodingModelSettings LoadCodingModelSettings(string repositoryPath)
