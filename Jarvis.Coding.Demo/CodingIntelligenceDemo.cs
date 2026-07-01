@@ -121,7 +121,7 @@ public static class CodingIntelligenceDemo
         var result = assistant.RunAsync(new CodingAssistantRequest
         {
             RepositoryPath = repositoryPath,
-            UserRequest = "create a login page",
+            UserRequest = "Create a modern login page",
             Mode = CodingAssistantMode.RunnablePreview
         }).GetAwaiter().GetResult();
 
@@ -130,6 +130,7 @@ public static class CodingIntelligenceDemo
         Console.WriteLine($"- Workspace: {result.RunnableResult.WorkspacePath}");
         Console.WriteLine($"- Port: {result.RunnableResult.Port}");
         Console.WriteLine($"- URL: {result.RunnableResult.Url}");
+        Console.WriteLine($"- Execution Time: {result.RunnableResult.Duration.TotalSeconds:n2}s");
         Console.WriteLine($"- Server Status: {result.RunnableResult.ServerStatus}");
         Console.WriteLine($"- Process Id: {result.RunnableResult.ProcessId}");
         Console.WriteLine($"- Stop Server: {result.RunnableResult.StopInstructions}");
@@ -139,6 +140,12 @@ public static class CodingIntelligenceDemo
         {
             Console.WriteLine("- Errors:");
             PrintLines(result.RunnableResult.Errors);
+        }
+
+        if (result.RunnableResult.Logs.Count > 0)
+        {
+            Console.WriteLine("- Logs:");
+            PrintLines(result.RunnableResult.Logs);
         }
 
         Console.WriteLine($"- Main Repo Modified: {result.FilesChanged}");

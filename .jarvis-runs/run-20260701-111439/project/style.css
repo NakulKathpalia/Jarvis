@@ -1,0 +1,13 @@
+:root { font-family: Inter, Segoe UI, Arial, sans-serif; color: #172033; background: #eef3f8; }
+body { margin: 0; min-height: 100vh; }
+.shell { min-height: 100vh; display: grid; place-items: center; padding: 32px; }
+.panel { width: min(460px, 100%); background: white; border: 1px solid #d7e0ea; border-radius: 18px; padding: 32px; box-shadow: 0 24px 70px rgba(24, 39, 75, .12); }
+.eyebrow { margin: 0 0 10px; color: #4f6f91; font-size: 13px; font-weight: 700; text-transform: uppercase; }
+h1 { margin: 0; font-size: 34px; letter-spacing: 0; }
+.subtext { color: #5f6f83; line-height: 1.5; }
+.login-card { display: grid; gap: 16px; margin-top: 24px; }
+label { display: grid; gap: 8px; font-weight: 700; color: #243047; }
+input { border: 1px solid #c8d3df; border-radius: 10px; padding: 12px 14px; font-size: 15px; }
+button { border: 0; border-radius: 10px; padding: 13px 16px; background: #2457d6; color: white; font-weight: 800; cursor: pointer; }
+button:hover { background: #1d48b6; }
+.status { color: #43607d; min-height: 22px; }

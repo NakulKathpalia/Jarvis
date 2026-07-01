@@ -132,30 +132,20 @@ public sealed class CodingAssistant
 
     private static CodingAssistantResult RunRunnable(CodingAssistantRequest request, RunnableTaskDetector detector)
     {
-        var taskType = detector.Detect(request.UserRequest);
-        if (taskType == RunnableTaskType.None)
+        _ = detector;
+        var result = new RunnableExecutor().Execute(new RunnableRequest
         {
-            taskType = RunnableTaskType.StaticHtml;
-        }
-
-        var applyToRepository = request.Mode == CodingAssistantMode.RunnableApply && request.ApplyToRepository;
-        var workspace = new RunnableWorkspaceManager().Create(request.RepositoryPath, applyToRepository);
-        var generator = new RunnableUiGenerator();
-        var files = generator.WriteFiles(workspace, generator.Generate(request.UserRequest, taskType));
-        var port = new PortFinder().FindAvailablePort(taskType == RunnableTaskType.React ? 5173 : 3000);
-        var result = new LocalDevServer().Start(workspace, taskType, port);
-        result.TaskType = taskType;
-        result.WorkspacePath = workspace.RootPath;
-        foreach (var file in files)
-        {
-            result.CreatedFiles.Add(file);
-        }
+            RepositoryPath = request.RepositoryPath,
+            Prompt = request.UserRequest,
+            ApplyToRepository = request.Mode == CodingAssistantMode.RunnableApply && request.ApplyToRepository,
+            ExplicitApproval = request.ExplicitApproval
+        });
 
         return new CodingAssistantResult
         {
             Succeeded = result.Succeeded,
             RunnableResult = result,
-            FilesChanged = applyToRepository,
+            FilesChanged = request.Mode == CodingAssistantMode.RunnableApply && request.ApplyToRepository && request.ExplicitApproval,
             ErrorMessage = result.Succeeded ? string.Empty : string.Join(Environment.NewLine, result.Errors)
         };
     }

@@ -11,6 +11,21 @@ public enum RunnableTaskType
     None,
 
     /// <summary>
+    /// A static HTML project.
+    /// </summary>
+    Html,
+
+    /// <summary>
+    /// A CSS-focused project.
+    /// </summary>
+    Css,
+
+    /// <summary>
+    /// A JavaScript project.
+    /// </summary>
+    JavaScript,
+
+    /// <summary>
     /// A static HTML, CSS, and JavaScript page.
     /// </summary>
     StaticHtml,
@@ -18,5 +33,30 @@ public enum RunnableTaskType
     /// <summary>
     /// A React UI application.
     /// </summary>
-    React
+    React,
+
+    /// <summary>
+    /// A Vue UI application.
+    /// </summary>
+    Vue,
+
+    /// <summary>
+    /// An Angular UI application.
+    /// </summary>
+    Angular,
+
+    /// <summary>
+    /// A console application.
+    /// </summary>
+    Console,
+
+    /// <summary>
+    /// An API project.
+    /// </summary>
+    Api,
+
+    /// <summary>
+    /// A library project.
+    /// </summary>
+    Library
 }

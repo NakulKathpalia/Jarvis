@@ -54,4 +54,14 @@ public sealed class RunnableResult
     /// Gets errors.
     /// </summary>
     public List<string> Errors { get; } = [];
+
+    /// <summary>
+    /// Gets runtime logs.
+    /// </summary>
+    public List<string> Logs { get; } = [];
+
+    /// <summary>
+    /// Gets or sets execution duration.
+    /// </summary>
+    public TimeSpan Duration { get; set; }
 }

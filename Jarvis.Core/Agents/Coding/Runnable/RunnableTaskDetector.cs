@@ -32,7 +32,7 @@ public sealed class RunnableTaskDetector
         }
 
         return UiTerms.Any(term => text.Contains(term, StringComparison.OrdinalIgnoreCase))
-            ? RunnableTaskType.StaticHtml
+            ? RunnableTaskType.Html
             : RunnableTaskType.None;
     }
 
